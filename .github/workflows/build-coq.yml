@@ -88,12 +88,3 @@ jobs:
         #            opam_file: './coq-demo.opam'
         #            custom_image: ${{ matrix.image }}
 
-        # Remarks:
-        #
-        # You can rename this file (e.g. to coq.yml, docker-action.yml, or …),
-        # as the name of this .yml file plays no role.
-        #
-        # You may want to add the following badge to your README.md:
-        # [![Docker CI](https://github.com/$USER/$REPO/workflows/Docker%20CI/badge.svg?branch=master)](https://github.com/$USER/$REPO/actions?query=workflow:"Docker%20CI")
-        # after replacing $USER/$REPO to use your project namespace; note also
-        # that "Docker CI" is the workflow name, defined at the beginning of this file.

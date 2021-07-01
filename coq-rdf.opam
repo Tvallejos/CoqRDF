@@ -1,0 +1,8 @@
+# custom script
+if [ -z "$INPUT_OPAM_FILE" ] || [ -d "$INPUT_OPAM_FILE" ]; then
+    WORKDIR=""
+    PACKAGE=${INPUT_OPAM_FILE:-.}
+else
+    WORKDIR=$(dirname "$INPUT_OPAM_FILE")
+    PACKAGE=$(basename "$INPUT_OPAM_FILE" .opam)
+fi

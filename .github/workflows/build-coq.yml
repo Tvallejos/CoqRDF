@@ -42,6 +42,10 @@ jobs:
           script: |
               startGroup "Build Coq project"
                   make
+                  ll
+                  id $(whoami)
+                  id -nG
+                  cat /etc/group
               endGroup
           uninstall: |
               startGroup "Clean Coq project"

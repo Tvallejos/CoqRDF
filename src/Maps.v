@@ -8,4 +8,4 @@ Definition t_empty {A : Type} (v : A) : total_map A :=
 
 Definition t_update {A : Type} (m : total_map A)
                     (n : node) (v : A) :=
-  fun n' => eqb_node n n' then v else m n'.
+  fun n' => if eqb_node n n' then v else m n'.

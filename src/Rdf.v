@@ -10,6 +10,17 @@ Inductive node : Type :=
   | Const (c : nat)
   | Var (s : string).
 
+Definition is_const (n : node) : bool :=
+  (match n with
+   | Const _ => true
+   | otherwise => false
+   end).
+
+Definition is_var (n : node) : bool :=
+  (match n with
+   | Var _ => true
+   | otherwise => false
+   end).
 
 Check (Const 5) : node.
 Check (Var "x") : node.

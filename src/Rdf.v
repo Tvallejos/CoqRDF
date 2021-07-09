@@ -114,20 +114,49 @@ Definition app_μ_to_triple (μ : node -> node) (t : triple) :=
 Theorem eq_or_not : forall (n m: node),
   {n = m} + {n <> m}.
 Proof. intros n m.
-  destruct n,m.
-  - left. reflexivity.
-  - right. Admitted.
+  destruct n,m ; 
+  try (left ; reflexivity);
+  try (right ; reflexivity);
+  try (left ; apply eqb_neq_node ; reflexivity);
+  try (right ; apply eqb_neq_node ; reflexivity);
+  try (left ; apply eqb_eq_node ; reflexivity);
+  try (right ; apply eqb_eq_node ; reflexivity).
+  - destruct (c =? c0) eqn:E.
+    + left. apply eqb_eq_node. simpl. apply E. 
+    + right. apply eqb_neq_node. simpl. apply E.
+  - destruct (eqb s s0) eqn:E.
+    + left. apply eqb_eq_node. simpl. apply E.
+    + right. apply eqb_neq_node. simpl. apply E.
+Qed.
 
 Check set_In.
 Check (set_add eq_or_not (Var "x") (set_add eq_or_not (Const 5) (empty_set node))).
 Example example_in_graph : set_In (Const 12) (set_add eq_or_not (Const 12) (set_add eq_or_not (Const 5) (empty_set node))).
-Proof. simpl. Admitted.
+Proof. simpl. destruct (eq_or_not (Const 12) (Const 5)) eqn:E.
+  - simpl. left. symmetry. apply e.
+  - simpl. right. left. reflexivity.
+Qed.
 
-(*
-do i need node refl for using set_map ?
-   Definition image (g : graph) (μ : node -> node) : graph :=
+Definition eqb_triple (t1 t2:triple) : bool :=
+  (match t1,t2 with
+   | (s,p,o),(s2,p2,o2) => (eqb_node s s2) && (eqb_node p p2) && (eqb_node o o2)
+   end).
+
+(* 
+Theorem eqb_eq_triple: forall (t1 t2 : triple),
+  eqb_triple t1 t2 = true <-> t1 = t2.
+Proof. intros. split.
  *)
- 
+Theorem eq_or_not_triple : forall (t1 t2:triple),
+  {t1 = t2} + {t1 <> t2}.
+Proof. intros t1 t2. destruct t1, t2.
+  - destruct (eq_or_not n n0) eqn:E. Admitted.
+
+    (* 
+Definition image (g : graph) (μ : node -> node) : graph :=
+  set_map eq_or_not (fun t => app_μ_to_triple μ t) g.
+
+     *)
 
 (* Check [((Const 5),(Const 5), (Const 5))].
    Check (set_add ((Const 5),(Const 5), (Const 5)) empty_set). *)

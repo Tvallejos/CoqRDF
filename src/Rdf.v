@@ -78,6 +78,28 @@ Check ((Null), (Const 1), (Var "foo")): triple.
 (* Not sure if its a good idea to have a set, 
  may be we want some order on the triples *)
 Definition graph := set triple.
+Definition app_μ_to_triple (μ : node -> node) (t : triple) :=
+  (match t with
+   | (n1, n2, n3) => (μ n1 , n2 , μ n3)
+   end).
+
+Theorem eq_or_not : forall (n m: node),
+  {n = m} + {n <> m}.
+Proof. intros n m.
+  destruct n,m.
+  - left. reflexivity.
+  - right. Admitted.
+
+Check set_In.
+Check (set_add eq_or_not (Var "x") (set_add eq_or_not (Const 5) nil)).
+Example example_in_graph : set_In (Const 12) (set_add eq_or_not (Const 12) (set_add eq_or_not (Const 5) nil)).
+Proof. simpl. Admitted.
+
+(*
+do i need node refl for using set_map ?
+   Definition image (g : graph) (μ : node -> node) : graph :=
+ *)
+ 
 
 (* Check [((Const 5),(Const 5), (Const 5))].
    Check (set_add ((Const 5),(Const 5), (Const 5)) empty_set). *)

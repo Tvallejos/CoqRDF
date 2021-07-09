@@ -24,14 +24,14 @@ Definition map_var_or_const (nod : node) (μ : node -> node) : bool :=
   map_const nod μ || map_var nod μ.
 
 (* want to define this as property of μ given IL B*)
-Definition mapping : forall (nod : node) (IL B : set node) (μ : node -> node),
-  set_In nod IL -> map_const nod μ = true /\ set_In nod B -> map_var_or_const nod μ = true.
-Admitted.
+Definition mapping (IL B : set node) (μ : node -> node) :=
+  forall nod : node,
+  (set_In nod IL -> map_const nod μ = true) /\ (set_In nod B -> map_var_or_const nod μ = true).
 
 (* want to define this as property of μ given IL B*)
-Definition relabelling : forall (nod : node) (IL B : set node) (μ : node -> node),
-  set_In nod IL -> map_const nod μ = true /\ set_In nod B -> map_var nod μ = true.
-Admitted.
+Definition relabelling (IL B : set node) (μ : node -> node) :=
+  forall nod : node,
+  (set_In nod IL -> map_const nod μ = true) /\ (set_In nod B -> map_var nod μ = true).
 
 (*
 Definition mapping (nod : node) (IL B : set node) (μ : node -> node) : bool :=

@@ -12,8 +12,6 @@ Definition t_update {A : Type} (m : total_map A)
                     (n : node) (v : A) :=
   fun n' => if eqb_node n n' then v else m n'.
 
-(* μ *)
-
 Definition map_const (nod : node) (μ : node -> node) : bool :=
   (is_const (μ nod)).
 

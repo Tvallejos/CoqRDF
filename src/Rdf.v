@@ -1,5 +1,6 @@
 From Coq Require Import Lists.ListSet.
 From Coq Require Import Init.Nat.
+From Coq Require Import Bool.Bool.
 From Coq Require Import Strings.String.
 From Coq Require Import Arith.EqNat.
 
@@ -27,11 +28,8 @@ Check (Const 5) : node.
 Check (Var "x") : node.
 Check (Null) : node.
 
-(*
-An idea to define triples
 Inductive trpl : Type :=
   | triple (s p o : node).
- *)
 
 Definition eqb_node (n1 n2 : node) : bool :=
   (match n1, n2 with
@@ -93,9 +91,9 @@ Proof. split.
 Qed.
 
 (* alias for triple of nodes type *)
-Definition triple := (node * node * node)%type. 
+(* Definition triple := (node * node * node)%type.  *)
 
-Check ((Null), (Const 1), (Var "foo")): triple.
+Check (triple (Null) (Const 1) (Var "foo")): trpl.
 
 
 (*
@@ -105,10 +103,10 @@ Check ((Null), (Const 1), (Var "foo")): triple.
 
 (* Not sure if its a good idea to have a set, 
  may be we want some order on the triples *)
-Definition graph := set triple.
-Definition app_μ_to_triple (μ : node -> node) (t : triple) :=
+Definition graph := set trpl.
+Definition app_μ_to_triple (μ : node -> node) (t : trpl) : trpl:=
   (match t with
-   | (n1, n2, n3) => (μ n1 , n2 , μ n3)
+   | (triple n1 n2 n3) => triple (μ n1) n2 (μ n3)
    end).
 
 Theorem eq_or_not : forall (n m: node),
@@ -137,20 +135,62 @@ Proof. simpl. destruct (eq_or_not (Const 12) (Const 5)) eqn:E.
   - simpl. right. left. reflexivity.
 Qed.
 
-Definition eqb_triple (t1 t2:triple) : bool :=
+Definition eqb_triple (t1 t2:trpl) : bool :=
   (match t1,t2 with
-   | (s,p,o),(s2,p2,o2) => (eqb_node s s2) && (eqb_node p p2) && (eqb_node o o2)
+   | (triple s p o),(triple s2 p2 o2) => (eqb_node s s2) && (eqb_node p p2) && (eqb_node o o2)
    end).
 
-(* 
-Theorem eqb_eq_triple: forall (t1 t2 : triple),
+Theorem eqb_eq_triple: forall (t1 t2 : trpl),
   eqb_triple t1 t2 = true <-> t1 = t2.
 Proof. intros. split.
- *)
-Theorem eq_or_not_triple : forall (t1 t2:triple),
+  - intros H. destruct t1,t2 as [s2 p2 o2]; f_equal;
+    simpl in H; apply andb_true_iff in H; destruct H as [H0 H2]; apply andb_true_iff in H0; destruct H0 as [H H1]; apply eqb_eq_node. 
+    + apply H.
+    + apply H1.
+    + apply H2.
+  - intros H. destruct t1,t2 as [s2 p2 o2]. injection H as H1 H2 H3. simpl. rewrite H1. rewrite H2. rewrite H3.
+    rewrite <- (eqb_node_refl s2). rewrite <- (eqb_node_refl p2). rewrite <- (eqb_node_refl o2). reflexivity.
+Qed.
+
+Theorem eqb_triple_refl : forall (t1: trpl),
+  eqb_triple t1 t1 = true.
+Proof. intros. destruct t1. simpl. rewrite <- (eqb_node_refl s). rewrite <- (eqb_node_refl p). rewrite <- (eqb_node_refl o). reflexivity.
+Qed.
+
+Theorem eqb_neq_triple : forall (t1 t2: trpl),
+  eqb_triple t1 t2 = false <-> t1 <> t2.
+Proof. intros. split.
+  - intros H contra. rewrite contra in H. rewrite eqb_triple_refl in H. discriminate H.
+  - intros H. unfold not in H. rewrite <- eqb_eq_triple in H. destruct (eqb_triple t1 t2).
+    + exfalso. apply H. reflexivity.
+    + reflexivity.
+Qed.
+
+(*
+Theorem eq_or_not_triple : forall (t1 t2: trpl),
   {t1 = t2} + {t1 <> t2}.
-Proof. intros t1 t2. destruct t1, t2.
-  - destruct (eq_or_not n n0) eqn:E. Admitted.
+Proof. intros t1 t2. destruct t1, t2. destruct (eq_or_not s s0,eq_or_not p p0,eq_or_not o o0) as [[[H|H] [H2|H2]] [H3|H3]] eqn:E;    
+  try (left; try f_equal;
+      try apply H;
+      try apply H2;
+      try apply H3).
+  (try (right; 
+      try rewrite <- eqb_neq_triple; simpl;
+      try rewrite H;
+      try rewrite H2;
+      try rewrite H3;
+      try rewrite <- (eqb_node_refl s0);
+      try rewrite <- (eqb_node_refl p0);
+      try rewrite <- (eqb_node_refl o0));
+    try reflexivity;
+    try simpl). rewrite eqb_neq_node. apply H3.
+  -
+
+  - right. rewrite <- eqb_neq_triple. simpl. rewrite H. rewrite H2. rewrite <- (eqb_node_refl s0). 
+    rewrite <- (eqb_node_refl p0). simpl. rewrite eqb_neq_node. apply H3.
+  - right. rewrite <- eqb_neq_triple. simpl. rewrite H. rewrite H3. rewrite <- (eqb_node_refl s0). rewrite <- (eqb_node_refl o0). rewrite andb_comm. simpl. rewrite <- (
+    
+ *)
 
     (* 
 Definition image (g : graph) (μ : node -> node) : graph :=

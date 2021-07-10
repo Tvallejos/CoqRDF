@@ -1,11 +1,11 @@
 # rdf-model
 [![Docker Coq Build](https://github.com/Tvallejos/rdf-model/workflows/Docker%20Coq%20Build/badge.svg?branch=main)](https://github.com/Tvallejos/rdf-model/actions?query=workflow:"Docker%20Coq%20Build")
-[![Docker Coq Build init](https://github.com/Tvallejos/rdf-model/workflows/Docker%20Coq%20Build/badge.svg?branch=init)](https://github.com/Tvallejos/rdf-model/actions?query=workflow:"Docker%20Coq%20Build")
 - [X] Define rdf model  
-- [ ] Define notion of isomorphism [WIP]
+- [X] Define notion of isomorphism [WIP]
   * [X] Mapping
   * [X] Relabelling  
-  * [ ] Img of mapping
+  * [X] Img of mapping
+  * [X] Graph eqb
 - [ ] Verify isomorphism as an equivalence relation    
   * [ ] Reflexive  
   * [ ] Symemtric  

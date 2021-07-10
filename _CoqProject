@@ -2,4 +2,5 @@
 
 ./src/Rdf.v
 ./src/Maps.v
+./src/Node.v
 

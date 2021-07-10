@@ -1,54 +1,14 @@
 From Coq Require Import Lists.ListSet.
 From Coq Require Import Init.Nat.
-From Coq Require Import Bool.Bool.
 From Coq Require Import Strings.String.
+From Coq Require Import Bool.Bool.
 From Coq Require Import Arith.EqNat.
-
-Definition eqb_string (x y : string) : bool :=
-  if string_dec x y then true else false.
-
-Inductive node : Type :=
-  | Null
-  | Const (c : nat)
-  | Var (s : string).
-
-Definition is_const (n : node) : bool :=
-  (match n with
-   | Const _ => true
-   | otherwise => false
-   end).
-
-Definition is_var (n : node) : bool :=
-  (match n with
-   | Var _ => true
-   | otherwise => false
-   end).
-
-Check (Const 5) : node.
-Check (Var "x") : node.
-Check (Null) : node.
+From RDF Require Import Node.
+From RDF Require Import Maps.
 
 Inductive trpl : Type :=
   | triple (s p o : node).
 
-Definition eqb_node (n1 n2 : node) : bool :=
-  (match n1, n2 with
-   | (Null), (Null) => true
-   | (Const c1), (Const c2) => c1 =? c2
-   | (Var s1),(Var s2) => eqb s1 s2
-   | e1,e2 => false
-   end).
-
-Example eqb_null_node :  eqb_node (Null) (Null) = true.
-Proof. reflexivity. Qed.
-Example eqb_const_eq_node:  eqb_node (Const 5) (Const 5) = true.
-Proof. reflexivity. Qed.
-Example eqb_const_neq_node:  eqb_node (Const 5) (Const 0) = false.
-Proof. reflexivity. Qed.
-Example eqb_var_eq_node :  eqb_node (Var "x") (Var "x") = true.
-Proof. reflexivity. Qed.
-Example eqb_var_neq_node :  eqb_node (Var "x") (Var "y") = false.
-Proof. reflexivity. Qed.
 
 Theorem eq_nat_eq_const : forall (n1 n2:nat) , (n1 = n2) <-> (Const n1) = (Const n2).
 Proof. split.
@@ -295,7 +255,39 @@ Definition image (g : graph) (μ : node -> node) : graph :=
 Compute (image (set_add eq_or_not_triple (triple (Const 1) (Const 1) (Const 1)) (empty_set trpl)) 
   (fun _ => Const 2)): graph.
 
-(* Check [((Const 5),(Const 5), (Const 5))].
-   Check (set_add ((Const 5),(Const 5), (Const 5)) empty_set). *)
-(* Check (set ((Const 5),(Const 5), (Const 5)),  ((Var "x"),(Const 1),(Const 2))  ) : graph.
- *)
+Definition eqb_graph (g g': graph) : bool :=
+  (match (set_diff eq_or_not_triple g g') with
+   | nil => true
+   | otherwirse => false
+   end).
+
+Example eqb_graph_test : 
+  eqb_graph (empty_set trpl) (empty_set trpl) = true.
+Proof. reflexivity. Qed.
+Example eqb_graph_test2 : 
+  eqb_graph (set_add eq_or_not_triple (triple (Const 5) (Const 4) (Const 3)) (empty_set trpl)) (empty_set trpl) = false.
+Proof. reflexivity. Qed.
+
+Inductive world : Type :=
+  | res (I L B : set node).
+
+Definition proj_I (w : world) : set node :=
+  match w with
+  | res i _ _ => i
+  end.
+Definition proj_L (w : world) : set node :=
+  match w with
+  | res _ l _ => l
+  end.
+
+Definition proj_B (w : world) : set node :=
+  match w with
+  | res _ _ b => b
+  end.
+Definition proj_IL (w : world) : set node:=
+  set_union eq_or_not (proj_I w) (proj_L w).
+
+Definition isomorphism (w : world) (g g': graph) :=
+  exists μ : node -> node,
+  relabelling (proj_IL w) (proj_B w) μ -> (image g μ) = g'.
+

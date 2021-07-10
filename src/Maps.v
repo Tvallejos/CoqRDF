@@ -1,7 +1,7 @@
 From Coq Require Export Strings.String.
 From Coq Require Import Arith.Arith.
 From Coq Require Import Lists.ListSet.
-From RDF Require Import Rdf.
+From RDF Require Import Node.
 
 
 Definition total_map (A : Type) := node -> A.

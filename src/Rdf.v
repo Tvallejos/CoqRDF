@@ -104,6 +104,7 @@ Check (triple (Null) (Const 1) (Var "foo")): trpl.
 (* Not sure if its a good idea to have a set, 
  may be we want some order on the triples *)
 Definition graph := set trpl.
+
 Definition app_μ_to_triple (μ : node -> node) (t : trpl) : trpl:=
   (match t with
    | (triple n1 n2 n3) => triple (μ n1) n2 (μ n3)
@@ -166,15 +167,15 @@ Proof. intros. split.
     + reflexivity.
 Qed.
 
-(*
+(* POC: this WILL be refactored *)
 Theorem eq_or_not_triple : forall (t1 t2: trpl),
   {t1 = t2} + {t1 <> t2}.
-Proof. intros t1 t2. destruct t1, t2. destruct (eq_or_not s s0,eq_or_not p p0,eq_or_not o o0) as [[[H|H] [H2|H2]] [H3|H3]] eqn:E;    
-  try (left; try f_equal;
+Proof. intros t1 t2. destruct t1, t2. destruct (eq_or_not s s0,eq_or_not p p0,eq_or_not o o0) as [[[H|H] [H2|H2]] [H3|H3]] eqn:E.
+- try (left; try f_equal;
       try apply H;
       try apply H2;
       try apply H3).
-  (try (right; 
+- (try (right; 
       try rewrite <- eqb_neq_triple; simpl;
       try rewrite H;
       try rewrite H2;
@@ -183,20 +184,116 @@ Proof. intros t1 t2. destruct t1, t2. destruct (eq_or_not s s0,eq_or_not p p0,eq
       try rewrite <- (eqb_node_refl p0);
       try rewrite <- (eqb_node_refl o0));
     try reflexivity;
-    try simpl). rewrite eqb_neq_node. apply H3.
-  -
+    try simpl; 
+    rewrite eqb_neq_node;
+      try apply H;
+      try apply H2;
+      try apply H3).
+- try right. 
+  try rewrite <- eqb_neq_triple. simpl.
+      try rewrite H.
+      try rewrite H2.
+      try rewrite H3.
+      try rewrite <- (eqb_node_refl s0).
+      try rewrite <- (eqb_node_refl p0).
+      try rewrite <- (eqb_node_refl o0).
+    try reflexivity.
+    try simpl.
+    try (rewrite andb_comm;simpl).
+    rewrite eqb_neq_node;
+      try apply H;
+      try apply H2;
+      try apply H3.
+- try right. 
+  try rewrite <- eqb_neq_triple. simpl.
+      try rewrite H.
+      try rewrite H2.
+      try rewrite H3.
+      try rewrite <- (eqb_node_refl s0).
+      try rewrite <- (eqb_node_refl p0).
+      try rewrite <- (eqb_node_refl o0).
+    try reflexivity.
+    try simpl.
+    try (rewrite andb_comm;simpl). 
+    apply andb_false_iff. left.
+    rewrite eqb_neq_node;
+      try apply H;
+      try apply H2;
+      try apply H3.
+- try right. 
+  try rewrite <- eqb_neq_triple. simpl.
+      try rewrite H.
+      try rewrite H2.
+      try rewrite H3.
+      try rewrite <- (eqb_node_refl s0).
+      try rewrite <- (eqb_node_refl p0).
+      try rewrite <- (eqb_node_refl o0).
+    try reflexivity.
+    try simpl.
+    try (rewrite andb_comm;simpl).
+    apply andb_false_iff. left.
+    rewrite eqb_neq_node;
+      try apply H;
+      try apply H2;
+      try apply H3.
+- try right. 
+  try rewrite <- eqb_neq_triple. simpl.
+      try rewrite H.
+      try rewrite H2.
+      try rewrite H3.
+      try rewrite <- (eqb_node_refl s0).
+      try rewrite <- (eqb_node_refl p0).
+      try rewrite <- (eqb_node_refl o0).
+    try reflexivity.
+    try simpl.
+    try (rewrite andb_comm;simpl).
+    apply andb_false_iff. left.
+    rewrite eqb_neq_node;
+      try apply H;
+      try apply H2;
+      try apply H3.
+- try right. 
+  try rewrite <- eqb_neq_triple. simpl.
+      try rewrite H.
+      try rewrite H2.
+      try rewrite H3.
+      try rewrite <- (eqb_node_refl s0).
+      try rewrite <- (eqb_node_refl p0).
+      try rewrite <- (eqb_node_refl o0).
+    try reflexivity.
+    try simpl.
+    try (rewrite andb_comm;simpl).
+    apply andb_false_iff. left.
+    rewrite eqb_neq_node;
+      try apply H;
+      try apply H2;
+      try apply H3.
+- try right. 
+  try rewrite <- eqb_neq_triple. simpl.
+      try rewrite H.
+      try rewrite H2.
+      try rewrite H3.
+      try rewrite <- (eqb_node_refl s0).
+      try rewrite <- (eqb_node_refl p0).
+      try rewrite <- (eqb_node_refl o0).
+    try reflexivity.
+    try simpl.
+    try (rewrite andb_comm;simpl).
+    apply andb_false_iff. left.
+    rewrite eqb_neq_node;
+      try apply H;
+      try apply H2;
+      try apply H3.
+Qed.
 
-  - right. rewrite <- eqb_neq_triple. simpl. rewrite H. rewrite H2. rewrite <- (eqb_node_refl s0). 
-    rewrite <- (eqb_node_refl p0). simpl. rewrite eqb_neq_node. apply H3.
-  - right. rewrite <- eqb_neq_triple. simpl. rewrite H. rewrite H3. rewrite <- (eqb_node_refl s0). rewrite <- (eqb_node_refl o0). rewrite andb_comm. simpl. rewrite <- (
-    
- *)
+Check (set_add eq_or_not_triple (triple (Const 1) (Const 1) (Const 1)) (empty_set trpl)): graph.
 
-    (* 
 Definition image (g : graph) (μ : node -> node) : graph :=
-  set_map eq_or_not (fun t => app_μ_to_triple μ t) g.
+  set_map eq_or_not_triple (fun t => app_μ_to_triple μ t) g.
 
-     *)
+(* image of mapping Const 2 of 1,1,1 => 2,1,2*)
+Compute (image (set_add eq_or_not_triple (triple (Const 1) (Const 1) (Const 1)) (empty_set trpl)) 
+  (fun _ => Const 2)): graph.
 
 (* Check [((Const 5),(Const 5), (Const 5))].
    Check (set_add ((Const 5),(Const 5), (Const 5)) empty_set). *)

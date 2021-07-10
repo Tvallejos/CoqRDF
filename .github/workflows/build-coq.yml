@@ -1,10 +1,10 @@
-name: Docker CI
+name: Docker Coq Build
 
 on:
     push:
         branches:
             - main
-            - init
+            - 'model/**'
         pull_request:
             branches:
                 - '**'

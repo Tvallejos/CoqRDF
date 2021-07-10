@@ -3,4 +3,6 @@
 ./src/Rdf.v
 ./src/Maps.v
 ./src/Node.v
+./src/Triples.v
+./src/Graph.v
 

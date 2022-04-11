@@ -1,7 +1,9 @@
 -R ./src RDF
 
+
+./src/Term.v
+./src/Triple.v
 ./src/Rdf.v
 ./src/Maps.v
-./src/Term.v
 ./src/examples/TermExamples.v
 ./src/examples/RdfExamples.v

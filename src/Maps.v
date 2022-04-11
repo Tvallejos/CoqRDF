@@ -9,27 +9,30 @@ Definition t_empty {A : Type} (v : A) : total_map A :=
   (fun _ => v).
 
 Definition t_update {A : Type} (m : total_map A)
-                    (n : term) (v : A) :=
-  fun n' => if eqb_node n n' then v else m n'.
+                    (t : term) (v : A) :=
+  fun t' => if eqb_term t t' then v else m t'.
 
-Definition map_lit (nod : term) (μ : term -> term) : bool :=
-  (is_lit (μ nod)).
+Definition maps_to_lit (t : term) (μ : term -> term) : bool :=
+  (is_lit (μ t)).
 
-Definition map_bnode (nod : term) (μ : term -> term) : bool :=
-  (is_bnode (μ nod)).
+Definition maps_to_iri (t : term) (μ : term -> term) : bool :=
+  (is_iri (μ t)).
 
-Definition map_lit_or_bnode (nod : term) (μ : term -> term) : bool :=
-  map_lit nod μ || map_bnode nod μ.
+Definition maps_to_bnode (t : term) (μ : term -> term) : bool :=
+  (is_bnode (μ t)).
+
+Definition maps_to_lit_or_bnode (t : term) (μ : term -> term) : bool :=
+  maps_to_lit t μ || maps_to_bnode t μ.
 
 (* want to define this as property of μ given IL B*)
 Definition mapping (IL B : set term) (μ : term -> term) :=
-  forall nod : term,
-  (set_In nod IL -> map_lit nod μ = true) /\ (set_In nod B -> map_lit_or_bnode nod μ = true).
+  forall t : term,
+  (set_In t IL -> maps_to_lit t μ = true) /\ (set_In t B -> maps_to_lit_or_bnode t μ = true).
 
 (* want to define this as property of μ given IL B*)
 Definition relabelling (IL B : set term) (μ : term -> term) :=
-  forall nod : term,
-  (set_In nod IL -> map_lit nod μ = true) /\ (set_In nod B -> map_bnode nod μ = true).
+  forall t : term,
+  (set_In t IL -> maps_to_lit t μ = true) /\ (set_In t B -> maps_to_bnode t μ = true).
 
 (*
 Definition mapping (nod : term) (IL B : set term) (μ : term -> node) : bool :=

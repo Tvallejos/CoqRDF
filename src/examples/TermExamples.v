@@ -5,13 +5,13 @@ Check (Lit 5) : term.
 Check (Bnode "b") : term.
 Check (Iri "A") : term.
 
-Example eqb_bnode_ex :  eqb_node (Bnode "b") (Bnode "b") = true.
+Example eqb_bnode_ex :  eqb_term (Bnode "b") (Bnode "b") = true.
 Proof. reflexivity. Qed.
-Example eqb_lit_eq_node_ex:  eqb_node (Lit 5) (Lit 5) = true.
+Example eqb_lit_eq_node_ex:  eqb_term (Lit 5) (Lit 5) = true.
 Proof. reflexivity. Qed.
-Example eqb_lit_neq_node:  eqb_node (Lit 5) (Lit 0) = false.
+Example eqb_lit_neq_node:  eqb_term (Lit 5) (Lit 0) = false.
 Proof. reflexivity. Qed.
-Example eqb_iri_eq_node :  eqb_node (Iri "x") (Iri "x") = true.
+Example eqb_iri_eq_node :  eqb_term (Iri "x") (Iri "x") = true.
 Proof. reflexivity. Qed.
-Example eqb_iri_neq_node :  eqb_node (Iri "x") (Iri "y") = false.
+Example eqb_iri_neq_node :  eqb_term (Iri "x") (Iri "y") = false.
 Proof. reflexivity. Qed.

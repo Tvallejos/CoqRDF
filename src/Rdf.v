@@ -3,6 +3,7 @@ From Coq Require Import Init.Nat.
 From Coq Require Import Strings.String.
 From Coq Require Import Bool.Bool.
 From Coq Require Import Arith.EqNat.
+From Coq Require Import Arith.PeanoNat.
 From RDF Require Import Node.
 From RDF Require Import Maps.
 
@@ -10,13 +11,19 @@ Inductive trpl : Type :=
   | triple (s p o : node).
 
 
-Theorem eq_nat_eq_const : forall (n1 n2:nat) , (n1 = n2) <-> (Const n1) = (Const n2).
+Theorem eq_nat_eq_lit : forall (n1 n2:nat) , (n1 = n2) <-> (Lit n1) = (Lit n2).
 Proof. split.
   - intros H. rewrite H. reflexivity.
   - intros H. injection H as H2. apply H2.
 Qed.
 
-Theorem eq_string_eq_var : forall (s1 s2:string) , (s1 = s2) <-> (Var s1) = (Var s2).
+Theorem eq_string_eq_iri : forall (s1 s2:string) , (s1 = s2) <-> (Iri s1) = (Iri s2).
+Proof. split.
+  - intros H. rewrite H. reflexivity.
+  - intros H. injection H as H2. apply H2.
+Qed.
+
+Theorem eq_string_eq_bnode : forall (s1 s2:string) , (s1 = s2) <-> (Bnode s1) = (Bnode s2).
 Proof. split.
   - intros H. rewrite H. reflexivity.
   - intros H. injection H as H2. apply H2.
@@ -25,7 +32,7 @@ Qed.
 Theorem eqb_node_refl : forall (nod1 : node),
   true = eqb_node nod1 nod1.
 Proof. destruct nod1 as [].
-  - reflexivity.
+  - simpl. symmetry. apply eqb_refl.
   - simpl. apply beq_nat_refl.
   - simpl. symmetry. apply eqb_refl.
 Qed.
@@ -36,8 +43,9 @@ Proof. split.
   - intros H. destruct nod1,nod2 as [] ; 
     try reflexivity ;
     try discriminate.
-    + simpl in H. apply beq_nat_true in H. apply eq_nat_eq_const. apply H.
-    + simpl in H. apply eqb_eq in H. apply eq_string_eq_var. apply H.
+    + simpl in H. apply eqb_eq in H. rewrite H. apply eq_string_eq_iri. reflexivity.
+    + simpl in H. apply beq_nat_true in H. rewrite H. apply eq_nat_eq_lit. reflexivity.
+    + simpl in H. apply eqb_eq in H. apply eq_string_eq_bnode. apply H.
   - intros H. rewrite H. symmetry. apply eqb_node_refl.
 Qed.
    
@@ -52,9 +60,6 @@ Qed.
 
 (* alias for triple of nodes type *)
 (* Definition triple := (node * node * node)%type.  *)
-
-Check (triple (Null) (Const 1) (Var "foo")): trpl.
-
 
 (*
    Inductive rdf : Type :=
@@ -72,29 +77,12 @@ Definition app_μ_to_triple (μ : node -> node) (t : trpl) : trpl:=
 
 Theorem eq_or_not : forall (n m: node),
   {n = m} + {n <> m}.
-Proof. intros n m.
-  destruct n,m ; 
-  try (left ; reflexivity);
-  try (right ; reflexivity);
-  try (left ; apply eqb_neq_node ; reflexivity);
-  try (right ; apply eqb_neq_node ; reflexivity);
-  try (left ; apply eqb_eq_node ; reflexivity);
-  try (right ; apply eqb_eq_node ; reflexivity).
-  - destruct (c =? c0) eqn:E.
-    + left. apply eqb_eq_node. simpl. apply E. 
-    + right. apply eqb_neq_node. simpl. apply E.
-  - destruct (eqb s s0) eqn:E.
-    + left. apply eqb_eq_node. simpl. apply E.
-    + right. apply eqb_neq_node. simpl. apply E.
+Proof. decide equality.
+  + apply string_dec.
+  + decide equality.
+  + apply string_dec.
 Qed.
 
-Check set_In.
-Check (set_add eq_or_not (Var "x") (set_add eq_or_not (Const 5) (empty_set node))).
-Example example_in_graph : set_In (Const 12) (set_add eq_or_not (Const 12) (set_add eq_or_not (Const 5) (empty_set node))).
-Proof. simpl. destruct (eq_or_not (Const 12) (Const 5)) eqn:E.
-  - simpl. left. symmetry. apply e.
-  - simpl. right. left. reflexivity.
-Qed.
 
 Definition eqb_triple (t1 t2:trpl) : bool :=
   (match t1,t2 with
@@ -246,27 +234,15 @@ Proof. intros t1 t2. destruct t1, t2. destruct (eq_or_not s s0,eq_or_not p p0,eq
       try apply H3.
 Qed.
 
-Check (set_add eq_or_not_triple (triple (Const 1) (Const 1) (Const 1)) (empty_set trpl)): graph.
-
 Definition image (g : graph) (μ : node -> node) : graph :=
   set_map eq_or_not_triple (fun t => app_μ_to_triple μ t) g.
 
-(* image of mapping Const 2 of 1,1,1 => 2,1,2*)
-Compute (image (set_add eq_or_not_triple (triple (Const 1) (Const 1) (Const 1)) (empty_set trpl)) 
-  (fun _ => Const 2)): graph.
 
 Definition eqb_graph (g g': graph) : bool :=
   (match (set_diff eq_or_not_triple g g') with
    | nil => true
    | otherwirse => false
    end).
-
-Example eqb_graph_test : 
-  eqb_graph (empty_set trpl) (empty_set trpl) = true.
-Proof. reflexivity. Qed.
-Example eqb_graph_test2 : 
-  eqb_graph (set_add eq_or_not_triple (triple (Const 5) (Const 4) (Const 3)) (empty_set trpl)) (empty_set trpl) = false.
-Proof. reflexivity. Qed.
 
 Inductive world : Type :=
   | res (I L B : set node).

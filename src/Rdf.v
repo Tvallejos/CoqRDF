@@ -3,7 +3,6 @@ From Coq Require Import Init.Nat.
 From Coq Require Import Strings.String.
 From Coq Require Import Bool.Bool.
 From Coq Require Import Arith.EqNat.
-From Coq Require Import Arith.PeanoNat.
 From RDF Require Import Node.
 From RDF Require Import Maps.
 
@@ -12,41 +11,41 @@ Inductive trpl : Type :=
 
 
 Theorem eq_nat_eq_lit : forall (n1 n2:nat) , (n1 = n2) <-> (Lit n1) = (Lit n2).
-Proof. split.
-  - intros H. rewrite H. reflexivity.
-  - intros H. injection H as H2. apply H2.
+Proof. split; intros H.
+  - rewrite H. reflexivity.
+  - injection H as H2. apply H2.
 Qed.
 
 Theorem eq_string_eq_iri : forall (s1 s2:string) , (s1 = s2) <-> (Iri s1) = (Iri s2).
-Proof. split.
-  - intros H. rewrite H. reflexivity.
-  - intros H. injection H as H2. apply H2.
+Proof. split; intros H.
+  - rewrite H. reflexivity.
+  - injection H as H2. apply H2.
 Qed.
 
 Theorem eq_string_eq_bnode : forall (s1 s2:string) , (s1 = s2) <-> (Bnode s1) = (Bnode s2).
-Proof. split.
-  - intros H. rewrite H. reflexivity.
-  - intros H. injection H as H2. apply H2.
+Proof. split; intros H.
+  - rewrite H. reflexivity.
+  - injection H as H2. apply H2.
 Qed.
 
 Theorem eqb_node_refl : forall (nod1 : node),
   true = eqb_node nod1 nod1.
-Proof. destruct nod1 as [].
-  - simpl. symmetry. apply eqb_refl.
-  - simpl. apply beq_nat_refl.
-  - simpl. symmetry. apply eqb_refl.
+Proof. destruct nod1 as []; simpl.
+  - symmetry. apply eqb_refl.
+  - apply beq_nat_refl.
+  - symmetry. apply eqb_refl.
 Qed.
 
 Theorem eqb_eq_node : forall (nod1 nod2 : node),
   eqb_node nod1 nod2 = true <-> nod1 = nod2.
-Proof. split.
-  - intros H. destruct nod1,nod2 as [] ; 
+Proof. split; intros H.
+  - destruct nod1,nod2 as [] ; 
     try reflexivity ;
-    try discriminate.
-    + simpl in H. apply eqb_eq in H. rewrite H. apply eq_string_eq_iri. reflexivity.
-    + simpl in H. apply beq_nat_true in H. rewrite H. apply eq_nat_eq_lit. reflexivity.
-    + simpl in H. apply eqb_eq in H. apply eq_string_eq_bnode. apply H.
-  - intros H. rewrite H. symmetry. apply eqb_node_refl.
+    try discriminate; simpl in H.
+    + apply eqb_eq in H. rewrite H. apply eq_string_eq_iri. reflexivity.
+    + apply beq_nat_true in H. rewrite H. apply eq_nat_eq_lit. reflexivity.
+    + apply eqb_eq in H. apply eq_string_eq_bnode. apply H.
+  - rewrite H. symmetry. apply eqb_node_refl.
 Qed.
    
 Theorem eqb_neq_node : forall (nod1 nod2 : node),
@@ -75,7 +74,7 @@ Definition app_μ_to_triple (μ : node -> node) (t : trpl) : trpl:=
    | (triple n1 n2 n3) => triple (μ n1) n2 (μ n3)
    end).
 
-Theorem eq_or_not : forall (n m: node),
+Theorem eq_dec_node : forall (n m: node),
   {n = m} + {n <> m}.
 Proof. decide equality.
   + apply string_dec.
@@ -91,13 +90,13 @@ Definition eqb_triple (t1 t2:trpl) : bool :=
 
 Theorem eqb_eq_triple: forall (t1 t2 : trpl),
   eqb_triple t1 t2 = true <-> t1 = t2.
-Proof. intros. split.
-  - intros H. destruct t1,t2 as [s2 p2 o2]; f_equal;
+Proof. intros. split; intros H.
+  - destruct t1,t2 as [s2 p2 o2]; f_equal;
     simpl in H; apply andb_true_iff in H; destruct H as [H0 H2]; apply andb_true_iff in H0; destruct H0 as [H H1]; apply eqb_eq_node. 
     + apply H.
     + apply H1.
     + apply H2.
-  - intros H. destruct t1,t2 as [s2 p2 o2]. injection H as H1 H2 H3. simpl. rewrite H1. rewrite H2. rewrite H3.
+  - destruct t1,t2 as [s2 p2 o2]. injection H as H1 H2 H3. simpl. rewrite H1. rewrite H2. rewrite H3.
     rewrite <- (eqb_node_refl s2). rewrite <- (eqb_node_refl p2). rewrite <- (eqb_node_refl o2). reflexivity.
 Qed.
 
@@ -115,17 +114,16 @@ Proof. intros. split.
     + reflexivity.
 Qed.
 
-(* POC: this WILL be refactored *)
-Theorem eq_or_not_triple : forall (t1 t2: trpl),
+Theorem eq_dec_triple : forall (t1 t2: trpl),
   {t1 = t2} + {t1 <> t2}.
-Proof. decide equality; try decide equality; try apply string_dec; try decide equality. Qed.
+Proof. decide equality; try decide equality; try apply string_dec; decide equality. Qed.
 
 Definition image (g : graph) (μ : node -> node) : graph :=
-  set_map eq_or_not_triple (fun t => app_μ_to_triple μ t) g.
+  set_map eq_dec_triple (fun t => app_μ_to_triple μ t) g.
 
 
 Definition eqb_graph (g g': graph) : bool :=
-  (match (set_diff eq_or_not_triple g g') with
+  (match (set_diff eq_dec_triple g g') with
    | nil => true
    | otherwirse => false
    end).
@@ -147,7 +145,7 @@ Definition proj_B (w : world) : set node :=
   | res _ _ b => b
   end.
 Definition proj_IL (w : world) : set node:=
-  set_union eq_or_not (proj_I w) (proj_L w).
+  set_union eq_dec_node (proj_I w) (proj_L w).
 
 Definition isomorphism (w : world) (g g': graph) :=
   exists μ : node -> node,

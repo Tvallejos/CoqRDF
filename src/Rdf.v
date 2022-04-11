@@ -3,11 +3,11 @@ From Coq Require Import Init.Nat.
 From Coq Require Import Strings.String.
 From Coq Require Import Bool.Bool.
 From Coq Require Import Arith.EqNat.
-From RDF Require Import Node.
+From RDF Require Import Term.
 From RDF Require Import Maps.
 
 Inductive trpl : Type :=
-  | triple (s p o : node).
+  | triple (s p o : term).
 
 
 Theorem eq_nat_eq_lit : forall (n1 n2:nat) , (n1 = n2) <-> (Lit n1) = (Lit n2).
@@ -28,7 +28,7 @@ Proof. split; intros H.
   - injection H as H2. apply H2.
 Qed.
 
-Theorem eqb_node_refl : forall (nod1 : node),
+Theorem eqb_node_refl : forall (nod1 : term),
   true = eqb_node nod1 nod1.
 Proof. destruct nod1 as []; simpl.
   - symmetry. apply eqb_refl.
@@ -36,7 +36,7 @@ Proof. destruct nod1 as []; simpl.
   - symmetry. apply eqb_refl.
 Qed.
 
-Theorem eqb_eq_node : forall (nod1 nod2 : node),
+Theorem eqb_eq_node : forall (nod1 nod2 : term),
   eqb_node nod1 nod2 = true <-> nod1 = nod2.
 Proof. split; intros H.
   - destruct nod1,nod2 as [] ; 
@@ -48,7 +48,7 @@ Proof. split; intros H.
   - rewrite H. symmetry. apply eqb_node_refl.
 Qed.
    
-Theorem eqb_neq_node : forall (nod1 nod2 : node),
+Theorem eqb_neq_node : forall (nod1 nod2 : term),
   eqb_node nod1 nod2 = false <-> nod1 <> nod2.
 Proof. split.
   - intros H contra. rewrite contra in H. rewrite <- eqb_node_refl in H. discriminate H.
@@ -57,8 +57,8 @@ Proof. split.
     + reflexivity.
 Qed.
 
-(* alias for triple of nodes type *)
-(* Definition triple := (node * node * node)%type.  *)
+(* alias for triple of terms type *)
+(* Definition triple := (node * term * term)%type.  *)
 
 (*
    Inductive rdf : Type :=
@@ -69,12 +69,12 @@ Qed.
  may be we want some order on the triples *)
 Definition graph := set trpl.
 
-Definition app_μ_to_triple (μ : node -> node) (t : trpl) : trpl:=
+Definition app_μ_to_triple (μ : term -> term) (t : trpl) : trpl:=
   (match t with
    | (triple n1 n2 n3) => triple (μ n1) n2 (μ n3)
    end).
 
-Theorem eq_dec_node : forall (n m: node),
+Theorem eq_dec_node : forall (n m: term),
   {n = m} + {n <> m}.
 Proof. decide equality.
   + apply string_dec.
@@ -118,7 +118,7 @@ Theorem eq_dec_triple : forall (t1 t2: trpl),
   {t1 = t2} + {t1 <> t2}.
 Proof. decide equality; try decide equality; try apply string_dec; decide equality. Qed.
 
-Definition image (g : graph) (μ : node -> node) : graph :=
+Definition image (g : graph) (μ : term -> term) : graph :=
   set_map eq_dec_triple (fun t => app_μ_to_triple μ t) g.
 
 
@@ -129,25 +129,25 @@ Definition eqb_graph (g g': graph) : bool :=
    end).
 
 Inductive world : Type :=
-  | res (I L B : set node).
+  | res (I L B : set term).
 
-Definition proj_I (w : world) : set node :=
+Definition proj_I (w : world) : set term :=
   match w with
   | res i _ _ => i
   end.
-Definition proj_L (w : world) : set node :=
+Definition proj_L (w : world) : set term :=
   match w with
   | res _ l _ => l
   end.
 
-Definition proj_B (w : world) : set node :=
+Definition proj_B (w : world) : set term :=
   match w with
   | res _ _ b => b
   end.
-Definition proj_IL (w : world) : set node:=
+Definition proj_IL (w : world) : set term:=
   set_union eq_dec_node (proj_I w) (proj_L w).
 
 Definition isomorphism (w : world) (g g': graph) :=
-  exists μ : node -> node,
+  exists μ : term -> term,
   relabelling (proj_IL w) (proj_B w) μ -> (image g μ) = g'.
 

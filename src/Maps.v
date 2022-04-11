@@ -1,38 +1,38 @@
 From Coq Require Export Strings.String.
 From Coq Require Import Arith.Arith.
 From Coq Require Import Lists.ListSet.
-From RDF Require Import Node.
+From RDF Require Import Term.
 
 
-Definition total_map (A : Type) := node -> A.
+Definition total_map (A : Type) := term -> A.
 Definition t_empty {A : Type} (v : A) : total_map A :=
   (fun _ => v).
 
 Definition t_update {A : Type} (m : total_map A)
-                    (n : node) (v : A) :=
+                    (n : term) (v : A) :=
   fun n' => if eqb_node n n' then v else m n'.
 
-Definition map_lit (nod : node) (μ : node -> node) : bool :=
+Definition map_lit (nod : term) (μ : term -> term) : bool :=
   (is_lit (μ nod)).
 
-Definition map_bnode (nod : node) (μ : node -> node) : bool :=
+Definition map_bnode (nod : term) (μ : term -> term) : bool :=
   (is_bnode (μ nod)).
 
-Definition map_lit_or_bnode (nod : node) (μ : node -> node) : bool :=
+Definition map_lit_or_bnode (nod : term) (μ : term -> term) : bool :=
   map_lit nod μ || map_bnode nod μ.
 
 (* want to define this as property of μ given IL B*)
-Definition mapping (IL B : set node) (μ : node -> node) :=
-  forall nod : node,
+Definition mapping (IL B : set term) (μ : term -> term) :=
+  forall nod : term,
   (set_In nod IL -> map_lit nod μ = true) /\ (set_In nod B -> map_lit_or_bnode nod μ = true).
 
 (* want to define this as property of μ given IL B*)
-Definition relabelling (IL B : set node) (μ : node -> node) :=
-  forall nod : node,
+Definition relabelling (IL B : set term) (μ : term -> term) :=
+  forall nod : term,
   (set_In nod IL -> map_lit nod μ = true) /\ (set_In nod B -> map_bnode nod μ = true).
 
 (*
-Definition mapping (nod : node) (IL B : set node) (μ : node -> node) : bool :=
+Definition mapping (nod : term) (IL B : set term) (μ : term -> node) : bool :=
   (match nod with
    | Const _ => if set_In_dec nod IL then map_const nod μ else true
    | Var _ => if set_In nod B then map_var_or_const nod μ else true
@@ -42,10 +42,10 @@ Definition mapping (nod : node) (IL B : set node) (μ : node -> node) : bool :=
 
        (* (is_const n /\ set_In n IL -> map_const) \/ () *)
 (* 
-   Definition mapping2 (IL : set node) (μ : node -> node) : bool :=
+   Definition mapping2 (IL : set term) (μ : term -> term) : bool :=
   set_map IL μ.
  *)
 (* 
-   Definition blank_node_mapping (IL B: set node) (μ : node -> node) :=
+   Definition blank_node_mapping (IL B: set term) (μ : term -> term) :=
  *)
   

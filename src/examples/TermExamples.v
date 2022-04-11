@@ -1,9 +1,9 @@
-From RDF Require Import Node.
+From RDF Require Import Term.
 From Coq Require Import Strings.String.
 
-Check (Lit 5) : node.
-Check (Bnode "b") : node.
-Check (Iri "A") : node.
+Check (Lit 5) : term.
+Check (Bnode "b") : term.
+Check (Iri "A") : term.
 
 Example eqb_bnode_ex :  eqb_node (Bnode "b") (Bnode "b") = true.
 Proof. reflexivity. Qed.

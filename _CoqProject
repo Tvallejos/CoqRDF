@@ -2,6 +2,6 @@
 
 ./src/Rdf.v
 ./src/Maps.v
-./src/Node.v
-./src/examples/NodeExamples.v
+./src/Term.v
+./src/examples/TermExamples.v
 ./src/examples/RdfExamples.v

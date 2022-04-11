@@ -1,13 +1,13 @@
-From RDF Require Import Node.
+From RDF Require Import Term.
 From RDF Require Import Rdf. 
 From Coq Require Import Strings.String.
 From Coq Require Import Lists.ListSet.
 
 Check (triple (Bnode "a") (Lit 1) (Iri "foo")): trpl.
 
-Check (set_add eq_dec_node (Iri "x") (set_add eq_dec_node (Lit 5) (empty_set node))).
+Check (set_add eq_dec_node (Iri "x") (set_add eq_dec_node (Lit 5) (empty_set term))).
 
-Example example_in_graph : set_In (Lit 12) (set_add eq_dec_node (Lit 12) (set_add eq_dec_node (Lit 5) (empty_set node))).
+Example example_in_graph : set_In (Lit 12) (set_add eq_dec_node (Lit 12) (set_add eq_dec_node (Lit 5) (empty_set term))).
 Proof. simpl. destruct (eq_dec_node (Lit 12) (Lit 5)) eqn:E.
   - simpl. left. symmetry. apply e.
   - simpl. right. left. reflexivity.

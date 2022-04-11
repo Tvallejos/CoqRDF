@@ -5,30 +5,30 @@ Definition eqb_string (x y : string) : bool :=
   if string_dec x y then true else false.
 
  (* literals should be of Datatype type, is not important for the moment*)
-Inductive node : Type :=
+Inductive term : Type :=
   | Iri (id: string)
   | Lit (l : nat)
   | Bnode (name : string).
 
-Definition is_lit (n : node) : bool :=
+Definition is_lit (n : term) : bool :=
   (match n with
    | Lit _ => true
    | _ => false
    end).
 
-Definition is_iri (n : node) : bool :=
+Definition is_iri (n : term) : bool :=
   (match n with
    | Iri _ => true
    | _ => false
    end).
 
-Definition is_bnode (n : node) : bool :=
+Definition is_bnode (n : term) : bool :=
   (match n with
    | Bnode _ => true
    | _ => false
    end).
 
-Definition eqb_node (n1 n2 : node) : bool :=
+Definition eqb_node (n1 n2 : term) : bool :=
   (match n1, n2 with
    | (Iri id), (Iri id2) => eqb id id2
    | (Lit l),(Lit l2) => l =? l2

@@ -14,15 +14,15 @@ Proof. simpl. destruct (eq_dec_term (Lit 12) (Lit 5)) eqn:E.
   - simpl. right. left. reflexivity.
 Qed.
 
-Check (set_add eq_dec_triple (triple (Lit 1) (Lit 1) (Lit 1)) (empty_set trpl)): graph.
+Check mkRdfGraph (set_add eq_dec_triple (triple (Lit 1) (Lit 1) (Lit 1)) (empty_set trpl)): rdf_graph.
 
 (* image of mapping Const 2 of 1,1,1 => 2,1,2*)
-Compute (image (set_add eq_dec_triple (triple (Lit 1) (Lit 1) (Lit 1)) (empty_set trpl)) 
-  (fun _ => Lit 2)): graph.
+Compute (image (mkRdfGraph (set_add eq_dec_triple (triple (Lit 1) (Lit 1) (Lit 1)) (empty_set trpl)))
+  (fun _ => Lit 2)): rdf_graph.
 
 Example eqb_graph_test : 
-  eqb_graph (empty_set trpl) (empty_set trpl) = true.
+  eqb_graph (mkRdfGraph (empty_set trpl)) (mkRdfGraph (empty_set trpl)) = true.
 Proof. reflexivity. Qed.
 Example eqb_graph_test2 : 
-  eqb_graph (set_add eq_dec_triple (triple (Lit 5) (Lit 4) (Lit 3)) (empty_set trpl)) (empty_set trpl) = false.
+  eqb_graph (mkRdfGraph (set_add eq_dec_triple (triple (Lit 5) (Lit 4) (Lit 3)) (empty_set trpl))) (mkRdfGraph (empty_set trpl)) = false.
 Proof. reflexivity. Qed.

@@ -7,6 +7,25 @@ From Coq Require Import Bool.Bool.
 Inductive trpl : Type :=
   | triple (s p o : term).
 
+Record tripl_r : Set := mkTrpl
+                       { the_triple : trpl
+                      }. 
+
+
+Definition proj_subject (t : trpl) : term :=
+  match t with
+  | triple s _ _ => s
+  end.
+Definition proj_predicate (t : trpl) : term :=
+  match t with
+  | triple _ p _ => p
+  end.
+
+Definition proj_object (t : trpl) : term :=
+  match t with
+  | triple _ _ o => o
+  end.
+
 (* alias for triple of terms type *)
 (* Definition triple := (node * term * term)%type.  *)
 
@@ -54,3 +73,5 @@ Qed.
 Theorem eq_dec_triple : forall (t1 t2: trpl),
   {t1 = t2} + {t1 <> t2}.
 Proof. decide equality; try decide equality; try apply string_dec; decide equality. Qed.
+
+(* Notation "t.s" := ( f α) (at level 20, α at next level) : selection_scope. *)

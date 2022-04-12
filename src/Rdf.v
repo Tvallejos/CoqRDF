@@ -9,13 +9,21 @@ From RDF Require Import Triple.
 
 (* Not sure if its a good idea to have a set, 
  may be we want some order on the triples *)
-Definition graph := set trpl.
+Record rdf_graph := mkRdfGraph
+  {
+    graph : set trpl
+    (* subject_in_IL : forall t in rdf_graph,   *)
+    (* predicate_in_I : forall t in rdf_graph,   *)
+    (* object_in_IBL : forall t in rdf_graph,   *)
 
-Definition image (g : graph) (μ : term -> term) : graph :=
-  set_map eq_dec_triple (fun t => app_μ_to_triple μ t) g.
+  }.
 
-Definition eqb_graph (g g': graph) : bool :=
-  (match (set_diff eq_dec_triple g g') with
+
+Definition image (g : rdf_graph) (μ : term -> term) : rdf_graph :=
+  mkRdfGraph (set_map eq_dec_triple (app_μ_to_triple μ) (graph g)).
+
+Definition eqb_graph (g g': rdf_graph) : bool :=
+  (match (set_diff eq_dec_triple (graph g) (graph g')) with
    | nil => true
    | otherwirse => false
    end).
@@ -39,7 +47,7 @@ Definition proj_B (w : world) : set term :=
 Definition proj_IL (w : world) : set term:=
   set_union eq_dec_term (proj_I w) (proj_L w).
 
-Definition isomorphism (w : world) (g g': graph) :=
+Definition isomorphism (w : world) (g g': rdf_graph) :=
   exists μ : term -> term,
   relabelling (proj_IL w) (proj_B w) μ -> (image g μ) = g'.
 

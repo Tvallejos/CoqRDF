@@ -17,7 +17,7 @@ Inductive term : Type :=
   | Bnode (name : B).
 
 
-Definition is_lit (t : term ) :=
+Definition is_lit (t : term ): bool :=
   (match t with
    | Lit _ => true
    | _ => false

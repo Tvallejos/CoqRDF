@@ -49,7 +49,7 @@ Section Triple.
   Qed.
 
 
-  (* Canonical triple_eqType := EqType term (EqMixin triple_inj). *)
+  Canonical triple_eqType := EqType triple (EqMixin triple_eqP).
 
   (* alias for triple of terms type *)
   (* Definition triple := (node * term * term)%type.  *)

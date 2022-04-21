@@ -36,34 +36,42 @@ Section rdf.
     rewrite /eqb_rdf //=. elim g2 => [//|h t IHt]=> //=. rewrite eq_refl //=.
   Qed.
 
+  Definition relabelingG (g : seq triple) (μ : B -> B) : seq triple :=
+    map (fun t => relabeling t μ) g.
 
-  Definition relabeling (g : rdf_graph) (μ : B -> B) : seq triple :=
-    map (fun t => relabeling t μ) (graph g).
+  Lemma relabelingG_preserves_subject_in_IB : forall (g : seq triple) (μ : B -> B)
+                                               (siib : forall (t : triple), t \in g -> is_in_ib (subject t) == true),
+    forall (t : triple), t \in (relabelingG g μ) -> is_in_ib (subject t) == true.
+  Proof. move=> g μ all_s_in_ib t mem_tg. destruct t => //=.
+  Qed.
 
-  (* Definition eqb_graph (g g': rdf_graph) : bool := *)
-  (*   (match (set_diff eq_dec_triple (graph g) (graph g')) with *)
-  (*    | nil => true *)
-  (*    | otherwirse => false *)
-  (*    end). *)
+  Lemma relabelingG_preserves_predicate_in_I : forall (g : seq triple) (μ : B -> B)
+                                                (pii : forall (t : triple), t \in g -> is_in_i (predicate t) == true),
+    forall (t : triple), t \in (relabelingG g μ) -> is_in_i (predicate t) == true.
+  Proof. move=> g μ all_s_in_ib t mem_tg. destruct t => //=.
+  Qed.
 
-  (* Inductive world : Type := *)
-  (* | res (I L B : set term) (P : set_inter eq_dec_term I (set_inter eq_dec_term L B) = empty_set term). *)
+  Lemma relabelingG_preserves_object_in_IBL : forall (g : seq triple) (μ : B -> B)
+                                               (oiibl : forall (t : triple), t \in g -> is_in_ibl (object t) == true),
+    forall (t : triple), t \in (relabelingG g μ) -> is_in_ibl (object t) == true.
+  Proof. move=> g μ all_s_in_ib t mem_tg. destruct t => //=.
+  Qed.
 
-  (* Definition proj_I (w : world) : set term := *)
-  (*   match w with *)
-  (*   | res i _ _ _ => i *)
-  (*   end. *)
-  (* Definition proj_L (w : world) : set term := *)
-  (*   match w with *)
-  (*   | res _ l _ _ => l *)
-  (*   end. *)
+  Definition relabeling (g : rdf_graph) (μ : B -> B) : rdf_graph :=
+    let (g',siib,pii,oiibl) := g in
+    {|
+      graph := relabelingG g' μ;
+      subject_in_IB := relabelingG_preserves_subject_in_IB siib;
+      predicate_in_I := relabelingG_preserves_predicate_in_I pii;
+      object_in_IBL := relabelingG_preserves_object_in_IBL oiibl
+    |}.
 
-  (* Definition proj_B (w : world) : set term := *)
-  (*   match w with *)
-  (*   | res _ _ b _ => b *)
-  (*   end. *)
-  (* Definition proj_IL (w : world) : set term:= *)
-  (*   set_union eq_dec_term (proj_I w) (proj_L w). *)
+  Definition is_iso (g1 g2 : rdf_graph) (μ : B -> B) : bool :=
+    eqb_rdf g1 (relabeling g2 μ) && eqb_rdf (relabeling g1 μ) g2.
+
+  Definition iso (g1 g2 : rdf_graph):= exists (μ : B -> B), is_iso g1 g2 μ == true.
+
+
 
   (* Definition isomorphism (w : world) (g g': rdf_graph) := *)
   (*   exists μ : term -> term, *)

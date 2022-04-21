@@ -4,72 +4,60 @@ Unset Strict Implicit.
 Unset Printing Implicit Defensive.
 From RDF Require Import Term.
 
-
 Section Triple.
-
   Variable I B L: eqType.
-  (* Notation "t.s" := (proj_subject t) (at level X) (* which scope? *) *)
   Let term:= (term I B L).
   Let is_iri:= (@is_iri I B L).
   Let is_bnode:= (@is_bnode I B L).
   Let is_lit:= (@is_lit I B L).
 
-  (* Inductive trpl : Type := *)
-  (* | triple (s p o : term). *)
-
-  (* Definition proj_subject (t : trpl) : term := *)
-  (*   match t with *)
-  (*   | triple s _ _ => s *)
-  (*   end. *)
-
-  (* Definition proj_predicate (t : trpl) : term := *)
-  (*   match t with *)
-  (*   | triple _ p _ => p *)
-  (*   end. *)
-
-  (* Definition proj_object (t : trpl) : term := *)
-  (*   match t with *)
-  (*   | triple _ _ o => o *)
-  (*   end. *)
-
-  (* Definition part_in (t : trpl) (part : trpl -> term) (is_in : term -> bool) : bool := *)
-  (*   is_in (part t). *)
-
-  (* Definition subject_in_ib (t : trpl) : bool := *)
-  (*   part_in t proj_subject (fun trm => is_iri trm || is_bnode trm). *)
-
-  (* Definition predicate_in_i (t : trpl) : bool := *)
-  (*   part_in t proj_predicate is_iri. *)
-
-  (* Definition object_in_ibl (t : trpl) : bool := *)
-  (*   part_in t proj_object (fun trm => is_iri trm || is_bnode trm || is_lit trm). *)
-
   Record triple := mkTriple { subject : term
-                           ; predicate : term
-                           ; object: term
-                           ; subject_in_IB: is_iri subject || is_bnode subject == true
-                           ; predicate_in_I: is_iri predicate == true
-                           ; object_in_IBL: is_iri object || is_bnode object || is_lit object == true
-                        }. 
+                            ; predicate : term
+                            ; object: term
+                            ; subject_in_IB: is_in_ib subject == true
+                            ; predicate_in_I: is_in_i predicate == true
+                            ; object_in_IBL: is_in_ibl object == true
+                    }. 
 
-  Lemma tripl_inj : forall (t1 t2: triple),
-      subject t1 = subject t2 ->
-      predicate t1 = predicate t2 ->
-      object t1 = object t2 ->
+  Lemma triple_inj : forall (t1 t2: triple),
+      subject t1 == subject t2 ->
+      predicate t1 == predicate t2 ->
+      object t1 == object t2 ->
       t1 = t2.
   Proof. move=> [s1 p1 o1 sin1 pin1 oin1] [s2 p2 o2 sin2 pin2 oin2] /= seq peq oeq.
+         (* apply seq in sin1. apply (eq_irrelevance sin1 sin2). *)
+         (* congr sin1 sin2. *)
+         (* elim: s1 s2=> [i1 b1 l1] [i2 b2 l2]. *)
+         (* rewrite (bool_irrelevance sin1 sin2). *)
          (* rewrite /subject /predicate /object /=. *)
          (* rewrite seq. *)
          (* apply: val. rewrite seq. (eq_irrelevance bool). *)
   Admitted.
 
+  Definition eqb_triple  (t1 t2 : triple) : bool :=
+    ((subject t1) == (subject t2)) &&
+      ((predicate t1) == (predicate t2)) &&
+      ((object t1) == (object t2)).
+
+  Lemma triple_eqP : Equality.axiom eqb_triple.
+  Proof.
+    rewrite /Equality.axiom => x y.
+    apply: (iffP idP) => //= [| ->]; rewrite /eqb_triple; case: x y=> [s1 p1 o1 sin1 pin1 oin1] [s2 p2 o2 sin2 pin2 oin2] //=.
+    case/andP; case/andP=> /eqP eq_s/eqP eq_p/eqP eq_o.
+    apply: triple_inj; move=> //= {sin1 sin2 pin1 pin2 oin1 oin2}; apply /eqP; by [].
+    rewrite !eq_refl //.
+  Qed.
+
+
+  (* Canonical triple_eqType := EqType term (EqMixin triple_inj). *)
+
   (* alias for triple of terms type *)
   (* Definition triple := (node * term * term)%type.  *)
 
-  (*
+(*
     Inductive rdf : Type :=
     | graph (triples : list triple).
-  *)
+ *)
 
   (* Definition image (t : triple) (μ : B -> B) : triple := *)
   (*   let (s,p,o,sin,pin,oin) := t in *)

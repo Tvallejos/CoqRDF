@@ -21,13 +21,23 @@ Section rdf.
   Definition eqb_rdf (g1 g2 : rdf_graph) : bool :=
     eqseq (graph g1) (graph g2).
 
+  Lemma eq_ir : forall (g1 g2: seq triple)
+                  (geq : g1 = g2)
+                  (p : triple -> bool)
+                  (fallt : forall (t : triple) (ting1 : t \in g1), p t == true),
+    forall (t : triple) (ting2 : t \in g2), p t == true.
+  Proof. move=> g1 g2 eqg p fallt. by rewrite -eqg.
+  Qed.
+
+
   Lemma graph_inj : forall (g1 g2: rdf_graph),
       graph g1 == graph g2 ->
       g1 = g2.
   Proof. move=> [g1 sib1 pi1 oibl1] [g2 sib2 pi2 oibl2] /= /eqP geq.
+         have: sib2 = eq_ir geq sib1.
+         (* apply eq_irrelevance. *)
   Admitted.
   
-
   Definition rdf_eqP : Equality.axiom eqb_rdf.
   Proof.
     rewrite /Equality.axiom => x y.
@@ -71,11 +81,10 @@ Section rdf.
 
   Definition iso (g1 g2 : rdf_graph):= exists (μ : B -> B), is_iso g1 g2 μ == true.
 
+  (* Lemma iso_refl : forall (g : rdf_graph), iso g g. *)
+  (* Proof. rewrite /iso /is_iso /relabeling //=. exists id. *)
 
 
-  (* Definition isomorphism (w : world) (g g': rdf_graph) := *)
-  (*   exists μ : term -> term, *)
-  (*     relabelling (proj_IL w) (proj_B w) μ -> (image g μ) = g'. *)
 
 End rdf.
 

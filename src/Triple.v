@@ -19,20 +19,25 @@ Section Triple.
                             ; object_in_IBL: is_in_ibl object == true
                     }. 
 
+  Lemma eq_ir : forall (t1 t2 : term) (eqt : t1 = t2) (p: term -> bool),
+      (p t1 == true) -> (p t2 == true).
+  Proof. move=> t1 t2 eqt p. by rewrite eqt.
+  Qed.
+
   Lemma triple_inj : forall (t1 t2: triple),
-      subject t1 == subject t2 ->
-      predicate t1 == predicate t2 ->
-      object t1 == object t2 ->
+      subject t1 = subject t2 ->
+      predicate t1 = predicate t2 ->
+      object t1 = object t2 ->
       t1 = t2.
-  Proof. move=> [s1 p1 o1 sin1 pin1 oin1] [s2 p2 o2 sin2 pin2 oin2] /= seq peq oeq.
-         (* apply seq in sin1. apply (eq_irrelevance sin1 sin2). *)
-         (* congr sin1 sin2. *)
-         (* elim: s1 s2=> [i1 b1 l1] [i2 b2 l2]. *)
-         (* rewrite (bool_irrelevance sin1 sin2). *)
-         (* rewrite /subject /predicate /object /=. *)
-         (* rewrite seq. *)
-         (* apply: val. rewrite seq. (eq_irrelevance bool). *)
-  Admitted.
+  Proof. move=> [s1 p1 o1 sin1 pin1 oin1] [s2 p2 o2 sin2 pin2 oin2] /= seq peq oeq. 
+         have: sin2 = (eq_ir seq sin1).  apply eq_irrelevance.
+         move => eqsin. rewrite eqsin. erewrite <-seq.
+         have: pin2 = (eq_ir peq pin1). apply eq_irrelevance.
+         move => eqpin. rewrite eqpin. erewrite <-peq.
+         have: oin2 = (eq_ir oeq oin1). apply eq_irrelevance.
+         move => eqoin. rewrite eqoin. erewrite <-oeq.
+         move => //=. f_equal; apply eq_irrelevance.
+  Qed.
 
   Definition eqb_triple  (t1 t2 : triple) : bool :=
     ((subject t1) == (subject t2)) &&

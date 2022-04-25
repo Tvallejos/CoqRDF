@@ -13,9 +13,9 @@ Section rdf.
 
   Record rdf_graph := mkRdfGraph {
                          graph : seq triple
-                       ; subject_in_IB : forall (t : triple), t \in graph -> is_in_ib (subject t) == true
-                       ; predicate_in_I : forall (t : triple), t \in graph -> is_in_i (predicate t) == true
-                       ; object_in_IBL : forall (t : triple), t \in graph -> is_in_ibl (object t) == true
+                       ; subject_in_IB : forall (t : triple), t \in graph -> is_in_ib (subject t)
+                       ; predicate_in_I : forall (t : triple), t \in graph -> is_in_i (predicate t)
+                       ; object_in_IBL : forall (t : triple), t \in graph -> is_in_ibl (object t)
                        }.
 
   Definition eqb_rdf (g1 g2 : rdf_graph) : bool :=
@@ -24,9 +24,9 @@ Section rdf.
   Lemma eq_ir : forall (g1 g2: seq triple)
                   (geq : g1 = g2)
                   (p : triple -> bool)
-                  (fallt : forall (t : triple) (ting1 : t \in g1), p t == true),
-    forall (t : triple) (ting2 : t \in g2), p t == true.
-  Proof. move=> g1 g2 eqg p fallt. by rewrite -eqg.
+                  (fallt : forall (t : triple) (ting1 : t \in g1), p t),
+    forall (t : triple) (ting2 : t \in g2), p t.
+  Proof. move=> g1 g2 eqg p fallt. by [rewrite -eqg].
   Qed.
 
 
@@ -50,20 +50,20 @@ Section rdf.
     map (fun t => relabeling t μ) g.
 
   Lemma relabelingG_preserves_subject_in_IB : forall (g : seq triple) (μ : B -> B)
-                                               (siib : forall (t : triple), t \in g -> is_in_ib (subject t) == true),
-    forall (t : triple), t \in (relabelingG g μ) -> is_in_ib (subject t) == true.
+                                               (siib : forall (t : triple), t \in g -> is_in_ib (subject t)),
+    forall (t : triple), t \in (relabelingG g μ) -> is_in_ib (subject t).
   Proof. move=> g μ all_s_in_ib t mem_tg. destruct t => //=.
   Qed.
 
   Lemma relabelingG_preserves_predicate_in_I : forall (g : seq triple) (μ : B -> B)
-                                                (pii : forall (t : triple), t \in g -> is_in_i (predicate t) == true),
-    forall (t : triple), t \in (relabelingG g μ) -> is_in_i (predicate t) == true.
+                                                (pii : forall (t : triple), t \in g -> is_in_i (predicate t)),
+    forall (t : triple), t \in (relabelingG g μ) -> is_in_i (predicate t).
   Proof. move=> g μ all_s_in_ib t mem_tg. destruct t => //=.
   Qed.
 
   Lemma relabelingG_preserves_object_in_IBL : forall (g : seq triple) (μ : B -> B)
-                                               (oiibl : forall (t : triple), t \in g -> is_in_ibl (object t) == true),
-    forall (t : triple), t \in (relabelingG g μ) -> is_in_ibl (object t) == true.
+                                               (oiibl : forall (t : triple), t \in g -> is_in_ibl (object t)),
+    forall (t : triple), t \in (relabelingG g μ) -> is_in_ibl (object t).
   Proof. move=> g μ all_s_in_ib t mem_tg. destruct t => //=.
   Qed.
 
@@ -79,7 +79,7 @@ Section rdf.
   Definition is_iso (g1 g2 : rdf_graph) (μ : B -> B) : bool :=
     eqb_rdf g1 (relabeling g2 μ) && eqb_rdf (relabeling g1 μ) g2.
 
-  Definition iso (g1 g2 : rdf_graph):= exists (μ : B -> B), is_iso g1 g2 μ == true.
+  Definition iso (g1 g2 : rdf_graph):= exists (μ : B -> B), is_iso g1 g2 μ.
 
   (* Lemma iso_refl : forall (g : rdf_graph), iso g g. *)
   (* Proof. rewrite /iso /is_iso /relabeling //=. exists id. *)

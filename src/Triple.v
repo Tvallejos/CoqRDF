@@ -14,13 +14,13 @@ Section Triple.
   Record triple := mkTriple { subject : term
                             ; predicate : term
                             ; object: term
-                            ; subject_in_IB: is_in_ib subject == true
-                            ; predicate_in_I: is_in_i predicate == true
-                            ; object_in_IBL: is_in_ibl object == true
+                            ; subject_in_IB: is_in_ib subject
+                            ; predicate_in_I: is_in_i predicate
+                            ; object_in_IBL: is_in_ibl object
                     }. 
 
   Lemma eq_ir : forall (t1 t2 : term) (eqt : t1 = t2) (p: term -> bool),
-      (p t1 == true) -> (p t2 == true).
+      (p t1) -> (p t2).
   Proof. move=> t1 t2 eqt p. by rewrite eqt.
   Qed.
 
@@ -56,16 +56,16 @@ Section Triple.
 
   Canonical triple_eqType := EqType triple (EqMixin triple_eqP).
 
-  Lemma relabeling_preserves_is_in_ib : forall (t : term) (p: is_in_ib t == true) (μ : B -> B),
-      is_in_ib (relabeling t μ) == true.
+  Lemma relabeling_preserves_is_in_ib : forall (t : term) (p: is_in_ib t) (μ : B -> B),
+      is_in_ib (relabeling t μ).
   Proof. move=> t. case t; by [].
   Qed.
-  Lemma relabeling_preserves_is_in_i : forall (t : term) (p: is_in_i t == true) (μ : B -> B),
-      is_in_i (relabeling t μ) == true.
+  Lemma relabeling_preserves_is_in_i : forall (t : term) (p: is_in_i t) (μ : B -> B),
+      is_in_i (relabeling t μ).
   Proof. move=> t. case t; by [].
   Qed.
-  Lemma relabeling_preserves_is_in_ibl : forall (t : term) (p: is_in_ibl t == true) (μ : B -> B),
-      is_in_ibl (relabeling t μ) == true.
+  Lemma relabeling_preserves_is_in_ibl : forall (t : term) (p: is_in_ibl t) (μ : B -> B),
+      is_in_ibl (relabeling t μ).
   Proof. move=> t. case t; by [].
   Qed.
   

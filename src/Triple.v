@@ -56,23 +56,25 @@ Section Triple.
 
   Canonical triple_eqType := EqType triple (EqMixin triple_eqP).
 
-  Lemma relabeling_preserves_is_in_ib : forall (t : term) (p: is_in_ib t) (μ : B -> B),
-      is_in_ib (relabeling t μ).
+  Lemma relabeling_preserves_is_in_ib : forall (t : term) (μ : B -> B),
+      is_in_ib t <-> is_in_ib (relabeling t μ).
   Proof. move=> t. case t; by [].
   Qed.
-  Lemma relabeling_preserves_is_in_i : forall (t : term) (p: is_in_i t) (μ : B -> B),
-      is_in_i (relabeling t μ).
+
+  Lemma relabeling_preserves_is_in_i : forall (t : term) (μ : B -> B),
+      is_in_i t <-> is_in_i (relabeling t μ).
   Proof. move=> t. case t; by [].
   Qed.
-  Lemma relabeling_preserves_is_in_ibl : forall (t : term) (p: is_in_ibl t) (μ : B -> B),
-      is_in_ibl (relabeling t μ).
+
+  Lemma relabeling_preserves_is_in_ibl : forall (t : term) (μ : B -> B),
+      is_in_ibl t <-> is_in_ibl (relabeling t μ).
   Proof. move=> t. case t; by [].
   Qed.
   
   Definition relabeling (t : triple) (μ : B -> B) : triple :=
     let (s,p,o,sin,pin,oin) := t in
-    mkTriple (relabeling_preserves_is_in_ib sin μ)
-             (relabeling_preserves_is_in_i pin μ)
-             (relabeling_preserves_is_in_ibl oin μ).
+    mkTriple (iffLR (relabeling_preserves_is_in_ib s μ) sin)
+             (iffLR (relabeling_preserves_is_in_i p μ) pin)
+             (iffLR (relabeling_preserves_is_in_ibl o μ) oin).
 
 End Triple.

@@ -85,10 +85,25 @@ Section Term.
 
   Canonical term_eqType := EqType term (EqMixin term_eqP).
 
-  Definition relabeling (t : term) (μ : B -> B) : term :=
+  Definition relabeling (μ : B -> B) (t : term) : term :=
     match t with
     | Bnode name => Bnode (μ name)
     | _ => t
     end.
+
+  Lemma relabel_id (t: term) : relabeling id t = t.
+  Proof. by case t. Qed.
+
+  Lemma relabel_comp (t: term) (μ1 μ2 : B -> B) : relabeling (μ2 \o μ1) t = (relabeling μ2 \o (relabeling μ1)) t.
+  Proof. by case t. Qed.
+
+  Lemma relabel_id_p_I (t : term) (p: is_iri t) : is_iri (relabeling id t).
+  Proof. by rewrite relabel_id p. Qed.
+
+  Lemma relabel_id_p_L (t : term) (p: is_lit t) : is_lit (relabeling id t).
+  Proof. by rewrite relabel_id p. Qed.
+
+  Lemma relabel_id_p_B (t : term) (p: is_iri t) : is_iri (relabeling id t).
+  Proof. by rewrite relabel_id p. Qed.
 
 End Term.

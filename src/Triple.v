@@ -56,25 +56,32 @@ Section Triple.
 
   Canonical triple_eqType := EqType triple (EqMixin triple_eqP).
 
-  Lemma relabeling_preserves_is_in_ib : forall (t : term) (μ : B -> B),
-      is_in_ib t <-> is_in_ib (relabeling t μ).
-  Proof. move=> t. case t; by [].
-  Qed.
+  Lemma relabeling_preserves_is_in_ib (μ : B -> B) (t : term) :
+    is_in_ib t <-> is_in_ib (relabeling μ t).
+  Proof. by case t. Qed.
 
-  Lemma relabeling_preserves_is_in_i : forall (t : term) (μ : B -> B),
-      is_in_i t <-> is_in_i (relabeling t μ).
-  Proof. move=> t. case t; by [].
-  Qed.
+  (* Corollary id_preserves_is_in_ib ()  : type. *)
+  (* Corollary relabeling_by_id : type. *)
 
-  Lemma relabeling_preserves_is_in_ibl : forall (t : term) (μ : B -> B),
-      is_in_ibl t <-> is_in_ibl (relabeling t μ).
-  Proof. move=> t. case t; by [].
-  Qed.
+  Lemma relabeling_preserves_is_in_i (μ : B -> B) (t : term) :
+    is_in_i t <-> is_in_i (relabeling μ t).
+  Proof. by case t. Qed.
+
+  Lemma relabeling_preserves_is_in_ibl (μ : B -> B) (t : term) :
+    is_in_ibl t <-> is_in_ibl (relabeling μ t).
+  Proof. by case t. Qed.
   
-  Definition relabeling (t : triple) (μ : B -> B) : triple :=
+  Definition relabeling (μ : B -> B) (t : triple) : triple :=
     let (s,p,o,sin,pin,oin) := t in
-    mkTriple (iffLR (relabeling_preserves_is_in_ib s μ) sin)
-             (iffLR (relabeling_preserves_is_in_i p μ) pin)
-             (iffLR (relabeling_preserves_is_in_ibl o μ) oin).
+    mkTriple ((iffLR (relabeling_preserves_is_in_ib μ s)) sin)
+             ((iffLR (relabeling_preserves_is_in_i μ p)) pin)
+             ((iffLR (relabeling_preserves_is_in_ibl μ o)) oin).
+
+  Lemma relabeling_id (t : triple) : relabeling id t = t.
+  Proof.
+    case t => [s p o sin pin oin] /=. apply triple_inj => /=; apply relabel_id. Qed.
+
+  Lemma relabeling_comp (μ1 μ2 : B -> B) (t : triple) : relabeling (μ2 \o μ1) t = (relabeling μ2 \o (relabeling μ1)) t.
+  Proof. case t=> [s p o sin pin oin] /=. apply triple_inj=> /=; by rewrite relabel_comp. Qed.
 
 End Triple.

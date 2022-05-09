@@ -5,6 +5,8 @@ Unset Printing Implicit Defensive.
 From RDF Require Import Term.
 (* From RDF Require Import Maps. *)
 From RDF Require Import Triple.
+From Coq Require Import Logic.FunctionalExtensionality.
+From Coq Require Import Logic.ExtensionalityFacts.
 
 (* Inductive existT (P: A -> Prop) : Type := ex : forall x: A, P x -> existT P. *)
 Definition Bijective {A B : Type} (f : A->B) :=
@@ -157,18 +159,15 @@ Section rdf.
                   apply /eqP;
                   try (case g2=> [ gs1 _ _ _ ] /=); try (case g1=> [gs1 _ _ _] /=);
                   elim gs1=> [ // | h t IHt] /=; rewrite IHt; f_equal; case h=> s p o sin pin oin; apply triple_inj; rewrite /=;
-                                                                                                                           case s=> id /=; case p=> pred; case o=> obj /=; try by []; try by rewrite cL.
+                  case s=> id /=; case p=> pred; case o=> obj /=; try by []; try by rewrite cL.
     Qed.
 
   Lemma iso_trans (g1 g2 g3: rdf_graph) : iso g1 g2 -> iso g2 g3 -> iso g1 g3.
-  Proof. Abort.
-         (*  rewrite /iso /is_iso => [[μ12] /andP [/eqP  eqb12 /eqP eqb21]] [μ23] /andP [/eqP eqb23 /eqP eqb32]. *)
-         (* exists (μ23 \o μ12). apply /andP. split. *)
-         (* apply /eqP. rewrite -relabeling_comp /=. *)
-         (* rewrite eqb12. have g2rel: g2 = (relabeling μ23 g3). apply graph_inj. apply /eqP. apply eqb23. *)
-         (* rewrite g2rel. *)
-         (* need bijective μ!!!*)
-  (* Abort. *)
+  Proof. rewrite /iso /is_iso=> [[μ1 [bij1 /graph_inj eqb1]] [μ2 [bij2 /graph_inj eqb2]]].
+         exists (μ1 \o μ2). split. 
+         rewrite /=. apply bij_comp. apply bij1. apply bij2.
+         rewrite -relabeling_comp /= -eqb2 -eqb1. by apply eqb_rdf_refl.
+ Qed.
 
 End rdf.
 

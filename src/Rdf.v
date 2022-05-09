@@ -6,6 +6,10 @@ From RDF Require Import Term.
 (* From RDF Require Import Maps. *)
 From RDF Require Import Triple.
 
+(* Inductive existT (P: A -> Prop) : Type := ex : forall x: A, P x -> existT P. *)
+Definition Bijective {A B : Type} (f : A->B) :=
+  {g : B -> A & cancel f g /\ cancel g f}.
+
 Section rdf.
   Variable I B L: eqType.
   Let term:= (term I B L).
@@ -56,15 +60,31 @@ Section rdf.
 
   Lemma relabelingG_id (g : seq triple) : relabelingG id g = g.
   Proof. rewrite /relabelingG. apply /eqP. elim g => [//|h t /eqP iht] /=. rewrite relabeling_id. by rewrite iht. Qed.
-  
-  (* map_comp: *)
-  (*   forall [T1 T2 T3 : Type] (f1 : T2 -> T3) (f2 : T1 -> T2) (s : seq T1), *)
-  (*   [seq (f1 \o f2) i | i <- s] = [seq f1 i | i <- [seq f2 i | i <- s]] *)
 
-  Lemma relabelingG_comp (g : seq triple) (μ12 μ23 : B -> B) :
+  Lemma inv_bij {T U : Type} (f : T -> U) (bij: bijective f) :
+    (exists g: U->T, exists f:T->U, (forall x, g (f x) = x) /\ (forall y, f (g y) = y)).
+  Proof.
+    case: bij=> g cL cR. exists g. exists f. split. apply cL. apply cR. Qed.
+
+  Definition inv {T U : Type} (f : T->U) (bij: Bijective f) : (U->T).
+  Proof. destruct bij. apply x. Defined.
+
+  Lemma relabelingG_comp_simpl (g : seq triple) (μ12 μ23 : B -> B) :
     relabelingG (μ23 \o μ12) g = (relabelingG μ23 \o (relabelingG μ12)) g.
   Proof. rewrite /relabelingG /=. elim g => [//|h t iht] /=. rewrite relabeling_comp /=. f_equal; apply iht.
   Qed.
+
+  Lemma relabeling_comp_P (g1 g2 : seq triple) (eqb : g1 = g2) (μ : B->B) :
+    relabelingG μ g1 = relabelingG μ g2. by rewrite eqb. Qed.
+
+  Lemma relabelingG_comp (μ1 μ2 : B -> B) (g : seq triple) : relabelingG μ1 (relabelingG μ2 g) = (relabelingG μ1 \o (relabelingG μ2)) g.
+    Proof. by []. Qed. 
+  (* move to relabel? *)
+  Lemma relabelingG_bij (g1 g2: seq triple) (μ : B->B) (bij: Bijective μ) (eqb : g1 = (relabelingG μ g2)) : relabelingG (inv bij) g1 = g2.
+  Proof. case bij=> μ1 [cL cR]. rewrite /inv /=. rewrite eqb.
+         rewrite relabelingG_comp_simpl -relabelingG_comp.
+         elim g2=> [//| h t IHt] /=. rewrite IHt. f_equal. case h=> s p o sin pin oin. rewrite /relabeling /Term.relabeling /=. apply triple_inj;
+           rewrite /=; case s; case p; case o => s1 p1 o1 ;repeat try by []; repeat try by rewrite cL. Qed.
 
   Lemma relabelingG_preserves_subject_in_IB (g : seq triple) (μ : B -> B) :
     all (fun t => is_in_ib (subject t)) g ->
@@ -100,32 +120,55 @@ Section rdf.
   Lemma relabeling_comp (g : rdf_graph) (μ12 μ23: B -> B) :
     (relabeling μ23 \o (relabeling μ12)) g = relabeling (μ23 \o μ12) g.
   Proof. apply graph_inj. rewrite /eqb_rdf. apply /eqP.
-         case g=> g' sin pin oin /=. by rewrite relabelingG_comp.
+         case g=> g' sin pin oin /=. by rewrite relabelingG_comp_simpl.
   Qed.
 
   Definition is_iso (g1 g2 : rdf_graph) (μ : B -> B) :=
-    eqb_rdf g1 (relabeling μ g2) && eqb_rdf (relabeling μ g1) g2.
+    (bijective μ) /\ eqb_rdf g1 (relabeling μ g2).
 
   Definition iso (g1 g2 : rdf_graph):= exists (μ : B -> B),
-      (* (bijective μ) -> *)
       is_iso g1 g2 μ.
 
+
   Lemma iso_refl (g : rdf_graph) : iso g g.
-  Proof. rewrite /iso /is_iso. exists id. by rewrite relabeling_id eqb_rdf_refl.
+  Proof. rewrite /iso /is_iso; exists id; split.
+         exists id => //.
+         by rewrite relabeling_id eqb_rdf_refl.
   Qed.
 
-  Lemma iso_symm (g1 g2 : rdf_graph) : iso g1 g2 <-> iso g2 g1.
-  Proof. rewrite /iso /is_iso. split=> [[μ] /andP [liso riso]|[μ] /andP [liso riso]];
-                                      exists μ; apply /andP; split; rewrite eqb_rdf_symm; try apply riso; apply liso. Qed.
+  (* Definition inv (bij : Type) : bijective : bijective f := *)
+
+  (*    Inductive ubn_geq_spec m : nat -> Type := *)
+  (*   UbnGeq n of n <= m : ubn_geq_spec m n. *)
+  (* Lemma ubnPgeq m : ubn_geq_spec m m. *)
+  (* Proof. by []. Qed. *)
+
+  Lemma relabeling_comp_simpl (μ1 μ2 : B -> B) (g : rdf_graph) : relabeling μ1 (relabeling μ2 g) = relabeling (μ1 \o μ2) g.
+    Proof. by rewrite -relabeling_comp. Qed.
+
+    Lemma iso_symm (g1 g2 : rdf_graph) :
+      iso g1 g2 <-> iso g2 g1.
+    Proof. rewrite /iso /is_iso.
+           split=>
+                  [[μ [[μ1 cL cR] eqb]] | [μ [[μ1 cL cR] eqb]]]; 
+                  have bij: bijective μ; exists μ1; try apply cL; try apply cR;
+                  split; try (exists μ; try apply cR; try apply cL);
+                  rewrite eqb_rdf_symm; apply graph_inj in eqb; subst; rewrite relabeling_comp_simpl;
+                  apply /eqP;
+                  try (case g2=> [ gs1 _ _ _ ] /=); try (case g1=> [gs1 _ _ _] /=);
+                  elim gs1=> [ // | h t IHt] /=; rewrite IHt; f_equal; case h=> s p o sin pin oin; apply triple_inj; rewrite /=;
+                                                                                                                           case s=> id /=; case p=> pred; case o=> obj /=; try by []; try by rewrite cL.
+    Qed.
 
   Lemma iso_trans (g1 g2 g3: rdf_graph) : iso g1 g2 -> iso g2 g3 -> iso g1 g3.
-  Proof. rewrite /iso /is_iso => [[μ12] /andP [/eqP  eqb12 /eqP eqb21]] [μ23] /andP [/eqP eqb23 /eqP eqb32].
-         exists (μ23 \o μ12). apply /andP. split.
-         apply /eqP. rewrite -relabeling_comp /=.
-         rewrite eqb12. have g2rel: g2 = (relabeling μ23 g3). apply graph_inj. apply /eqP. apply eqb23.
-         rewrite g2rel.
+  Proof. Abort.
+         (*  rewrite /iso /is_iso => [[μ12] /andP [/eqP  eqb12 /eqP eqb21]] [μ23] /andP [/eqP eqb23 /eqP eqb32]. *)
+         (* exists (μ23 \o μ12). apply /andP. split. *)
+         (* apply /eqP. rewrite -relabeling_comp /=. *)
+         (* rewrite eqb12. have g2rel: g2 = (relabeling μ23 g3). apply graph_inj. apply /eqP. apply eqb23. *)
+         (* rewrite g2rel. *)
          (* need bijective μ!!!*)
-  Abort.
+  (* Abort. *)
 
 End rdf.
 

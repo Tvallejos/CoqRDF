@@ -145,31 +145,31 @@ Section rdf.
   (* Lemma ubnPgeq m : ubn_geq_spec m m. *)
   (* Proof. by []. Qed. *)
 
-  Lemma relabeling_comp_simpl (μ1 μ2 : B -> B) (g : rdf_graph) : relabeling μ1 (relabeling μ2 g) = relabeling (μ1 \o μ2) g.
-    Proof. by rewrite -relabeling_comp. Qed.
-
-  Lemma bijective_eqb_rdf mu g1 g2 : bijective mu -> eqb_rdf g1 (relabeling mu g2) ->  eqb_rdf g2 (relabeling mu g1).
+  Lemma relabeling_ext  (μ1 μ2 : B -> B) :  μ1 =1 μ2 -> forall g, relabeling μ1 g = relabeling μ2 g.
   Proof.
   Admitted.
   
+  Lemma relabeling_comp_simpl (μ1 μ2 : B -> B) (g : rdf_graph) : relabeling μ1 (relabeling μ2 g) = relabeling (μ1 \o μ2) g.
+    Proof. by rewrite -relabeling_comp. Qed.
+
+  Lemma bijective_eqb_rdf mu nu g1 g2 : cancel mu nu -> eqb_rdf g1 (relabeling mu g2) ->  eqb_rdf g2 (relabeling nu g1).
+  Proof.
+  move=> cancel_mu_nu /graph_inj->.
+  rewrite relabeling_comp_simpl.
+  have /relabeling_ext-> : nu \o mu =1 id by [].
+  rewrite relabeling_id; exact: eqb_rdf_refl.
+  Qed.  
+
   Lemma iso_symm (g1 g2 : rdf_graph) :
       iso g1 g2 <-> iso g2 g1.
   Proof.
     rewrite /iso /is_iso.
-    split; case=> mu [mu_bij heqb_rdf]; exists mu; split=> //; exact: bijective_eqb_rdf.
-            
-           (* split=> *)
-           (*        [[μ [[μ1 cL cR] eqb]] | [μ [[μ1 cL cR] eqb]]];  *)
-           (*        have bij: bijective μ; exists μ1; try apply cL; try apply cR; *)
-           (*        split; try (exists μ; try apply cR; try apply cL); *)
-           (*        rewrite eqb_rdf_symm; apply graph_inj in eqb; subst; rewrite relabeling_comp_simpl; *)
-           (*        apply /eqP; *)
-           (*        try (case g2=> [ gs1 _ _ _ ] /=); try (case g1=> [gs1 _ _ _] /=); *)
-           (*        elim gs1=> [ // | h t IHt] /=; rewrite IHt; f_equal; case h=> s p o sin pin oin; apply triple_inj; rewrite /=; *)
-           (*        case s=> id /=; case p=> pred; case o=> obj /=; try by []; try by rewrite cL. *)
-    Qed.
+    split; case=> mu [mu_bij heqb_rdf]; case: (mu_bij)=> [nu h1 h2];
+          (exists nu; split; [exact: bij_can_bij h1 | exact: bijective_eqb_rdf heqb_rdf]).
+  Qed. 
 
-  Lemma iso_trans (g1 g2 g3: rdf_graph) : iso g1 g2 -> iso g2 g3 -> iso g1 g3.
+
+ Lemma iso_trans (g1 g2 g3: rdf_graph) : iso g1 g2 -> iso g2 g3 -> iso g1 g3.
   Proof. rewrite /iso /is_iso=> [[μ1 [bij1 /graph_inj eqb1]] [μ2 [bij2 /graph_inj eqb2]]].
          exists (μ1 \o μ2). split. 
          rewrite /=. apply bij_comp. apply bij1. apply bij2.

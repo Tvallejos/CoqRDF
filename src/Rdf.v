@@ -148,18 +148,25 @@ Section rdf.
   Lemma relabeling_comp_simpl (μ1 μ2 : B -> B) (g : rdf_graph) : relabeling μ1 (relabeling μ2 g) = relabeling (μ1 \o μ2) g.
     Proof. by rewrite -relabeling_comp. Qed.
 
-    Lemma iso_symm (g1 g2 : rdf_graph) :
+  Lemma bijective_eqb_rdf mu g1 g2 : bijective mu -> eqb_rdf g1 (relabeling mu g2) ->  eqb_rdf g2 (relabeling mu g1).
+  Proof.
+  Admitted.
+  
+  Lemma iso_symm (g1 g2 : rdf_graph) :
       iso g1 g2 <-> iso g2 g1.
-    Proof. rewrite /iso /is_iso.
-           split=>
-                  [[μ [[μ1 cL cR] eqb]] | [μ [[μ1 cL cR] eqb]]]; 
-                  have bij: bijective μ; exists μ1; try apply cL; try apply cR;
-                  split; try (exists μ; try apply cR; try apply cL);
-                  rewrite eqb_rdf_symm; apply graph_inj in eqb; subst; rewrite relabeling_comp_simpl;
-                  apply /eqP;
-                  try (case g2=> [ gs1 _ _ _ ] /=); try (case g1=> [gs1 _ _ _] /=);
-                  elim gs1=> [ // | h t IHt] /=; rewrite IHt; f_equal; case h=> s p o sin pin oin; apply triple_inj; rewrite /=;
-                  case s=> id /=; case p=> pred; case o=> obj /=; try by []; try by rewrite cL.
+  Proof.
+    rewrite /iso /is_iso.
+    split; case=> mu [mu_bij heqb_rdf]; exists mu; split=> //; exact: bijective_eqb_rdf.
+            
+           (* split=> *)
+           (*        [[μ [[μ1 cL cR] eqb]] | [μ [[μ1 cL cR] eqb]]];  *)
+           (*        have bij: bijective μ; exists μ1; try apply cL; try apply cR; *)
+           (*        split; try (exists μ; try apply cR; try apply cL); *)
+           (*        rewrite eqb_rdf_symm; apply graph_inj in eqb; subst; rewrite relabeling_comp_simpl; *)
+           (*        apply /eqP; *)
+           (*        try (case g2=> [ gs1 _ _ _ ] /=); try (case g1=> [gs1 _ _ _] /=); *)
+           (*        elim gs1=> [ // | h t IHt] /=; rewrite IHt; f_equal; case h=> s p o sin pin oin; apply triple_inj; rewrite /=; *)
+           (*        case s=> id /=; case p=> pred; case o=> obj /=; try by []; try by rewrite cL. *)
     Qed.
 
   Lemma iso_trans (g1 g2 g3: rdf_graph) : iso g1 g2 -> iso g2 g3 -> iso g1 g3.

@@ -3,14 +3,7 @@ Set Implicit Arguments.
 Unset Strict Implicit.
 Unset Printing Implicit Defensive.
 From RDF Require Import Term.
-(* From RDF Require Import Maps. *)
 From RDF Require Import Triple.
-From Coq Require Import Logic.FunctionalExtensionality.
-From Coq Require Import Logic.ExtensionalityFacts.
-
-(* Inductive existT (P: A -> Prop) : Type := ex : forall x: A, P x -> existT P. *)
-Definition Bijective {A B : Type} (f : A->B) :=
-  {g : B -> A & cancel f g /\ cancel g f}.
 
 Section rdf.
   Variable I B L: eqType.
@@ -57,72 +50,58 @@ Section rdf.
          apply: (iffP idP) => //= [| ->]; case: x y=> [g1 sib1 pi1 oibl1] [g2 sib2 pi2 oibl2]. apply graph_inj. apply eqb_rdf_refl. 
   Qed.
 
-  Definition relabelingG (μ : B -> B) (g : seq triple) : seq triple :=
-    map (relabeling μ) g.
+  Definition relabeling_seq_triple (μ : B -> B) (g : seq triple) : seq triple :=
+    map (relabeling_triple μ) g.
 
-  Lemma relabelingG_id (g : seq triple) : relabelingG id g = g.
-  Proof. rewrite /relabelingG. apply /eqP. elim g => [//|h t /eqP iht] /=. rewrite relabeling_id. by rewrite iht. Qed.
+  Lemma relabeling_seq_triple_id (g : seq triple) : relabeling_seq_triple id g = g.
+  Proof. rewrite /relabeling_seq_triple. apply /eqP. elim g => [//|h t /eqP iht] /=. rewrite relabeling_triple_id. by rewrite iht. Qed.
 
-  Lemma inv_bij {T U : Type} (f : T -> U) (bij: bijective f) :
-    (exists g: U->T, exists f:T->U, (forall x, g (f x) = x) /\ (forall y, f (g y) = y)).
-  Proof.
-    case: bij=> g cL cR. exists g. exists f. split. apply cL. apply cR. Qed.
-
-  Definition inv {T U : Type} (f : T->U) (bij: Bijective f) : (U->T).
-  Proof. destruct bij. apply x. Defined.
-
-  Lemma relabelingG_comp_simpl (g : seq triple) (μ12 μ23 : B -> B) :
-    relabelingG (μ23 \o μ12) g = (relabelingG μ23 \o (relabelingG μ12)) g.
-  Proof. rewrite /relabelingG /=. elim g => [//|h t iht] /=. rewrite relabeling_comp /=. f_equal; apply iht.
+  Lemma relabeling_seq_triple_comp_simpl (g : seq triple) (μ12 μ23 : B -> B) :
+    relabeling_seq_triple (μ23 \o μ12) g = (relabeling_seq_triple μ23 \o (relabeling_seq_triple μ12)) g.
+  Proof. rewrite /relabeling_seq_triple /=. elim g => [//|h t iht] /=. rewrite relabeling_triple_comp /=. f_equal; apply iht.
   Qed.
 
-  Lemma relabeling_comp_P (g1 g2 : seq triple) (eqb : g1 = g2) (μ : B->B) :
-    relabelingG μ g1 = relabelingG μ g2. by rewrite eqb. Qed.
+  Lemma relabeling_seq_triple_comp_P (g1 g2 : seq triple) (eqb : g1 = g2) (μ : B->B) :
+    relabeling_seq_triple μ g1 = relabeling_seq_triple μ g2. by rewrite eqb. Qed.
 
-  Lemma relabelingG_comp (μ1 μ2 : B -> B) (g : seq triple) : relabelingG μ1 (relabelingG μ2 g) = (relabelingG μ1 \o (relabelingG μ2)) g.
+  Lemma relabeling_seq_triple_comp (μ1 μ2 : B -> B) (g : seq triple) : relabeling_seq_triple μ1 (relabeling_seq_triple μ2 g) = (relabeling_seq_triple μ1 \o (relabeling_seq_triple μ2)) g.
     Proof. by []. Qed. 
-  (* move to relabel? *)
-  Lemma relabelingG_bij (g1 g2: seq triple) (μ : B->B) (bij: Bijective μ) (eqb : g1 = (relabelingG μ g2)) : relabelingG (inv bij) g1 = g2.
-  Proof. case bij=> μ1 [cL cR]. rewrite /inv /=. rewrite eqb.
-         rewrite relabelingG_comp_simpl -relabelingG_comp.
-         elim g2=> [//| h t IHt] /=. rewrite IHt. f_equal. case h=> s p o sin pin oin. rewrite /relabeling /Term.relabeling /=. apply triple_inj;
-           rewrite /=; case s; case p; case o => s1 p1 o1 ;repeat try by []; repeat try by rewrite cL. Qed.
 
-  Lemma relabelingG_preserves_subject_in_IB (g : seq triple) (μ : B -> B) :
+  Lemma relabeling_seq_triple_preserves_subject_in_IB (g : seq triple) (μ : B -> B) :
     all (fun t => is_in_ib (subject t)) g ->
-    all (fun t => is_in_ib (subject t)) (relabelingG μ g).
+    all (fun t => is_in_ib (subject t)) (relabeling_seq_triple μ g).
   Proof. move=> /allP sin. apply /allP => [[s p o /= sint pint oint]] => tg. apply sint. 
   Qed.
 
-  Lemma relabelingG_preserves_predicate_in_I (g : seq triple) (μ : B -> B) :
+  Lemma relabeling_seq_triple_preserves_predicate_in_I (g : seq triple) (μ : B -> B) :
     all (fun t => is_in_i (predicate t)) g ->
-    all (fun t => is_in_i (predicate t)) (relabelingG μ g).
+    all (fun t => is_in_i (predicate t)) (relabeling_seq_triple μ g).
   Proof. move=> /allP pin. apply /allP => [[s p o /= sint pint oint]] => tg . apply pint.
   Qed.
 
-  Lemma relabelingG_preserves_object_in_IBL (g : seq triple) (μ : B -> B) :
+  Lemma relabeling_seq_triple_preserves_object_in_IBL (g : seq triple) (μ : B -> B) :
     all (fun t => is_in_ibl (object t)) g ->
-    all (fun t => is_in_ibl (object t)) (relabelingG μ g).
+    all (fun t => is_in_ibl (object t)) (relabeling_seq_triple μ g).
   Proof. move=> /allP oin. apply /allP => [[s p o /= sibt pibt oint]] => tg . apply oint.
   Qed.
 
   Definition relabeling (μ : B -> B) (g : rdf_graph): rdf_graph :=
     let (g',siib,pii,oiibl) := g in
     {|
-      graph := relabelingG μ g';
-      subject_in_IB :=  relabelingG_preserves_subject_in_IB μ siib;
-      predicate_in_I := relabelingG_preserves_predicate_in_I μ pii;
-      object_in_IBL := relabelingG_preserves_object_in_IBL μ oiibl
+      graph := relabeling_seq_triple μ g';
+      subject_in_IB :=  relabeling_seq_triple_preserves_subject_in_IB μ siib;
+      predicate_in_I := relabeling_seq_triple_preserves_predicate_in_I μ pii;
+      object_in_IBL := relabeling_seq_triple_preserves_object_in_IBL μ oiibl
     |}.
 
   Lemma relabeling_id (g : rdf_graph) : relabeling id g = g.
-  Proof. apply graph_inj. case g=> g' sin pin oin. rewrite /relabeling /= /eqP /eqb_rdf /=. by rewrite /eqP relabelingG_id.
+  Proof. apply graph_inj. case g=> g' sin pin oin. rewrite /relabeling /= /eqP /eqb_rdf /=. by rewrite /eqP relabeling_seq_triple_id.
   Qed.
 
   Lemma relabeling_comp (g : rdf_graph) (μ12 μ23: B -> B) :
     (relabeling μ23 \o (relabeling μ12)) g = relabeling (μ23 \o μ12) g.
   Proof. apply graph_inj. rewrite /eqb_rdf. apply /eqP.
-         case g=> g' sin pin oin /=. by rewrite relabelingG_comp_simpl.
+         case g=> g' sin pin oin /=. by rewrite relabeling_seq_triple_comp_simpl.
   Qed.
 
   Definition is_iso (g1 g2 : rdf_graph) (μ : B -> B) :=
@@ -130,7 +109,6 @@ Section rdf.
 
   Definition iso (g1 g2 : rdf_graph):= exists (μ : B -> B),
       is_iso g1 g2 μ.
-
 
   Lemma iso_refl (g : rdf_graph) : iso g g.
   Proof. rewrite /iso /is_iso; exists id; split.
@@ -144,11 +122,12 @@ Section rdf.
   (*   UbnGeq n of n <= m : ubn_geq_spec m n. *)
   (* Lemma ubnPgeq m : ubn_geq_spec m m. *)
   (* Proof. by []. Qed. *)
+  Lemma relabelingG_ext (μ1 μ2 : B -> B) : μ1 =1 μ2 -> forall g, relabeling_seq_triple μ1 g = relabeling_seq_triple μ2 g.
+  Proof. move => μpqeq. elim=> [//|h t IHt] /=. rewrite IHt. f_equal. by apply relabeling_triple_ext. Qed.
 
   Lemma relabeling_ext  (μ1 μ2 : B -> B) :  μ1 =1 μ2 -> forall g, relabeling μ1 g = relabeling μ2 g.
-  Proof.
-  Admitted.
-  
+  Proof. move=> μpweq g. apply /graph_inj. rewrite /eqb_rdf. case g. rewrite /= => gs _ _ _. apply /eqP. by apply relabelingG_ext. Qed.
+
   Lemma relabeling_comp_simpl (μ1 μ2 : B -> B) (g : rdf_graph) : relabeling μ1 (relabeling μ2 g) = relabeling (μ1 \o μ2) g.
     Proof. by rewrite -relabeling_comp. Qed.
 

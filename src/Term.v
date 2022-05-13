@@ -85,25 +85,28 @@ Section Term.
 
   Canonical term_eqType := EqType term (EqMixin term_eqP).
 
-  Definition relabeling (μ : B -> B) (t : term) : term :=
+  Definition relabeling_term (μ : B -> B) (t : term) : term :=
     match t with
     | Bnode name => Bnode (μ name)
     | _ => t
     end.
 
-  Lemma relabel_id (t: term) : relabeling id t = t.
+  Lemma relabeling_term_id (t: term) : relabeling_term id t = t.
   Proof. by case t. Qed.
 
-  Lemma relabel_comp (t: term) (μ1 μ2 : B -> B) : relabeling (μ2 \o μ1) t = (relabeling μ2 \o (relabeling μ1)) t.
+  Lemma relabeling_term_comp (t: term) (μ1 μ2 : B -> B) : relabeling_term (μ2 \o μ1) t = (relabeling_term μ2 \o (relabeling_term μ1)) t.
   Proof. by case t. Qed.
 
-  Lemma relabel_id_p_I (t : term) (p: is_iri t) : is_iri (relabeling id t).
-  Proof. by rewrite relabel_id p. Qed.
+  Lemma relabeling_term_id_p_I (t : term) (p: is_iri t) : is_iri (relabeling_term id t).
+  Proof. by rewrite relabeling_term_id p. Qed.
 
-  Lemma relabel_id_p_L (t : term) (p: is_lit t) : is_lit (relabeling id t).
-  Proof. by rewrite relabel_id p. Qed.
+  Lemma relabeling_term_id_p_L (t : term) (p: is_lit t) : is_lit (relabeling_term id t).
+  Proof. by rewrite relabeling_term_id p. Qed.
 
-  Lemma relabel_id_p_B (t : term) (p: is_iri t) : is_iri (relabeling id t).
-  Proof. by rewrite relabel_id p. Qed.
+  Lemma relabeling_id_p_B (t : term) (p: is_iri t) : is_iri (relabeling_term id t).
+  Proof. by rewrite relabeling_term_id p. Qed.
+
+  Lemma relabeling_term_ext (μ1 μ2 : B -> B) : μ1 =1 μ2 -> forall t, relabeling_term μ1 t = relabeling_term μ2 t.
+  Proof. move => μpweq [//| // | b] /=. by rewrite μpweq. Qed.
 
 End Term.

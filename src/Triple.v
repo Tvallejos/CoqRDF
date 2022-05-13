@@ -56,32 +56,31 @@ Section Triple.
 
   Canonical triple_eqType := EqType triple (EqMixin triple_eqP).
 
-  Lemma relabeling_preserves_is_in_ib (μ : B -> B) (t : term) :
-    is_in_ib t <-> is_in_ib (relabeling μ t).
+  Lemma relabeling_term_preserves_is_in_ib (μ : B -> B) (t : term) :
+    is_in_ib t <-> is_in_ib (relabeling_term μ t).
   Proof. by case t. Qed.
 
-  (* Corollary id_preserves_is_in_ib ()  : type. *)
-  (* Corollary relabeling_by_id : type. *)
-
-  Lemma relabeling_preserves_is_in_i (μ : B -> B) (t : term) :
-    is_in_i t <-> is_in_i (relabeling μ t).
+  Lemma relabeling_term_preserves_is_in_i (μ : B -> B) (t : term) :
+    is_in_i t <-> is_in_i (relabeling_term μ t).
   Proof. by case t. Qed.
 
-  Lemma relabeling_preserves_is_in_ibl (μ : B -> B) (t : term) :
-    is_in_ibl t <-> is_in_ibl (relabeling μ t).
+  Lemma relabeling_term_preserves_is_in_ibl (μ : B -> B) (t : term) :
+    is_in_ibl t <-> is_in_ibl (relabeling_term μ t).
   Proof. by case t. Qed.
   
-  Definition relabeling (μ : B -> B) (t : triple) : triple :=
+  Definition relabeling_triple (μ : B -> B) (t : triple) : triple :=
     let (s,p,o,sin,pin,oin) := t in
-    mkTriple ((iffLR (relabeling_preserves_is_in_ib μ s)) sin)
-             ((iffLR (relabeling_preserves_is_in_i μ p)) pin)
-             ((iffLR (relabeling_preserves_is_in_ibl μ o)) oin).
+    mkTriple ((iffLR (relabeling_term_preserves_is_in_ib μ s)) sin)
+             ((iffLR (relabeling_term_preserves_is_in_i μ p)) pin)
+             ((iffLR (relabeling_term_preserves_is_in_ibl μ o)) oin).
 
-  Lemma relabeling_id (t : triple) : relabeling id t = t.
+  Lemma relabeling_triple_id (t : triple) : relabeling_triple id t = t.
   Proof.
-    case t => [s p o sin pin oin] /=. apply triple_inj => /=; apply relabel_id. Qed.
+    case t => [s p o sin pin oin] /=. apply triple_inj => /=; apply relabeling_term_id. Qed.
 
-  Lemma relabeling_comp (μ1 μ2 : B -> B) (t : triple) : relabeling (μ2 \o μ1) t = (relabeling μ2 \o (relabeling μ1)) t.
-  Proof. case t=> [s p o sin pin oin] /=. apply triple_inj=> /=; by rewrite relabel_comp. Qed.
+  Lemma relabeling_triple_comp (μ1 μ2 : B -> B) (t : triple) : relabeling_triple (μ2 \o μ1) t = (relabeling_triple μ2 \o (relabeling_triple μ1)) t.
+  Proof. case t=> [s p o sin pin oin] /=. apply triple_inj=> /=; by rewrite relabeling_term_comp. Qed.
 
+  Lemma relabeling_triple_ext (μ1 μ2 : B -> B) : μ1 =1 μ2 -> forall t, relabeling_triple μ1 t = relabeling_triple μ2 t.
+  Proof. move => μpweq t. apply /triple_inj; case t => /= [s p o _ _ _]; by apply (relabeling_term_ext μpweq). Qed.
 End Triple.

@@ -8,9 +8,6 @@ Section Term.
   (* literals should be of Datatype type, is not important for the moment*)
   Variable I B L: eqType.
 
-  (* Definition eqb_i (i1 i2 : I) : bool := *)
-  (*   bool_of_sumbool (Ieq_dec i1 i2). *)
-
   Inductive term : Type :=
   | Iri (id: I) 
   | Lit (l : L) 
@@ -43,27 +40,6 @@ Section Term.
      | _,_ => false
      end).
 
-  Theorem eq_l_eq_lit : forall (l1 l2:L),
-      (l1 = l2) <-> (Lit l1)  = (Lit l2).
-  Proof. split; intros H.
-         - rewrite H. reflexivity.
-         - injection H as H2. apply H2.
-  Qed.
-
-  Theorem eq_i_eq_iri : forall (i1 i2:I) ,
-      (i1 = i2) <-> (Iri i1) = (Iri i2).
-  Proof. split; intros H.
-         - rewrite H. reflexivity.
-         - injection H as H2. apply H2.
-  Qed.
-
-  Theorem eq_b_eq_bnode : forall (b1 b2:B) ,
-      (b1 = b2) <-> (Bnode b1) = (Bnode b2).
-  Proof. split; intros H.
-         - rewrite H. reflexivity.
-         - injection H as H2. apply H2.
-  Qed.
-
   Definition is_in_ib (t : term) : bool :=
     is_iri t || is_bnode t.
 
@@ -77,10 +53,8 @@ Section Term.
   Proof.
     rewrite /Equality.axiom => x y.
     apply: (iffP idP) => //= [| ->]; rewrite /eqb_term; last by case y.
-    case: x y=> [i1|l1|b1] [i2|l2|b2]=> //.
-    rewrite -eq_i_eq_iri. by apply /eqP.
-    rewrite -eq_l_eq_lit. by apply /eqP.
-    rewrite -eq_b_eq_bnode. by apply /eqP.
+    case: x y=> [i1|l1|b1] [i2|l2|b2] //;
+                          move=> /eqP eq; by rewrite eq.
   Qed.
 
   Canonical term_eqType := EqType term (EqMixin term_eqP).
@@ -103,10 +77,22 @@ Section Term.
   Lemma relabeling_term_id_p_L (t : term) (p: is_lit t) : is_lit (relabeling_term id t).
   Proof. by rewrite relabeling_term_id p. Qed.
 
-  Lemma relabeling_id_p_B (t : term) (p: is_iri t) : is_iri (relabeling_term id t).
+  Lemma relabeling_term_id_p_B (t : term) (p: is_iri t) : is_iri (relabeling_term id t).
   Proof. by rewrite relabeling_term_id p. Qed.
 
   Lemma relabeling_term_ext (μ1 μ2 : B -> B) : μ1 =1 μ2 -> forall t, relabeling_term μ1 t = relabeling_term μ2 t.
   Proof. move => μpweq [//| // | b] /=. by rewrite μpweq. Qed.
+
+  Lemma relabeling_term_preserves_is_in_ib (μ : B -> B) (t : term) :
+    is_in_ib t <-> is_in_ib (relabeling_term μ t).
+  Proof. by case t. Qed.
+
+  Lemma relabeling_term_preserves_is_in_i (μ : B -> B) (t : term) :
+    is_in_i t <-> is_in_i (relabeling_term μ t).
+  Proof. by case t. Qed.
+
+  Lemma relabeling_term_preserves_is_in_ibl (μ : B -> B) (t : term) :
+    is_in_ibl t <-> is_in_ibl (relabeling_term μ t).
+  Proof. by case t. Qed.
 
 End Term.

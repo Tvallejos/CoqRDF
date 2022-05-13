@@ -30,13 +30,9 @@ Section Triple.
       object t1 = object t2 ->
       t1 = t2.
   Proof. move=> [s1 p1 o1 sin1 pin1 oin1] [s2 p2 o2 sin2 pin2 oin2] /= seq peq oeq. 
-         have: sin2 = (eq_ir seq sin1).  apply eq_irrelevance.
-         move => eqsin. rewrite eqsin. erewrite <-seq.
-         have: pin2 = (eq_ir peq pin1). apply eq_irrelevance.
-         move => eqpin. rewrite eqpin. erewrite <-peq.
-         have: oin2 = (eq_ir oeq oin1). apply eq_irrelevance.
-         move => eqoin. rewrite eqoin. erewrite <-oeq.
-         move => //=. f_equal; apply eq_irrelevance.
+         have: sin2 = (eq_ir seq sin1);
+           have: pin2 = (eq_ir peq pin1); 
+           have: oin2 = (eq_ir oeq oin1); try move=> eq; try move=> eq2; try apply eq_irrelevance. move=> eq3. subst. by f_equal; apply eq_irrelevance.
   Qed.
 
   Definition eqb_triple  (t1 t2 : triple) : bool :=
@@ -49,25 +45,12 @@ Section Triple.
     rewrite /Equality.axiom => x y.
     apply: (iffP idP) => //= [| ->]; rewrite /eqb_triple; case: x y=> [s1 p1 o1 sin1 pin1 oin1] [s2 p2 o2 sin2 pin2 oin2] //=.
     case/andP; case/andP=> /eqP eq_s/eqP eq_p/eqP eq_o.
-    apply: triple_inj; move=> //= {sin1 sin2 pin1 pin2 oin1 oin2}; apply /eqP; by [].
-    rewrite !eq_refl //.
+    apply: triple_inj; move=> //= {sin1 sin2 pin1 pin2 oin1 oin2}; by apply /eqP.
+    by rewrite !eq_refl //.
   Qed.
-
 
   Canonical triple_eqType := EqType triple (EqMixin triple_eqP).
 
-  Lemma relabeling_term_preserves_is_in_ib (μ : B -> B) (t : term) :
-    is_in_ib t <-> is_in_ib (relabeling_term μ t).
-  Proof. by case t. Qed.
-
-  Lemma relabeling_term_preserves_is_in_i (μ : B -> B) (t : term) :
-    is_in_i t <-> is_in_i (relabeling_term μ t).
-  Proof. by case t. Qed.
-
-  Lemma relabeling_term_preserves_is_in_ibl (μ : B -> B) (t : term) :
-    is_in_ibl t <-> is_in_ibl (relabeling_term μ t).
-  Proof. by case t. Qed.
-  
   Definition relabeling_triple (μ : B -> B) (t : triple) : triple :=
     let (s,p,o,sin,pin,oin) := t in
     mkTriple ((iffLR (relabeling_term_preserves_is_in_ib μ s)) sin)
@@ -76,7 +59,7 @@ Section Triple.
 
   Lemma relabeling_triple_id (t : triple) : relabeling_triple id t = t.
   Proof.
-    case t => [s p o sin pin oin] /=. apply triple_inj => /=; apply relabeling_term_id. Qed.
+    case t => [s p o sin pin oin] /=. apply triple_inj => /=; by apply relabeling_term_id. Qed.
 
   Lemma relabeling_triple_comp (μ1 μ2 : B -> B) (t : triple) : relabeling_triple (μ2 \o μ1) t = (relabeling_triple μ2 \o (relabeling_triple μ1)) t.
   Proof. case t=> [s p o sin pin oin] /=. apply triple_inj=> /=; by rewrite relabeling_term_comp. Qed.

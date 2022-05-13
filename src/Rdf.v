@@ -6,13 +6,11 @@ From RDF Require Import Term.
 (* From RDF Require Import Maps. *)
 From RDF Require Import Triple.
 From Coq Require Import Logic.FunctionalExtensionality.
-From Coq Require Import Logic.ExtensionalityFacts.
 
-(* Inductive existT (P: A -> Prop) : Type := ex : forall x: A, P x -> existT P. *)
 Definition Bijective {A B : Type} (f : A->B) :=
   {g : B -> A & cancel f g /\ cancel g f}.
 
-Section rdf.
+Section Rdf.
   Variable I B L: eqType.
   Let term:= (term I B L).
   Let triple:= (triple I B L).
@@ -169,5 +167,5 @@ Section rdf.
          rewrite -relabeling_comp /= -eqb2 -eqb1. by apply eqb_rdf_refl.
  Qed.
 
-End rdf.
+End Rdf.
 

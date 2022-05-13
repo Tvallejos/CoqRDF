@@ -1,94 +1,97 @@
-From Coq Require Import Init.Nat.
-From Coq Require Import Strings.String.
-From Coq Require Import Arith.EqNat.
+From mathcomp Require Import all_ssreflect.
+Set Implicit Arguments.
+Unset Strict Implicit.
+Unset Printing Implicit Defensive.
 
-Definition eqb_string (x y : string) : bool :=
-  if string_dec x y then true else false.
+Section Term.
 
- (* literals should be of Datatype type, is not important for the moment*)
-Inductive term : Type :=
-  | Iri (id: string)
-  | Lit (l : nat)
-  | Bnode (name : string).
+  (* literals should be of Datatype type, is not important for the moment*)
+  Variable I B L: eqType.
 
-Definition is_lit (n : term) : bool :=
-  (match n with
-   | Lit _ => true
-   | _ => false
-   end).
+  Inductive term : Type :=
+  | Iri (id: I) 
+  | Lit (l : L) 
+  | Bnode (name : B).
 
-Definition is_iri (n : term) : bool :=
-  (match n with
-   | Iri _ => true
-   | _ => false
-   end).
 
-Definition is_bnode (n : term) : bool :=
-  (match n with
-   | Bnode _ => true
-   | _ => false
-   end).
+  Definition is_lit (t : term ): bool :=
+    (match t with
+     | Lit _ => true
+     | _ => false
+     end).
 
-Definition eqb_term (n1 n2 : term) : bool :=
-  (match n1, n2 with
-   | (Iri id), (Iri id2) => eqb id id2
-   | (Lit l),(Lit l2) => l =? l2
-   | (Bnode b),(Bnode b2) => eqb b b2
-   | _,_ => false
-   end).
+  Definition is_iri (t : term ) : bool :=
+    (match t with
+     | Iri _ => true
+     | _ => false
+     end).
 
-Theorem eq_nat_eq_lit : forall (n1 n2:nat) , (n1 = n2) <-> (Lit n1) = (Lit n2).
-Proof. split; intros H.
-  - rewrite H. reflexivity.
-  - injection H as H2. apply H2.
-Qed.
+  Definition is_bnode (t : term ) : bool :=
+    (match t with
+     | Bnode _ => true
+     | _ => false
+     end).
 
-Theorem eq_string_eq_iri : forall (s1 s2:string) , (s1 = s2) <-> (Iri s1) = (Iri s2).
-Proof. split; intros H.
-  - rewrite H. reflexivity.
-  - injection H as H2. apply H2.
-Qed.
+  Definition eqb_term (t1 t2 : term) : bool :=
+    (match t1, t2 with
+     | (Iri id1), (Iri id2) => id1 == id2
+     | (Lit l1),(Lit l2) => l1 == l2
+     | (Bnode b1),(Bnode b2) => b1 == b2
+     | _,_ => false
+     end).
 
-Theorem eq_string_eq_bnode : forall (s1 s2:string) , (s1 = s2) <-> (Bnode s1) = (Bnode s2).
-Proof. split; intros H.
-  - rewrite H. reflexivity.
-  - injection H as H2. apply H2.
-Qed.
+  Definition is_in_ib (t : term) : bool :=
+    is_iri t || is_bnode t.
 
-Theorem eq_dec_term : forall (t1 t2: term),
-  {t1 = t2} + {t1 <> t2}.
-Proof. decide equality.
-  + apply string_dec.
-  + decide equality.
-  + apply string_dec.
-Qed.
+  Definition is_in_i (t : term) : bool :=
+    is_iri t.
 
-Theorem eqb_term_refl : forall (t1 : term),
-  eqb_term t1 t1 = true.
-Proof. destruct t1 as []; simpl.
-  - apply eqb_refl.
-  - symmetry. apply beq_nat_refl.
-  - apply eqb_refl.
-Qed.
+  Definition is_in_ibl (t : term) : bool :=
+    is_iri t || is_bnode t || is_lit t.
 
-Theorem eqb_eq_term : forall (t1 t2 : term),
-  eqb_term t1 t2 = true <-> t1 = t2.
-Proof. split; intros H.
-  - destruct t1,t2 as [] ; 
-    try reflexivity ;
-    try discriminate; simpl in H.
-    + apply eqb_eq in H. rewrite H. apply eq_string_eq_iri. reflexivity.
-    + apply beq_nat_true in H. rewrite H. apply eq_nat_eq_lit. reflexivity.
-    + apply eqb_eq in H. apply eq_string_eq_bnode. apply H.
-  - rewrite H. apply eqb_term_refl.
-Qed.
-   
-Theorem eqb_neq_term : forall (t1 t2 : term),
-  eqb_term t1 t2 = false <-> t1 <> t2.
-Proof. split.
-  - intros H contra. rewrite contra in H. rewrite eqb_term_refl in H. discriminate H.
-  - intros H. unfold not in H. rewrite <- eqb_eq_term in H. destruct (eqb_term t1 t2) as [].
-    + exfalso. apply H. reflexivity.
-    + reflexivity.
-Qed.
+  Lemma term_eqP : Equality.axiom eqb_term.
+  Proof.
+    rewrite /Equality.axiom => x y.
+    apply: (iffP idP) => //= [| ->]; rewrite /eqb_term; last by case y.
+    by case: x y=> [i1|l1|b1] [i2|l2|b2] // => /eqP ->. 
+  Qed.
 
+  Canonical term_eqType := EqType term (EqMixin term_eqP).
+
+  Definition relabeling_term (μ : B -> B) (t : term) : term :=
+    match t with
+    | Bnode name => Bnode (μ name)
+    | _ => t
+    end.
+
+  Lemma relabeling_term_id (t: term) : relabeling_term id t = t.
+  Proof. by case t. Qed.
+
+  Lemma relabeling_term_comp (t: term) (μ1 μ2 : B -> B) : relabeling_term (μ2 \o μ1) t = (relabeling_term μ2 \o (relabeling_term μ1)) t.
+  Proof. by case t. Qed.
+
+  Lemma relabeling_term_id_p_I (t : term) (p: is_iri t) : is_iri (relabeling_term id t).
+  Proof. by rewrite relabeling_term_id p. Qed.
+
+  Lemma relabeling_term_id_p_L (t : term) (p: is_lit t) : is_lit (relabeling_term id t).
+  Proof. by rewrite relabeling_term_id p. Qed.
+
+  Lemma relabeling_term_id_p_B (t : term) (p: is_iri t) : is_iri (relabeling_term id t).
+  Proof. by rewrite relabeling_term_id p. Qed.
+
+  Lemma relabeling_term_ext (μ1 μ2 : B -> B) : μ1 =1 μ2 -> forall t, relabeling_term μ1 t = relabeling_term μ2 t.
+  Proof. move => μpweq [//| // | b] /=. by rewrite μpweq. Qed.
+
+  Lemma relabeling_term_preserves_is_in_ib (μ : B -> B) (t : term) :
+    is_in_ib t <-> is_in_ib (relabeling_term μ t).
+  Proof. by case t. Qed.
+
+  Lemma relabeling_term_preserves_is_in_i (μ : B -> B) (t : term) :
+    is_in_i t <-> is_in_i (relabeling_term μ t).
+  Proof. by case t. Qed.
+
+  Lemma relabeling_term_preserves_is_in_ibl (μ : B -> B) (t : term) :
+    is_in_ibl t <-> is_in_ibl (relabeling_term μ t).
+  Proof. by case t. Qed.
+
+End Term.

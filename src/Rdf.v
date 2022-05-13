@@ -6,6 +6,7 @@ From RDF Require Import Term.
 From RDF Require Import Triple.
 
 Section Rdf.
+
   Variable I B L: eqType.
   Let term:= (term I B L).
   Let triple:= (triple I B L).

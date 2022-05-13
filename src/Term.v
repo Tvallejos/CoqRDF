@@ -53,8 +53,7 @@ Section Term.
   Proof.
     rewrite /Equality.axiom => x y.
     apply: (iffP idP) => //= [| ->]; rewrite /eqb_term; last by case y.
-    case: x y=> [i1|l1|b1] [i2|l2|b2] //;
-                          move=> /eqP eq; by rewrite eq.
+    by case: x y=> [i1|l1|b1] [i2|l2|b2] // => /eqP ->. 
   Qed.
 
   Canonical term_eqType := EqType term (EqMixin term_eqP).

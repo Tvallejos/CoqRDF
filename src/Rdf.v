@@ -5,11 +5,6 @@ Unset Printing Implicit Defensive.
 From RDF Require Import Term.
 From RDF Require Import Triple.
 
-(* From Coq Require Import Logic.FunctionalExtensionality. *)
-
-(* Definition Bijective {A B : Type} (f : A->B) := *)
-(*   {g : B -> A & cancel f g /\ cancel g f}. *)
-
 Section Rdf.
 
   Variable I B L: eqType.
@@ -32,23 +27,12 @@ Section Rdf.
   Lemma eqb_rdf_symm (g1 g2 : rdf_graph) : eqb_rdf g1 g2 = eqb_rdf g2 g1.
   Proof. by rewrite /eqb_rdf. Qed.
 
-  Lemma eq_ir : forall (g1 g2: seq triple)
-                  (geq : g1 = g2)
-                  (p : triple -> bool)
-                  (fallt : all p g1),
-      all p g2.
-  Proof. move=> g1 g2 eqg p fallt. by [rewrite -eqg].
-  Qed.
-
   Lemma graph_inj : forall (g1 g2: rdf_graph),
       eqb_rdf g1 g2 ->
       g1 = g2.
   Proof.
     move=> [g1 sib1 pi1 oibl1] [g2 sib2 pi2 oibl2] /= /eqP /= geq.
-    have eqsib: sib2 = (eq_ir geq sib1);
-      have eqpi : pi2 = (eq_ir geq pi1);
-      have eqoibl: oibl2 = (eq_ir geq oibl1); try apply eq_irrelevance.
-    rewrite eqsib eqpi eqoibl. erewrite <-geq. f_equal; by apply eq_irrelevance. 
+    subst. by f_equal; apply eq_irrelevance.
   Qed.
   
   Definition rdf_eqP : Equality.axiom eqb_rdf.
@@ -124,11 +108,11 @@ Section Rdf.
          by rewrite relabeling_id eqb_rdf_refl.
   Qed.
 
-  Lemma relabelingG_ext (μ1 μ2 : B -> B) : μ1 =1 μ2 -> forall g, relabeling_seq_triple μ1 g = relabeling_seq_triple μ2 g.
+  Lemma relabeling_seq_triple_ext (μ1 μ2 : B -> B) : μ1 =1 μ2 -> forall g, relabeling_seq_triple μ1 g = relabeling_seq_triple μ2 g.
   Proof. move => μpqeq. elim=> [//|h t IHt] /=. rewrite IHt. f_equal. by apply relabeling_triple_ext. Qed.
 
   Lemma relabeling_ext  (μ1 μ2 : B -> B) :  μ1 =1 μ2 -> forall g, relabeling μ1 g = relabeling μ2 g.
-  Proof. move=> μpweq g. apply /graph_inj. rewrite /eqb_rdf. case g. rewrite /= => gs _ _ _. apply /eqP. by apply relabelingG_ext. Qed.
+  Proof. move=> μpweq g. apply /graph_inj. rewrite /eqb_rdf. case g. rewrite /= => gs _ _ _. apply /eqP. by apply relabeling_seq_triple_ext. Qed.
 
   Lemma relabeling_comp_simpl (μ1 μ2 : B -> B) (g : rdf_graph) : relabeling μ1 (relabeling μ2 g) = relabeling (μ1 \o μ2) g.
   Proof. by rewrite -relabeling_comp. Qed.

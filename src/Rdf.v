@@ -5,6 +5,11 @@ Unset Printing Implicit Defensive.
 From RDF Require Import Term.
 From RDF Require Import Triple.
 
+(* From Coq Require Import Logic.FunctionalExtensionality. *)
+
+(* Definition Bijective {A B : Type} (f : A->B) := *)
+(*   {g : B -> A & cancel f g /\ cancel g f}. *)
+
 Section Rdf.
 
   Variable I B L: eqType.

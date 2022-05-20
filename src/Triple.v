@@ -59,4 +59,9 @@ Section Triple.
 
   Lemma relabeling_triple_ext (μ1 μ2 : B -> B) : μ1 =1 μ2 -> forall t, relabeling_triple μ1 t = relabeling_triple μ2 t.
   Proof. move => μpweq t. apply /triple_inj; case t => /= [s p o _ _ _]; by apply (relabeling_term_ext μpweq). Qed.
+
+  Definition terms_triple (t : triple) : seq term :=
+    let (s,p,o,_,_,_) := t in
+    [:: s ; p ; o].
+
 End Triple.

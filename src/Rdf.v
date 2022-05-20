@@ -6,10 +6,13 @@ From RDF Require Import Term.
 From RDF Require Import Triple.
 
 Section Rdf.
+  (* Declare Scope rdf_scope. *)
+  (* Open Scope rdf_scope. *)
 
   Variable I B L: eqType.
   Let term:= (term I B L).
   Let triple:= (triple I B L).
+  (* Let terms_triple:= (terms_triple). *)
 
   Record rdf_graph := mkRdfGraph {
                          graph : seq triple
@@ -20,6 +23,11 @@ Section Rdf.
 
   Definition eqb_rdf (g1 g2 : rdf_graph) : bool :=
     (graph g1) == (graph g2).
+
+  Definition terms (g : rdf_graph) : seq term :=
+    flatten (map (fun t => terms_triple t) (graph g)).
+
+  (* Notation "x \in G" := (in_mem x (mem (terms G))) (only parsing) : bool_scope. *)
 
   Lemma eqb_rdf_refl (g : rdf_graph) : eqb_rdf g g.
   Proof. by rewrite /eqb_rdf. Qed.
@@ -123,7 +131,7 @@ Section Rdf.
     rewrite relabeling_comp_simpl.
     have /relabeling_ext-> : nu \o mu =1 id by [].
     rewrite relabeling_id; exact: eqb_rdf_refl.
-  Qed.  
+  Qed.
 
   Lemma iso_symm (g1 g2 : rdf_graph) :
     iso g1 g2 <-> iso g2 g1.

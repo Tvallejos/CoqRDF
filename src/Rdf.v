@@ -27,6 +27,8 @@ Section Rdf.
   Definition terms (g : rdf_graph) : seq term :=
     flatten (map (fun t => terms_triple t) (graph g)).
 
+  Definition bnodes (g : rdf_graph) : seq term :=
+    filter (fun t => is_bnode t) (terms g).
   (* Notation "x \in G" := (in_mem x (mem (terms G))) (only parsing) : bool_scope. *)
 
   Lemma eqb_rdf_refl (g : rdf_graph) : eqb_rdf g g.

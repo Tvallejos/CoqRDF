@@ -6,7 +6,6 @@ Unset Printing Implicit Defensive.
 From RDF Require Import Rdf Triple Term.
 (* From Coq Require Import List. *)
 
-
 Section IsoCan.
   (* Axiom todo : forall A,A. *)
   Variable I B L: eqType.
@@ -103,21 +102,31 @@ Section IsoCan.
 
     (* Let nth := nth hashmap [::]. *)
 
-    Hypothesis hash_dont_get_equal : forall (g : rdf_graph) (hms : seq hashmap)
-                                       (ghashh : hashNodes g = hms)
-                                       (i j : nat) (ileqj : i <= j) (lim : j < size hms)
-                                       (x y : term) (bnx : is_bnode x) (bny : is_bnode y)
-                                       (xing : x \in (terms g)) (ying : y \in (terms g)),
+    Hypothesis hash_dont_get_equal :
+      forall (g : rdf_graph) (hms : seq hashmap)
+        (ghashh : hashNodes g = hms)
+        (i j : nat) (ileqj : i <= j) (lim : j < size hms)
+        (x y : term) (bnx : is_bnode x) (bny : is_bnode y)
+        (xing : x \in (terms g)) (ying : y \in (terms g)),
         (lookup_hashmap (nth [::] hms i) x != lookup_hashmap (nth [::] hms i) y)
-        -> lookup_hashmap (nth [::] hms j) x != lookup_hashmap (nth [::] hms j) y. 
+        -> lookup_hashmap (nth [::] hms j) x != lookup_hashmap (nth [::] hms j) y.
+
+    Hypothesis hashNodes_preserves_isomorphism :
+      forall (g h: rdf_graph) (isogh : iso g h)
+        (hash_g hash_h: hashmap)
+        (hashg_hm : hash_g = last [::] (hashNodes g))
+        (hashh_hm : hash_h = last [::] (hashNodes h))
+        (b : term) (bing : b \in (bnodes (g)))
+        (c : term) (cinh : c \in (bnodes (h))),
+        exists μ, (relabeling_term μ b) = c -> lookup_hashmap hash_g b = lookup_hashmap hash_h c.
 
     (* Hypothesis perfectHashingSchemeTriple : injective hashTriple. *)
 
-    Variable hashBag : (seq hash -> hash).
-    Hypothesis hashBag_assoc : forall (l l1 l2 l3: seq hash) (perm : l = l1 ++ l2 ++ l3),
-        hashBag ([:: hashBag (l1 ++ l2)] ++ l3) = hashBag (l1 ++ [:: hashBag (l2 ++ l3)]).
-    Hypothesis hashBag_comm : forall (l l1 l2: seq hash) (perm : l = l1 ++ l2),
-        hashBag l = hashBag (l2 ++ l1).
+        Variable hashBag : (seq hash -> hash).
+        Hypothesis hashBag_assoc : forall (l l1 l2 l3: seq hash) (perm : l = l1 ++ l2 ++ l3),
+            hashBag ([:: hashBag (l1 ++ l2)] ++ l3) = hashBag (l1 ++ [:: hashBag (l2 ++ l3)]).
+        Hypothesis hashBag_comm : forall (l l1 l2: seq hash) (perm : l = l1 ++ l2),
+            hashBag l = hashBag (l2 ++ l1).
 
   End IsoCanAlgorithm.
   (* Hypothesis rdf_total_order   *)

@@ -64,4 +64,7 @@ Section Triple.
     let (s,p,o,_,_,_) := t in
     [:: s ; p ; o].
 
+  Definition bnodes_triple (t : triple) : seq term :=
+    filter is_bnode (terms_triple t).
+
 End Triple.

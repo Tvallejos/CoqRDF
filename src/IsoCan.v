@@ -12,22 +12,26 @@ Section IsoCan.
   Let rdf_graph:= (rdf_graph I B L).
   Let triple:= (triple I B L).
   Let term:= (term I B L).
+  Let term_countType := (term_countType I B L).
+  Let is_bnode := (@is_bnode I B L).
 
   Definition isocanonical_function (M : B -> B) (g : rdf_graph) :=
     iso g (Rdf.relabeling M g) /\
       forall (h : rdf_graph), iso g h <-> (relabeling M g) = (relabeling M h).
 
   Section IsoCanAlgorithm.
-    Variable h : eqType.
-    Variable hashTerm : term -> h.
+    Variable h : countType.
+    Definition hash_eqMixin := PcanEqMixin (@pickleK h).
+    Definition hash_canChoiceMixin := PcanChoiceMixin (@pickleK h).
+    Definition hash_canCountMixin := PcanCountMixin (@pickleK h).
 
-    (* Record hinput := mkHinput { *)
-    (*                     A : Type; *)
-    (*                     input : A ; *)
-    (*                     output : h ; *)
-    (*                     f : A -> h; *)
-    (*                     (* heqin : f input == output *) *)
-    (*                   }. *)
+    Canonical hash_eqType := Eval hnf in EqType h hash_eqMixin.
+    Canonical hash_choiceType := Eval hnf in ChoiceType h hash_canChoiceMixin.
+    Canonical hash_countType := Eval hnf in CountType h hash_canCountMixin.
+
+    Definition hash_canPOrderMixin := PcanPOrderMixin (@pickleK hash_countType).
+    Canonical hash_POrderType := Eval hnf in POrderType tt h hash_canPOrderMixin.
+    Variable hashTerm : term -> h.
 
     Record hi_term :=
       mkHinput {
@@ -36,19 +40,11 @@ Section IsoCan.
           io : hashTerm input == output 
         }.
 
-    (* Definition hi_triple (t : triple) := *)
-    (*   {| *)
-    (*       A := triple; *)
-    (*       input := t; *)
-    (*       output := hashTriple t; *)
-    (*       f := hashTriple; *)
-    (*   |}. *)
-
     Hypothesis perfectHashingSchemeTerm : injective hashTerm.
 
     Lemma by_perf_hash (i : term) (o : h) (eqb : hashTerm i == o) : hashTerm i = o. apply /eqP. apply eqb. Qed.
 
-    Definition hi_term_inj (hin1 hin2: hi_term):
+    Definition hi_term_inj_o (hin1 hin2: hi_term):
       output hin1 = output hin2 ->
       hin1 = hin2.
     Proof. case: hin1; case: hin2 => [i1 o1 io1] i2 o2 io2 /= oeq. 
@@ -57,35 +53,48 @@ Section IsoCan.
            subst. by f_equal; apply eq_irrelevance.
     Qed.
 
-    Definition eqb_hi_term (hin1 hin2: hi_term) : bool :=
-      output hin1 == output hin2.
-
-    Lemma hi_term_eqP : Equality.axiom eqb_hi_term.
-    Proof.
-      rewrite /Equality.axiom => x y.
-      apply: (iffP idP) => //= [| ->]; rewrite /eqb_hi_term.
-      case: x; case: y => [ix ox iox] iy oy ioy /= eq. apply hi_term_inj. rewrite /=. apply /eqP. apply eq.
-      by [].
+    Definition hi_term_inj_i (hin1 hin2: hi_term):
+      input hin1 = input hin2 ->
+      hin1 = hin2.
+    Proof. case: hin1; case: hin2 => [i1 o1 io1] i2 o2 io2 /= ieq. subst.
+           have io1P: hashTerm i1 = o1. apply /eqP. apply io1.
+           have io2P: hashTerm i1 = o2. apply /eqP. apply io2. subst. f_equal. apply eq_irrelevance.
     Qed.
 
-    Canonical hi_term_eqType := EqType hi_term (EqMixin hi_term_eqP).
-    (* Inductive hit (t : term) : h -> Type := *)
-    (* | ha : hit t (hashTerm t). *)
+    Definition code_hash (x : hi_term) :=
+      let (i,_,_) := x in
+      pickle i.
 
-    (* Definition hit_eq (t : term) : (hit t (hashTerm t)) := *)
-    (*   (ha t).  *)
+    Definition build_hash (i : term) : option hi_term.
+    Proof.
+      (* have o: h. exact (hashTerm i). *)
+      have E : hashTerm i == hashTerm i. by [].
+           - exact (Some (mkHinput E)).
+   Defined.
 
-    Definition hash := option hi_term.
+    Definition decode_hash (x : nat) : option hi_term:=
+      let ot := (@unpickle term_countType x) in
+      match ot with
+      | Some t => build_hash t
+      | None => None
+      end.
 
-    (* Definition eqb_hash (h1 h2: hash) := *)
-    (*   match h1, h2 with *)
-    (*   | None,None => true *)
-    (*   | Some hin1,Some hin2 => hin1 == hin2 *)
-    (*   | _,_ => false *)
-    (*   end. *)
+    Definition cancel_hin_encode : pcancel code_hash decode_hash.
+    Proof. case => i o ioeq. rewrite /code_hash /decode_hash. rewrite pickleK.
+           rewrite /build_hash. have ioeqP : hashTerm i = o. by apply /eqP; apply ioeq.
+           rewrite /ssr_have /=. f_equal. by apply hi_term_inj_i.
+    Qed.
 
-    Canonical hash_eqType := EqType hash [eqMixin of hash].
+    Definition hin_eqMixin := PcanEqMixin cancel_hin_encode.
+    Definition hin_canChoiceMixin := PcanChoiceMixin cancel_hin_encode.
+    Definition hin_canCountMixin := PcanCountMixin cancel_hin_encode.
 
+    Canonical hin_eqType := Eval hnf in EqType hi_term hin_eqMixin.
+    Canonical hin_choiceType := Eval hnf in ChoiceType hi_term hin_canChoiceMixin.
+    Canonical hin_countType := Eval hnf in CountType hi_term hin_canCountMixin.
+    Definition hin_canPOrderMixin := PcanPOrderMixin cancel_hin_encode.
+    Canonical hin_POrderType := Eval hnf in POrderType tt h hash_canPOrderMixin.
+    Definition hash := hi_term.
 
     (* Definition initTerm (t : term) : hash := *)
     (*   match t with *)
@@ -99,8 +108,6 @@ Section IsoCan.
 
     Variable hashNodes : (rdf_graph -> seq hashmap).
     Variable lookup_hashmap : (hashmap -> term -> hash).
-
-    (* Let nth := nth hashmap [::]. *)
 
     Hypothesis hash_dont_get_equal :
       forall (g : rdf_graph) (hms : seq hashmap)
@@ -128,7 +135,17 @@ Section IsoCan.
     Hypothesis hashBag_comm : forall (l l1 l2: seq hash) (perm : l = l1 ++ l2),
         hashBag l = hashBag (l2 ++ l1).
 
+    Section Partition.
+
+      Record partition := mkPartition {
+                             bnodes : seq term ;
+                             bnodes_r_bnodes : all is_bnode bnodes ;
+                             parts : seq hash
+                           }.
+    End Partition.
+
   End IsoCanAlgorithm.
   (* Hypothesis rdf_total_order   *)
 
 End IsoCan.
+

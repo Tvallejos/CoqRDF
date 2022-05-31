@@ -221,7 +221,7 @@ Section Rdf.
   Proof.
     rewrite /iso /is_iso.
     split; case=> mu [mu_bij heqb_rdf]; case: (mu_bij)=> [nu h1 h2];
-                                                         (exists nu; split; [exact: bij_can_bij h1 | exact: bijective_eqb_rdf heqb_rdf]).
+                                                       (exists nu; split; [exact: bij_can_bij h1 | exact: bijective_eqb_rdf heqb_rdf]).
   Qed. 
 
   Lemma iso_trans (g1 g2 g3: rdf_graph) : iso g1 g2 -> iso g2 g3 -> iso g1 g3.

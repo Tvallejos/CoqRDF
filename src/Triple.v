@@ -34,14 +34,6 @@ Section Triple.
     let (s,p,o,_,_,_) := t in
     GenTree.Node 0 [:: (code_term s); (code_term p) ; (code_term o)].
 
-  (* Variable T : eqType. *)
-  (* Variable p : T -> bool. *)
-  (* Definition f ( x' : T) : option {x | p x}. *)
-  (* Proof. destruct (p x') eqn:E. *)
-  (*        - exact (Some (exist _ x' E)). *)
-  (*        - exact None. *)
-  (* Qed. *)
-
   Definition decode_triple (x : GenTree.tree nat) : option triple.
   Proof. destruct x eqn:E.
          - exact None.
@@ -51,24 +43,24 @@ Section Triple.
              * exact None.
              * exact None.
              * destruct l0.
-               -- destruct (decode_term s) as [dst | ] eqn:ds; destruct (decode_term p) as [dpt | ] eqn:dp ; destruct (decode_term o) as [ dot| ] eqn:do.
-                                                                                                                                                        destruct (is_in_ib dst) eqn:iib; destruct (is_in_i dpt) eqn:ii; destruct (is_in_ibl dot) eqn: ibl.
-                                                                                                                                                        ++ exact (Some (mkTriple iib ii ibl)).
-                                                                                                                                                        -- repeat exact None.
-                                                                                                                                                           all: exact None.
+               -- destruct (decode_term s) as [dst | ] eqn:ds;
+                    destruct (decode_term p) as [dpt | ] eqn:dp;
+                    destruct (decode_term o) as [ dot| ] eqn:do.
+                                                               destruct (is_in_ib dst) eqn:iib;
+                                                                 destruct (is_in_i dpt) eqn:ii;
+                                                                 destruct (is_in_ibl dot) eqn: ibl.
+
+                                                               ++ exact (Some (mkTriple iib ii ibl)).
+                                                               + all: exact None. 
   Defined.
   
   Lemma cancel_triple_encode : pcancel code_triple decode_triple.
   Proof. case => s p o sib ii oibl. rewrite /code_triple /decode_triple.
-         (* rewrite *)
-         have cans: decode_term (code_term s) = Some s. apply cancel_code_decode.
-         have canp: decode_term (code_term p) = Some p. apply cancel_code_decode.
-         have cano: decode_term (code_term o) = Some o. apply cancel_code_decode.
-         rewrite /= !cans !canp !cano.
-         destruct s => //=; destruct p => //=; destruct o => //=.
-         all: f_equal; apply triple_inj; rewrite /=; reflexivity.
-         Qed. 
-         
+         have cant: forall (t : term), decode_term (code_term t) = Some t. apply cancel_code_decode.
+         rewrite /= !cant; destruct s; destruct p ; destruct o => //=.
+         all: by f_equal; apply triple_inj. 
+  Qed. 
+  
   Definition triple_eqMixin := PcanEqMixin cancel_triple_encode.
   Definition triple_canChoiceMixin := PcanChoiceMixin cancel_triple_encode.
   Definition triple_canCountMixin := PcanCountMixin cancel_triple_encode.

@@ -38,7 +38,6 @@ Section Term.
     | _ => None
     end.
 
-
   Lemma cancel_code_decode : pcancel code_term decode_term.
   Proof. case => [id | l | name]; by rewrite /= pickleK. Qed.
 
@@ -79,30 +78,6 @@ Section Term.
 
   Definition is_in_ibl (t : term) : bool :=
     is_iri t || is_bnode t || is_lit t.
-
-  Definition reconstruct_is_in_ib (x : GenTree.tree nat) : bool :=
-    if decode_term x is Some t then is_in_ib t else false.
-
-  Definition reconstruct_is_in_i (x : GenTree.tree nat) : bool :=
-    if decode_term x is Some t then is_in_i t else false.
-
-  Definition reconstruct_is_in_ibl (x : GenTree.tree nat) : bool :=
-    if decode_term x is Some t then is_in_ibl t else false.
-
-  Lemma decode_is_in_ib (t : term) (p: is_in_ib t) :
-    reconstruct_is_in_ib (code_term t).
-  Proof. revert p; case t; rewrite /reconstruct_is_in_ib=> t' p'; by rewrite cancel_code_decode; apply p'.
-  Qed.
-
-  Lemma decode_is_in_i (t : term) (p: is_in_i t) :
-    reconstruct_is_in_i (code_term t).
-  Proof. revert p; case t; rewrite /reconstruct_is_in_i=> t' p'; by rewrite cancel_code_decode; apply p'.
-  Qed.
-
-  Lemma decode_is_in_ibl (t : term) (p: is_in_ibl t) :
-    reconstruct_is_in_ibl (code_term t).
-  Proof. revert p; case t; rewrite /reconstruct_is_in_ibl=> t' p'; by rewrite cancel_code_decode; apply p'.
-  Qed.
 
   Definition relabeling_term (μ : B -> B) (t : term) : term :=
     match t with

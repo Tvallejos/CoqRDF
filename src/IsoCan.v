@@ -118,15 +118,15 @@ Section IsoCan.
         (hashh_hm : hash_h = last [::] (hashNodes h))
         (b : term) (bing : b \in (bnodes (g)))
         (c : term) (cinh : c \in (bnodes (h))),
-        exists μ, (relabeling_term μ b) = c -> lookup_hashmap hash_g b = lookup_hashmap hash_h c.
+      exists μ, (relabeling_term μ b) = c -> lookup_hashmap hash_g b = lookup_hashmap hash_h c.
 
     (* Hypothesis perfectHashingSchemeTriple : injective hashTriple. *)
 
-        Variable hashBag : (seq hash -> hash).
-        Hypothesis hashBag_assoc : forall (l l1 l2 l3: seq hash) (perm : l = l1 ++ l2 ++ l3),
-            hashBag ([:: hashBag (l1 ++ l2)] ++ l3) = hashBag (l1 ++ [:: hashBag (l2 ++ l3)]).
-        Hypothesis hashBag_comm : forall (l l1 l2: seq hash) (perm : l = l1 ++ l2),
-            hashBag l = hashBag (l2 ++ l1).
+    Variable hashBag : (seq hash -> hash).
+    Hypothesis hashBag_assoc : forall (l l1 l2 l3: seq hash) (perm : l = l1 ++ l2 ++ l3),
+        hashBag ([:: hashBag (l1 ++ l2)] ++ l3) = hashBag (l1 ++ [:: hashBag (l2 ++ l3)]).
+    Hypothesis hashBag_comm : forall (l l1 l2: seq hash) (perm : l = l1 ++ l2),
+        hashBag l = hashBag (l2 ++ l1).
 
   End IsoCanAlgorithm.
   (* Hypothesis rdf_total_order   *)

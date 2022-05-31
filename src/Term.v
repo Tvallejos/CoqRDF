@@ -24,17 +24,11 @@ Section Term.
     | Bnode name => GenTree.Node 2 (GenTree.Leaf (pickle name) :: nil)
     end.
 
-  Definition unwrap {T U: Type} (ctor : T -> U) (x : option T) : option U :=
-    match x with
-    | Some t => Some (ctor t)
-    | None => None
-    end.
-
   Definition decode_term (x : GenTree.tree nat) : option term :=
     match x with
-    | GenTree.Node 0 (GenTree.Leaf id :: nil) => unwrap Iri (unpickle id)
-    | GenTree.Node 1 (GenTree.Leaf l :: nil) =>  unwrap Lit (unpickle l)
-    | GenTree.Node 2 (GenTree.Leaf name :: nil) => unwrap Bnode (unpickle name)
+    | GenTree.Node 0 (GenTree.Leaf id :: nil) => omap Iri (unpickle id)
+    | GenTree.Node 1 (GenTree.Leaf l :: nil) =>  omap Lit (unpickle l)
+    | GenTree.Node 2 (GenTree.Leaf name :: nil) => omap Bnode (unpickle name)
     | _ => None
     end.
 

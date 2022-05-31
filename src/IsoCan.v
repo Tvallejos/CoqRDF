@@ -8,7 +8,7 @@ From RDF Require Import Rdf Triple Term.
 
 Section IsoCan.
   (* Axiom todo : forall A,A. *)
-  Variable I B L: eqType.
+  Variable I B L: countType.
   Let rdf_graph:= (rdf_graph I B L).
   Let triple:= (triple I B L).
   Let term:= (term I B L).

@@ -6,13 +6,13 @@ From RDF Require Import Term.
 From RDF Require Import Triple.
 
 Section Rdf.
-  (* Declare Scope rdf_scope. *)
-  (* Open Scope rdf_scope. *)
 
-  Variable I B L: eqType.
+  Variable I B L: countType.
   Let term:= (term I B L).
   Let triple:= (triple I B L).
-  (* Let terms_triple:= (terms_triple). *)
+  Let code_triple:= (@code_triple I B L).
+  Let decode_triple:= (@decode_triple I B L).
+  Let cancel_triple_encode := (@cancel_triple_encode I B L).
 
   Record rdf_graph := mkRdfGraph {
                          graph : seq triple
@@ -44,12 +44,93 @@ Section Rdf.
     move=> [g1 sib1 pi1 oibl1] [g2 sib2 pi2 oibl2] /= /eqP /= geq.
     subst. by f_equal; apply eq_irrelevance.
   Qed.
-  
-  Definition rdf_eqP : Equality.axiom eqb_rdf.
-  Proof. rewrite /Equality.axiom => x y.
-         apply: (iffP idP) => //= [| ->];
-                             case: x y=> [g1 sib1 pi1 oibl1] [g2 sib2 pi2 oibl2]. apply graph_inj. by apply eqb_rdf_refl.
+
+  Definition code_rdf (g : rdf_graph) :=
+    let (g',_,_,_) := g in
+    GenTree.Node 0 (map code_triple g').
+
+  Definition add_sib (ts : seq triple) (pall : all (fun t => is_in_ib (subject t)) ts) (t : triple) : all (fun t => is_in_ib (subject t)) (t::ts).
+  Proof. induction (t::ts).
+         - apply all_nil.
+         - rewrite /=. apply /andP ; split. by case a=> /= _ _ _ -> _ _. apply IHl.
   Qed.
+
+  Definition add_i (ts : seq triple) (pall : all (fun t => is_in_i (predicate t)) ts) (t : triple) : all (fun t => is_in_i (predicate t)) (t::ts).
+  Proof. induction (t::ts).
+         - apply all_nil.
+         - rewrite /=. apply /andP ; split. by case a=> /= _ _ _ _ -> _. apply IHl.
+  Qed.
+
+  Definition add_ibl (ts : seq triple) (pall : all (fun t => is_in_ibl (object t)) ts) (t : triple) : all (fun t => is_in_ibl (object t)) (t::ts).
+  Proof. induction (t::ts).
+         - apply all_nil.
+         - rewrite /=. apply /andP ; split. by case a=> /= _ _ _ _ _ ->. apply IHl.
+  Qed.
+
+  Definition add_triple (sg : option rdf_graph) (t : triple) : option rdf_graph.
+  Proof. destruct sg as [g |].
+         - destruct g as [g' sib ip ibl].
+           exact (Some {|
+                      graph := t :: g' ;
+                      subject_in_IB := (@add_sib g' sib t) ;
+                      predicate_in_I := (@add_i g' ip t) ;
+                      object_in_IBL := (@add_ibl g' ibl t)
+                    |}).
+         - exact None.
+  Defined.
+
+  Definition decode_rdf (x : GenTree.tree nat) : option rdf_graph.
+  Proof. destruct x.
+         - exact None.
+         - destruct n as [| n'].
+           + induction l as [| t ts IHts].
+             * exact (Some (mkRdfGraph
+                              (all_nil (fun t => is_in_ib (subject t)))
+                              (all_nil (fun t => is_in_i (predicate t)))
+                              (all_nil (fun t => is_in_ibl (object t)))
+                     )).
+             * destruct (decode_triple t) as [t'|].
+               -- apply (@add_triple IHts t').
+               -- exact None.
+           + exact None.
+  Defined.
+
+  Lemma forget_hd {T : Type} (t : T) (st : seq T) {p: T -> bool} (pall: all p (t::st)) : all p st.
+  Proof. revert pall=> /=. by move /andP=> [_ ->]. Qed.
+
+  Lemma cancel_rdf_encode : pcancel code_rdf decode_rdf.
+  Proof. case => g sib ii ibl. rewrite /code_rdf /decode_rdf.
+         induction g as [| t ts IHts].
+         - rewrite /=. f_equal. by apply graph_inj.
+         - rewrite /=.
+           have cant : decode_triple (code_triple t) = Some t. apply cancel_triple_encode.
+           rewrite cant. rewrite IHts.
+         - apply (forget_hd sib). apply (forget_hd ii). apply (forget_hd ibl).
+           move=> sib' ii' ibl'. rewrite /add_triple /=. f_equal. apply graph_inj. by rewrite /eqb_rdf.
+  Qed.
+
+  (* Definition rdf_eqP : Equality.axiom eqb_rdf. *)
+  (* Proof. rewrite /Equality.axiom => x y. *)
+  (*        apply: (iffP idP) => //= [| ->]; *)
+  (*                            case: x y=> [g1 sib1 pi1 oibl1] [g2 sib2 pi2 oibl2]. apply graph_inj. by apply eqb_rdf_refl. *)
+  (* Qed. *)
+
+  (* Definition rdf_le (g1 g2: rdf_graph) : bool := *)
+  (*   seqprod_with d triple *)
+
+  (* Canonical rdf_eqType := EqType rdf_graph (EqMixin rdf_eqP). *)
+
+  (* Canonical rdf_porderType := POrderType <= rdf_graph (lePOrderMixin). *)
+  Definition rdf_eqMixin := PcanEqMixin cancel_rdf_encode.
+  Definition rdf_canChoiceMixin := PcanChoiceMixin cancel_rdf_encode.
+  Definition rdf_canCountMixin := PcanCountMixin cancel_rdf_encode.
+
+  Canonical rdf_eqType := Eval hnf in EqType rdf_graph rdf_eqMixin.
+  Canonical rdf_choiceType := Eval hnf in ChoiceType rdf_graph rdf_canChoiceMixin.
+  Canonical rdf_countType := Eval hnf in CountType rdf_graph rdf_canCountMixin.
+
+  Definition rdf_canPOrderMixin := PcanPOrderMixin (@pickleK rdf_countType).
+  Canonical rdf_POrderType := Eval hnf in POrderType tt rdf_graph rdf_canPOrderMixin.
 
   Definition relabeling_seq_triple (μ : B -> B) (g : seq triple) : seq triple := map (relabeling_triple μ) g.
 
@@ -140,7 +221,7 @@ Section Rdf.
   Proof.
     rewrite /iso /is_iso.
     split; case=> mu [mu_bij heqb_rdf]; case: (mu_bij)=> [nu h1 h2];
-                                                       (exists nu; split; [exact: bij_can_bij h1 | exact: bijective_eqb_rdf heqb_rdf]).
+                                                         (exists nu; split; [exact: bij_can_bij h1 | exact: bijective_eqb_rdf heqb_rdf]).
   Qed. 
 
   Lemma iso_trans (g1 g2 g3: rdf_graph) : iso g1 g2 -> iso g2 g3 -> iso g1 g3.

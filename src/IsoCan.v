@@ -69,8 +69,8 @@ Section IsoCan.
     Proof.
       (* have o: h. exact (hashTerm i). *)
       have E : hashTerm i == hashTerm i. by [].
-           - exact (Some (mkHinput E)).
-   Defined.
+      - exact (Some (mkHinput E)).
+    Defined.
 
     Definition decode_hash (x : nat) : option hi_term:=
       let ot := (@unpickle term_countType x) in
@@ -137,11 +137,56 @@ Section IsoCan.
 
     Section Partition.
 
-      Record partition := mkPartition {
-                             bnodes : seq term ;
-                             bnodes_r_bnodes : all is_bnode bnodes ;
-                             parts : seq hash
-                           }.
+      Definition eq_rel (g : rdf_graph) (hm : hashmap) (b1 b2 : term) : bool :=
+        (b1 \in (bnodes g)) && (b2 \in (bnodes g)) && (lookup_hashmap hm b1 == lookup_hashmap hm b2).
+
+      Check partition.
+
+      Fixpoint partition {A : Type} (f : A -> bool) (s:seq A) : list A * list A :=
+        match s with
+        | nil => (nil, nil)
+        | x :: tl => let (g,d) := partition f tl in
+                   if f x then (x::g,d) else (g,x::d)
+        end.
+
+      Definition mkPartition (g : rdf_graph) (hm : hashmap) : seq (seq hash):=
+        let bns := (bnodes g) in
+        let equiv := (fun b => (fun t=> eq_rel g hm b t)) in
+        let partition := undup (map (fun b=> (partition (equiv b) bns).1 ) bns) in
+        map (fun bs => map (lookup_hashmap hm) bs) partition.
+      
+      (* Error: Cannot guess decreasing argument of fix. *)
+      (* Definition mkPartition (g : rdf_graph) (hm : hashmap) := *)
+      (*   let fix part (bnodes : seq term) (acc : seq (seq term)) := *)
+      (*                match bnodes with *)
+      (*                | nil => acc *)
+      (*                | b :: bs => *)
+      (*                    let equiv := (fun t=> eq_rel g hm b t) in *)
+      (*                    let (a_part,rest) := partition equiv bs in *)
+      (*                    part rest (a_part::acc) *)
+      (*                end in *)
+      (*   part (bnodes g) hm [::]. *)
+
+      (* Definition mkPartition (g : rdf_graph) (hm : hashmap) := *)
+      (*   let fix aux (bnodes : seq term) (acc : seq (seq term)) := *)
+      (*                match bnodes with *)
+      (*                | nil => acc *)
+      (*                | b :: bs => *)
+      (*                    let equiv := (fun t=> eq_rel g hm b t) in *)
+      (*                    let part := filter equiv bs in *)
+      (*                    let rest := foldr (@rem (term_eqType I B L)) bs part in *)
+      (*                    aux rest (part::acc) *)
+      (*                    (* aux (filter (fun t=>(~~ (equiv t))) bs) (part::acc) *) *)
+      (*                end in *)
+      (*   aux (bnodes g) hm [::]. *)
+
+      (* Record partition := mkPartition { *)
+      (*                        bnodes : seq term ; *)
+      (*                        bnodes_r_bnodes : all is_bnode bnodes ; *)
+      (*                        hm : hashmap ; *)
+
+
+      (*                      }. *)
     End Partition.
 
   End IsoCanAlgorithm.

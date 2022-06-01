@@ -111,20 +111,20 @@ Section IsoCan.
 
     Hypothesis hash_dont_get_equal :
       forall (g : rdf_graph) (hms : seq hashmap)
-        (ghashh : hashNodes g = hms)
-        (i j : nat) (ileqj : i <= j) (lim : j < size hms)
-        (x y : term) (bnx : is_bnode x) (bny : is_bnode y)
-        (xing : x \in (terms g)) (ying : y \in (terms g)),
+             (ghashh : hashNodes g = hms)
+             (i j : nat) (ileqj : i <= j) (lim : j < size hms)
+             (x y : term) (bnx : is_bnode x) (bny : is_bnode y)
+             (xing : x \in (terms g)) (ying : y \in (terms g)),
         (lookup_hashmap (nth [::] hms i) x != lookup_hashmap (nth [::] hms i) y)
         -> lookup_hashmap (nth [::] hms j) x != lookup_hashmap (nth [::] hms j) y.
 
     Hypothesis hashNodes_preserves_isomorphism :
       forall (g h: rdf_graph) (isogh : iso g h)
-        (hash_g hash_h: hashmap)
-        (hashg_hm : hash_g = last [::] (hashNodes g))
-        (hashh_hm : hash_h = last [::] (hashNodes h))
-        (b : term) (bing : b \in (bnodes (g)))
-        (c : term) (cinh : c \in (bnodes (h))),
+             (hash_g hash_h: hashmap)
+             (hashg_hm : hash_g = last [::] (hashNodes g))
+             (hashh_hm : hash_h = last [::] (hashNodes h))
+             (b : term) (bing : b \in (bnodes (g)))
+             (c : term) (cinh : c \in (bnodes (h))),
       exists μ, (relabeling_term μ b) = c -> lookup_hashmap hash_g b = lookup_hashmap hash_h c.
 
     (* Hypothesis perfectHashingSchemeTriple : injective hashTriple. *)
@@ -142,19 +142,32 @@ Section IsoCan.
 
       Check partition.
 
-      Fixpoint partition {A : Type} (f : A -> bool) (s:seq A) : list A * list A :=
+      Fixpoint partitionate {A : Type} (f : A -> bool) (s:seq A) : list A * list A :=
         match s with
         | nil => (nil, nil)
-        | x :: tl => let (g,d) := partition f tl in
-                   if f x then (x::g,d) else (g,x::d)
+        | x :: tl => let (g,d) := partitionate f tl in
+                     if f x then (x::g,d) else (g,x::d)
         end.
 
-      Definition mkPartition (g : rdf_graph) (hm : hashmap) : seq (seq hash):=
+      Definition part := seq hash.
+      Definition partition := seq part.
+
+      Definition mkPartition (g : rdf_graph) (hm : hashmap) : partition :=
         let bns := (bnodes g) in
         let equiv := (fun b => (fun t=> eq_rel g hm b t)) in
-        let partition := undup (map (fun b=> (partition (equiv b) bns).1 ) bns) in
-        map (fun bs => map (lookup_hashmap hm) bs) partition.
-      
+        let P := undup (map (fun b=> (partitionate (equiv b) bns).1 ) bns) in
+        map (fun bs => map (lookup_hashmap hm) bs) P.
+
+      Record Partition := mkPartition_ {
+                             P : partition ;
+                             g : rdf_graph ;
+                             hm : hashmap ;
+                             p_wf : P == mkPartition g hm ;
+                             has_b : all (fun p=> ~~ (nilp p)) P ;
+                             diff_hashes : uniq P 
+
+                           }.
+
       (* Error: Cannot guess decreasing argument of fix. *)
       (* Definition mkPartition (g : rdf_graph) (hm : hashmap) := *)
       (*   let fix part (bnodes : seq term) (acc : seq (seq term)) := *)
@@ -187,6 +200,40 @@ Section IsoCan.
 
 
       (*                      }. *)
+
+      Definition is_trivial (part : part) : bool :=
+        size part == 1.
+
+      Definition is_non_trivial (part : part) : bool :=
+        ~~ is_trivial part.
+
+      Definition is_fine (p : partition) : bool :=
+        all is_trivial p.
+
+      Definition is_coarse (p : partition) : bool :=
+        size p == 1.
+
+      Definition is_intermediate (p : partition) :=
+        ~~ is_fine p && ~~ is_coarse p.
+
+
+
+      (* Definition lt_part (part1 part2 : part) : bool := *)
+      (*   if size part1 < size part2 then *)
+      (*     true *)
+      (*   else if size part1 == size part2 then *)
+
+
+      (*          Definition le_partition (p1 p2 : partition) : bool :=  *)
+      (*          fun T : Type => T -> pred T *)
+      (*                                eq_refl. *)
+      (*          . *)
+      (*          Definition partition_LePOrderMixin := LePOrderMixin partition. *)
+      (*          forall (T : eqType) (le lt : rel T), *)
+      (*   (forall x y : T, lt x y = (y != x) && le x y) -> *)
+      (*   reflexive le -> antisymmetric le -> transitive le -> lePOrderMixin T *)
+
+      
     End Partition.
 
   End IsoCanAlgorithm.

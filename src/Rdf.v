@@ -231,4 +231,8 @@ Section Rdf.
          rewrite -relabeling_comp /= -eqb2 -eqb1. by apply eqb_rdf_refl.
   Qed.
 
+  Definition isocanonical_mapping (M : rdf_graph -> rdf_graph) :=
+    forall (g : rdf_graph),
+      iso (M g) g /\ forall (h : rdf_graph), iso (M g) (M h) <-> iso g h.
+
 End Rdf.

@@ -10,7 +10,7 @@ From RDF Require Export Rdf Triple Term.
 Section IsoCan.
   (* Axiom todo : forall A,A. *)
   Variable I B L: countType.
-  Let rdf_graph_:= (rdf_graph I B L).
+  Let rdf_graph_ := (rdf_graph I B L).
   Let triple_:= (triple I B L).
   Let term_ := (term I B L).
   Let term_countType_ := (term_countType I B L).
@@ -77,8 +77,9 @@ Section IsoCan.
 
     Definition hash := hi_term.
     End Hash.
-    
-    Definition eqb_t_hi (t : term_) (ht : term I (hin_ct B) L) : bool :=
+    Definition hash_term := term I (hin_ct B) L.
+
+    Definition eqb_t_hi (t : term_) (ht : hash_term) : bool :=
       match t, ht with
       | Iri i, Iri i' => i == i'
       | Bnode b,Bnode hin => b == (input hin)
@@ -116,24 +117,24 @@ Section IsoCan.
         |}.
 
 
-      Definition hash_graph (g : seq (triple I B L)) (f : B -> T): seq (triple I T L) :=
+      Definition map_graph (g : seq (triple I B L)) (f : B -> T): seq (triple I T L) :=
         map (MoveTriple f) g.
 
       Lemma app_st_p_sin (g : seq (triple I B L) ) (f : B -> T) :
         all (fun t => is_in_ib (subject t)) g ->
-        all (fun t => is_in_ib (subject t)) (hash_graph g f).
+        all (fun t => is_in_ib (subject t)) (map_graph g f).
       Proof. move=> /allP sin; apply /allP => [[s p o /= sint pint oint]] => tg; by apply sint. 
       Qed.
 
       Lemma app_st_p_pin (g : seq (triple I B L)) (μ : B -> T) :
         all (fun t => is_in_i (predicate t)) g ->
-        all (fun t => is_in_i (predicate t)) (hash_graph g μ).
+        all (fun t => is_in_i (predicate t)) (map_graph g μ).
       Proof. move=> /allP pin; apply /allP => [[s p o /= sint pint oint]] => tg; by apply pint.
       Qed.
 
       Lemma app_st_p_oin (g : seq (triple I B L)) (μ : B -> T) :
         all (fun t => is_in_ibl (object t)) g ->
-        all (fun t => is_in_ibl (object t)) (hash_graph g μ).
+        all (fun t => is_in_ibl (object t)) (map_graph g μ).
       Proof. move=> /allP oin; apply /allP => [[s p o /= sibt pibt oint]] => tg; by apply oint.
       Qed.
 
@@ -142,8 +143,9 @@ Section IsoCan.
         mkRdfGraph (app_st_p_sin f sin)(app_st_p_pin f pin) (app_st_p_oin f oin).
 
     End typeRelabel.
-    
-    Definition get_triple (t : term I B L) (trpl : triple I (hin_ct B) L) : option (term I (hin_ct B) L) :=
+    Definition hash_triple := triple I (hin_ct B) L.
+
+    Definition get_triple (t : term I B L) (trpl : hash_triple) : option hash_term :=
       let (s,p,o,_,_,_) := trpl in
       if eqb_t_hi t s then Some s
       else if eqb_t_hi t p then Some p
@@ -153,7 +155,9 @@ Section IsoCan.
     Definition is_some {T : Type} (ot : option T) : bool := 
       match ot with Some _ => true | None => false end.
 
-    Definition get (t : term_) (g : rdf_graph I (hin_ct B) L) : option (term I (hin_ct B) L) :=
+    Definition hash_graph := rdf_graph I (hin_ct B) L.
+
+    Definition get (t : term_) (g : hash_graph) : option hash_term :=
       let otrs := (map (get_triple t) (graph g)) in
       head None (filter is_some otrs).
 
@@ -164,7 +168,7 @@ Section IsoCan.
       | _ => None
       end. *)
 
-    Definition lookup_hash (b : term I (hin_ct B) L): option (hash B) :=
+    Definition lookup_hash (b : hash_term): option (hash B) :=
       match b with 
       | Bnode hin => Some hin
       | _ => None
@@ -179,13 +183,13 @@ Section IsoCan.
       | _,_ => false
       end. *)
 
-    Definition eq_rel (b1 b2 : term I (hin_ct B) L ) : bool :=
+    Definition eq_rel (b1 b2 : hash_term) : bool :=
       match (lookup_hash b1), (lookup_hash b2) with
       | Some hin1, Some hin2 => current_hash hin1 == current_hash hin2
       | _,_ => false
       end.
 
-    Fixpoint partitionate (f : (term I (hin_ct B) L) -> bool) (s:seq (term I (hin_ct B) L)) : list (term I (hin_ct B) L) * list (term I (hin_ct B) L) :=
+    Fixpoint partitionate (f : hash_term -> bool) (s:seq hash_term) : seq hash_term * seq hash_term :=
       match s with
       | nil => (nil, nil)
       | x :: tl => let (g,d) := partitionate f tl in
@@ -202,7 +206,7 @@ Section IsoCan.
       | None :: oss => unwrap oss
       end.
 
-    Definition mkPartition (g : rdf_graph I (hin_ct B) L) : partition :=
+    Definition mkPartition (g : hash_graph) : partition :=
       let bns := (bnodes g) in
       let equiv := (fun b => (fun t=> eq_rel b t)) in
       let P := undup (map (fun b=> (partitionate (equiv b) bns).1 ) bns) in
@@ -211,7 +215,7 @@ Section IsoCan.
 
     Record Partition := mkPartition_ {
                            P : partition ;
-                           g : rdf_graph I (hin_ct B) L ;
+                           g : hash_graph ;
                            p_wf : P == mkPartition g  ;
                            has_b : all (fun p=> ~~ (nilp p)) P ;
                            diff_hashes : uniq P 
@@ -288,40 +292,36 @@ Section IsoCan.
 
 
 
-  Definition init_bnode (b : B) : (hi_term B) :=
+  Definition init_bnode (b : B) : (hash B) :=
     mkHinput b h0.
 
-  Definition init_hash (g : rdf_graph_) : rdf_graph I (hin_ct B) L :=
+  Definition init_hash (g : rdf_graph_) : hash_graph :=
     graph_map init_bnode g.
 
   Definition cmp_part (p1 p2 : part) : bool :=
     all2 (fun b1 b2 => input b1 == input b2) p1 p2.
 
-  Definition partition_didnt_change (g h: rdf_graph I (hin_ct B) L) : bool :=
+  Definition partition_didnt_change (g h: hash_graph) : bool :=
     let pg := mkPartition g in 
     let ph := mkPartition h in
     all2 (fun p1 p2 => cmp_part p1 p2) pg ph.
 
-  Variable update_bnodes : rdf_graph I (hin_ct B) L -> rdf_graph I (hin_ct B) L.
+  Variable update_bnodes : hash_graph -> hash_graph.
 
-  Fixpoint iterate (g h: rdf_graph I (hin_ct B) L) (fuel : nat) : rdf_graph I (hin_ct B) L :=
+  Fixpoint iterate (g : hash_graph) (fuel : nat) : hash_graph :=
     match fuel with
-    | O => h 
+    | O => g
     | S n' =>
+      let h := update_bnodes g in
       if partition_didnt_change g h then h else
-      let g' := update_bnodes h in
-      iterate h g' n'
+      iterate h n'
       end.
 
-  Definition hashNodes (g : rdf_graph_ ) : (rdf_graph I (hin_ct B) L) :=
+  Definition hashNodes (g : rdf_graph_ ) : hash_graph :=
     let ini := init_hash g in
-    let iter := update_bnodes ini in
-    iterate ini iter (size (graph g)).
+    iterate ini (size (graph g)).
 
-      (*     Variable hashNodes : (rdf_graph -> seq hashmap).
-    Variable lookup_hashmap : (hashmap -> term -> hash).
-
-    Hypothesis hash_dont_get_equal :
+(*   Lemma hash_dont_get_equal (g : hash_graph)
       forall (g : rdf_graph) (hms : seq hashmap)
              (ghashh : hashNodes g = hms)
              (i j : nat) (ileqj : i <= j) (lim : j < size hms)
@@ -338,13 +338,13 @@ Section IsoCan.
              (b : term) (bing : b \in (bnodes (g)))
              (c : term) (cinh : c \in (bnodes (h))),
       exists μ, (relabeling_term μ b) = c -> lookup_hashmap hash_g b = lookup_hashmap hash_h c. *)
-
+ 
       (* Hypothesis perfectHashingSchemeTriple : injective hashTriple. *)
 
-      Variable hashBag : (seq hash -> hash).
-  Hypothesis hashBag_assoc : forall (l l1 l2 l3: seq hash) (perm : l = l1 ++ l2 ++ l3),
+      Variable hashBag : (seq (hash B) -> (hash B)).
+  Hypothesis hashBag_assoc : forall (l l1 l2 l3: seq (hash B)) (perm : l = l1 ++ l2 ++ l3),
       hashBag ([:: hashBag (l1 ++ l2)] ++ l3) = hashBag (l1 ++ [:: hashBag (l2 ++ l3)]).
-  Hypothesis hashBag_comm : forall (l l1 l2: seq hash) (perm : l = l1 ++ l2),
+  Hypothesis hashBag_comm : forall (l l1 l2: seq (hash B)) (perm : l = l1 ++ l2),
       hashBag l = hashBag (l2 ++ l1).
 
 End IsoCanAlgorithm.

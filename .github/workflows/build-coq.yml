@@ -6,6 +6,7 @@ on:
             - main
             - 'model/**'
             - 'ci/**'
+            - 'impl/**'
         pull_request:
             branches:
                 - '**'

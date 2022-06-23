@@ -10,11 +10,10 @@ From RDF Require Export Rdf Triple Term.
 Section IsoCan.
   (* Axiom todo : forall A,A. *)
   Variable I B L: countType.
-  Let rdf_graph_ := (rdf_graph I B L).
-  Let triple_:= (triple I B L).
-  Let term_ := (term I B L).
-  Let term_countType_ := (term_countType I B L).
-  Let is_bnode := (@is_bnode I B L).
+  Let rdf_graph_ := (@rdf_graph I B L).
+  Let triple_:= (@triple I B L).
+  Let term_ := (@term I B L).
+  Let term_countType_ := (@term_countType I B L).
 
 (*   Definition isocanonical_function (M : B -> B) (g : rdf_graph_) :=
     iso g (Rdf.relabeling M g) /\
@@ -35,24 +34,23 @@ Section IsoCan.
     Canonical hash_POrderType := Eval hnf in POrderType tt h hash_canPOrderMixin.
     Variable hashTerm : term_ -> h.
     Section Hash.
-    Variable T : countType.
+    
 
-    Record hi_term := mkHinput {
+    Record hi_term (T : Type) := mkHinput {
                          input : T ;
                          current_hash : h
                        }.
 
 
-
     Hypothesis perfectHashingSchemeTerm : injective hashTerm.
 
     Lemma by_perf_hash (i : term_) (o : h) (eqb : hashTerm i == o) : hashTerm i = o. apply /eqP. apply eqb. Qed.
-
-    Definition code_hash (x : hi_term) : GenTree.tree nat :=
+    Variable T : countType.
+    Definition code_hash (x : hi_term T) : GenTree.tree nat :=
       let (i,o) := x in
       GenTree.Node 0 [:: GenTree.Leaf (pickle i); GenTree.Leaf (pickle o)].
 
-    Definition decode_hash (x : GenTree.tree nat) : option hi_term :=
+    Definition decode_hash (x : GenTree.tree nat) : option (hi_term T) :=
       match x with
       | GenTree.Node 0 [:: GenTree.Leaf n; GenTree.Leaf m] =>
           match (@unpickle T n, @unpickle hash_countType m) with
@@ -69,15 +67,19 @@ Section IsoCan.
     Definition hin_canChoiceMixin := PcanChoiceMixin cancel_hin_encode.
     Definition hin_canCountMixin := PcanCountMixin cancel_hin_encode.
 
-    Canonical hin_eqType := Eval hnf in EqType hi_term hin_eqMixin.
-    Canonical hin_choiceType := Eval hnf in ChoiceType hi_term hin_canChoiceMixin.
-    Canonical hin_ct := Eval hnf in CountType hi_term hin_canCountMixin.
+    Canonical hin_eqType := Eval hnf in EqType (hi_term T) hin_eqMixin.
+    Canonical hin_choiceType := Eval hnf in ChoiceType (hi_term T) hin_canChoiceMixin.
+    Canonical hin_ct := Eval hnf in CountType (hi_term T) hin_canCountMixin.
     Definition hin_canPOrderMixin := PcanPOrderMixin (@pickleK hin_ct).
-    Canonical hin_POrderType := Eval hnf in POrderType tt hi_term hin_canPOrderMixin.
+    Canonical hin_POrderType := Eval hnf in POrderType tt (hi_term T) hin_canPOrderMixin.
 
     Definition hash := hi_term.
     End Hash.
-    Definition hash_term := term I (hin_ct B) L.
+    Definition hash_term := @term I (hash B) L.
+(*     Definition hash_term_eqMixin := PcanEqMixin (@pickleK hash_term).
+    Canonical hash_eqType := Eval hnf in EqType hash_term hash_term_eqMixin. *)
+
+    Let is_bnode := (@is_bnode I (hash B) L).
 
     Definition eqb_t_hi (t : term_) (ht : hash_term) : bool :=
       match t, ht with
@@ -92,21 +94,21 @@ Section IsoCan.
     Section typeRelabel.
       Variable T : countType.
 
-      Definition app_term (t : term I B L) (f : B -> T) : term I T L :=
+      Definition app_term (t : @term I B L) (f : B -> T) : @term I T L :=
         match t with
-        | Bnode b => Bnode I L (f b)
-        | Iri i => Iri T L i
-        | Lit l => Lit I T l
+        | Bnode b => Bnode (f b)
+        | Iri i => Iri i
+        | Lit l => Lit l
         end.
 
-      Definition app_p_sib (s : term I B L) (f : B -> T) : (is_in_ib s) -> (is_in_ib (app_term s f)).
+      Definition app_p_sib (s : @term I B L) (f : B -> T) : (is_in_ib s) -> (is_in_ib (app_term s f)).
       Proof. rewrite /app_term; by case s. Qed.
-      Definition app_p_pii (p : term I B L) (f : B -> T) : (is_in_i p) -> (is_in_i (app_term p f)).
+      Definition app_p_pii (p : @term I B L) (f : B -> T) : (is_in_i p) -> (is_in_i (app_term p f)).
       Proof. rewrite /app_term; by case p. Qed.
-      Definition app_p_ibl (o : term I B L) (f : B -> T) : (is_in_ibl o) -> (is_in_ibl (app_term o f)).
+      Definition app_p_ibl (o : @term I B L) (f : B -> T) : (is_in_ibl o) -> (is_in_ibl (app_term o f)).
       Proof. rewrite /app_term; by case o. Qed.
 
-      Definition MoveTriple (f : B -> T) (t : triple I B L) : triple I T L :=
+      Definition MoveTriple (f : B -> T) (t : @triple I B L) : @triple I T L :=
         let (s,p,o,sin,pin,oin) := t in
         {| subject := app_term s f ;
           predicate := app_term p f ;
@@ -117,35 +119,35 @@ Section IsoCan.
         |}.
 
 
-      Definition map_graph (g : seq (triple I B L)) (f : B -> T): seq (triple I T L) :=
+      Definition map_graph (g : seq (@triple I B L)) (f : B -> T): seq (@triple I T L) :=
         map (MoveTriple f) g.
 
-      Lemma app_st_p_sin (g : seq (triple I B L) ) (f : B -> T) :
+      Lemma app_st_p_sin (g : seq (@triple I B L) ) (f : B -> T) :
         all (fun t => is_in_ib (subject t)) g ->
         all (fun t => is_in_ib (subject t)) (map_graph g f).
       Proof. move=> /allP sin; apply /allP => [[s p o /= sint pint oint]] => tg; by apply sint. 
       Qed.
 
-      Lemma app_st_p_pin (g : seq (triple I B L)) (μ : B -> T) :
+      Lemma app_st_p_pin (g : seq (@triple I B L)) (μ : B -> T) :
         all (fun t => is_in_i (predicate t)) g ->
         all (fun t => is_in_i (predicate t)) (map_graph g μ).
       Proof. move=> /allP pin; apply /allP => [[s p o /= sint pint oint]] => tg; by apply pint.
       Qed.
 
-      Lemma app_st_p_oin (g : seq (triple I B L)) (μ : B -> T) :
+      Lemma app_st_p_oin (g : seq (@triple I B L)) (μ : B -> T) :
         all (fun t => is_in_ibl (object t)) g ->
         all (fun t => is_in_ibl (object t)) (map_graph g μ).
       Proof. move=> /allP oin; apply /allP => [[s p o /= sibt pibt oint]] => tg; by apply oint.
       Qed.
 
-      Definition graph_map (f : B -> T) (g : rdf_graph_): rdf_graph I T L:=
+      Definition graph_map (f : B -> T) (g : rdf_graph_): @rdf_graph I T L:=
         let (g',sin,pin,oin) := g in
         mkRdfGraph (app_st_p_sin f sin)(app_st_p_pin f pin) (app_st_p_oin f oin).
 
     End typeRelabel.
-    Definition hash_triple := triple I (hin_ct B) L.
+    Definition hash_triple := @triple I (hash B) L.
 
-    Definition get_triple (t : term I B L) (trpl : hash_triple) : option hash_term :=
+    Definition get_triple (t : @term I B L) (trpl : hash_triple) : option hash_term :=
       let (s,p,o,_,_,_) := trpl in
       if eqb_t_hi t s then Some s
       else if eqb_t_hi t p then Some p
@@ -155,13 +157,13 @@ Section IsoCan.
     Definition is_some {T : Type} (ot : option T) : bool := 
       match ot with Some _ => true | None => false end.
 
-    Definition hash_graph := rdf_graph I (hin_ct B) L.
+    Definition hash_graph := @rdf_graph I (hash B) L.
 
     Definition get (t : term_) (g : hash_graph) : option hash_term :=
       let otrs := (map (get_triple t) (graph g)) in
       head None (filter is_some otrs).
 
-(*     Definition lookup_hash (g : rdf_graph I (hin_ct B) L) (b : term I B L): option (hash B) :=
+(*     Definition lookup_hash (g : rdf_graph I (hash B) L) (b : term I B L): option (hash B) :=
       let ot := get b g in
       match ot with 
       | Some (Bnode hin) => Some hin
@@ -177,7 +179,7 @@ Section IsoCan.
 
       Section Partition.
 
-(*     Definition eq_rel (g : rdf_graph I (hin_ct B) L) (b1 b2 : term I B L ) : bool :=
+(*     Definition eq_rel (g : rdf_graph I (hash B) L) (b1 b2 : term I B L ) : bool :=
       match (lookup_hash b1), (lookup_hash b2) with
       | Some hin1, Some hin2 => current_hash hin1 == current_hash hin2
       | _,_ => false
@@ -320,16 +322,45 @@ Section IsoCan.
   Definition hashNodes (g : rdf_graph_ ) : hash_graph :=
     let ini := init_hash g in
     iterate ini (size (graph g)).
+  
 
-(*   Lemma hash_dont_get_equal (g : hash_graph)
-      forall (g : rdf_graph) (hms : seq hashmap)
-             (ghashh : hashNodes g = hms)
-             (i j : nat) (ileqj : i <= j) (lim : j < size hms)
-             (x y : term) (bnx : is_bnode x) (bny : is_bnode y)
-             (xing : x \in (terms g)) (ying : y \in (terms g)),
-        (lookup_hashmap (nth [::] hms i) x != lookup_hashmap (nth [::] hms i) y)
-        -> lookup_hashmap (nth [::] hms j) x != lookup_hashmap (nth [::] hms j) y.
 
+(*   Definition cmp_bnode (b : B) (t : hash_term) : bool :=
+    match t with
+    | Bnode hin => b == hin
+    | _ => false
+    end. *)
+  Definition lookup_bnode_in_triple (t : hash_triple) (b : B) : hash_term :=
+    let (s,p,o,_,_,_) := t in 
+    let is_b := (fun t : hash_term => match t with
+                     | Bnode hin => b == (input hin)
+                     | _ => false
+                     end) in
+    if is_b s then s 
+    else if is_b p then p
+    else o.
+        
+  (* Definition lookup_bnode (b : B) (g : hash_graph) : option h := *)
+  (*   filter (fun t => match t with *)
+  (*                    | Bnode hin => b == hin *)
+  (*                    | _ => false *)
+  (*                    end) (graph g). *)
+
+  (* Lemma hash_dont_get_equal (g : hash_graph) (b1 b2: B) : True. *)
+  
+  
+  (* { hash_term | is_true is_bnode }) : forall n, n+1. *)
+  
+  (* () *)
+  (*     forall (g : rdf_graph) (hms : seq hashmap) *)
+  (*            (ghashh : hashNodes g = hms) *)
+  (*            (i j : nat) (ileqj : i <= j) (lim : j < size hms) *)
+  (*            (x y : term) (bnx : is_bnode x) (bny : is_bnode y) *)
+  (*            (xing : x \in (terms g)) (ying : y \in (terms g)), *)
+  (*       (lookup_hashmap (nth [::] hms i) x != lookup_hashmap (nth [::] hms i) y) *)
+  (*       -> lookup_hashmap (nth [::] hms j) x != lookup_hashmap (nth [::] hms j) y. *)
+
+(* 
     Hypothesis hashNodes_preserves_isomorphism :
       forall (g h: rdf_graph) (isogh : iso g h)
              (hash_g hash_h: hashmap)

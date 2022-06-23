@@ -1,11 +1,9 @@
 From mathcomp Require Import all_ssreflect.
-(* all_algebra. *)
 Set Implicit Arguments.
 Unset Strict Implicit.
 Unset Printing Implicit Defensive.
 
 Import Order.Theory.
-(* GRing.Theory Num.Theory. *)
 Section Term.
 
   (* literals should be of Datatype type, is not important for the moment*)
@@ -45,7 +43,6 @@ Section Term.
 
     Definition is_in_ibl (t : @term I B L) : bool :=
       is_iri t || is_bnode t || is_lit t.
-
 
     Definition relabeling_term (μ : B -> B) (t : (@term I B L)) : term :=
       match t with
@@ -87,7 +84,6 @@ Section Term.
   Section EqTerm.
     Variables I B L : eqType.
 
-
     Definition eqb_term (t1 t2 : @term I B L) : bool :=
       match t1, t2 with
       | Iri i1, Iri i2 => i1 == i2
@@ -104,6 +100,7 @@ Section Term.
     Qed.
 
     Canonical term_eqType := EqType term (EqMixin term_eqP).
+
   End EqTerm.
   Section CountTerm.
     Variable I B L: countType.
@@ -126,11 +123,9 @@ Section Term.
     Lemma cancel_code_decode : pcancel code_term decode_term.
     Proof. case => [id | l | name]; by rewrite /= pickleK. Qed.
 
-    (*   Definition term_eqMixin := PcanEqMixin cancel_code_decode. *)
     Definition term_canChoiceMixin := PcanChoiceMixin cancel_code_decode.
     Definition term_canCountMixin := PcanCountMixin cancel_code_decode.
 
-    (*   Canonical term_eqType := Eval hnf in EqType term term_eqMixin. *)
     Canonical term_choiceType := Eval hnf in ChoiceType term term_canChoiceMixin.
     Canonical term_countType := Eval hnf in CountType term term_canCountMixin.
 
@@ -138,6 +133,5 @@ Section Term.
     Canonical term_POrderType := Eval hnf in POrderType tt term term_canPOrderMixin.
 
   End CountTerm.
-
-
 End Term.
+

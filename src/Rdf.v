@@ -55,7 +55,6 @@ Section Rdf.
 
     Definition relabeling_seq_triple (μ : B -> B) (g : seq (@triple I B L)) : seq triple := map (relabeling_triple μ) g.
 
-
     Lemma relabeling_seq_triple_comp_P (g1 g2 : seq triple) (eqb : g1 = g2) (μ : B->B) :
       relabeling_seq_triple μ g1 = relabeling_seq_triple μ g2. by rewrite eqb. Qed.
 
@@ -138,8 +137,8 @@ Section Rdf.
 
     Lemma relabeling_comp_simpl (μ1 μ2 : B -> B) (g : rdf_graph) : relabeling μ1 (relabeling μ2 g) = relabeling (μ1 \o μ2) g.
     Proof. by rewrite -relabeling_comp. Qed.
-  End PolyRdf.
 
+  End PolyRdf.
   Section EqRdf.
     Variables I B L : eqType.
     
@@ -166,6 +165,37 @@ Section Rdf.
       have /relabeling_ext-> : nu \o mu =1 id by [].
       rewrite relabeling_id; exact: eqb_rdf_refl.
     Qed.
+
+    Definition is_iso (g1 g2 : @rdf_graph I B L) (μ : B -> B) :=
+      (bijective μ) /\ eqb_rdf g1 (relabeling μ g2).
+
+    Definition iso (g1 g2 : rdf_graph):= exists (μ : B -> B),
+        is_iso g1 g2 μ.
+
+    Lemma iso_refl (g : rdf_graph) : iso g g.
+    Proof. rewrite /iso /is_iso; exists id; split.
+           exists id => //.
+           by rewrite relabeling_id eqb_rdf_refl.
+    Qed.
+
+    Lemma iso_symm (g1 g2 : rdf_graph) :
+      iso g1 g2 <-> iso g2 g1.
+    Proof.
+      rewrite /iso /is_iso.
+      split; case=> mu [mu_bij heqb_rdf]; case: (mu_bij)=> [nu h1 h2];
+                                                         (exists nu; split; [exact: bij_can_bij h1 | exact: bijective_eqb_rdf heqb_rdf]).
+    Qed. 
+
+    Lemma iso_trans (g1 g2 g3: rdf_graph) : iso g1 g2 -> iso g2 g3 -> iso g1 g3.
+    Proof. rewrite /iso /is_iso /eqb_rdf => [[μ1 [bij1 /eqP /graph_inj eqb1]] [μ2 [bij2 /eqP /graph_inj eqb2]]].
+           exists (μ1 \o μ2). split. 
+           rewrite /=. apply bij_comp. apply bij1. apply bij2.
+           rewrite -relabeling_comp /= -eqb2 -eqb1. by apply eqb_rdf_refl.
+    Qed.
+
+    Definition isocanonical_mapping (M : rdf_graph -> rdf_graph) :=
+      forall (g : rdf_graph),
+        iso (M g) g /\ forall (h : rdf_graph), iso (M g) (M h) <-> iso g h.
 
   End EqRdf.
 
@@ -203,8 +233,6 @@ Section Rdf.
              move=> sib' ii' ibl'. rewrite /add_triple /=. f_equal. apply graph_inj. by rewrite /eqb_rdf.
     Qed.
 
-
-    (* Canonical rdf_porderType := POrderType <= rdf_graph (lePOrderMixin). *)
     Definition rdf_canChoiceMixin := PcanChoiceMixin cancel_rdf_encode.
     Definition rdf_canCountMixin := PcanCountMixin cancel_rdf_encode.
 
@@ -214,40 +242,6 @@ Section Rdf.
     Definition rdf_canPOrderMixin := PcanPOrderMixin (@pickleK rdf_countType).
     Canonical rdf_POrderType := Eval hnf in POrderType tt rdf_graph rdf_canPOrderMixin.
 
-
-    Definition is_iso (g1 g2 : @rdf_graph I B L) (μ : B -> B) :=
-      (bijective μ) /\ eqb_rdf g1 (relabeling μ g2).
-
-    Definition iso (g1 g2 : rdf_graph):= exists (μ : B -> B),
-        is_iso g1 g2 μ.
-
-    Lemma iso_refl (g : rdf_graph) : iso g g.
-    Proof. rewrite /iso /is_iso; exists id; split.
-           exists id => //.
-           by rewrite relabeling_id eqb_rdf_refl.
-    Qed.
-
-
-    Lemma iso_symm (g1 g2 : rdf_graph) :
-      iso g1 g2 <-> iso g2 g1.
-    Proof.
-      rewrite /iso /is_iso.
-      split; case=> mu [mu_bij heqb_rdf]; case: (mu_bij)=> [nu h1 h2];
-                                                         (exists nu; split; [exact: bij_can_bij h1 | exact: bijective_eqb_rdf heqb_rdf]).
-    Qed. 
-
-
-    Lemma iso_trans (g1 g2 g3: rdf_graph) : iso g1 g2 -> iso g2 g3 -> iso g1 g3.
-    Proof. rewrite /iso /is_iso /eqb_rdf => [[μ1 [bij1 /eqP /graph_inj eqb1]] [μ2 [bij2 /eqP /graph_inj eqb2]]].
-           exists (μ1 \o μ2). split. 
-           rewrite /=. apply bij_comp. apply bij1. apply bij2.
-           rewrite -relabeling_comp /= -eqb2 -eqb1. by apply eqb_rdf_refl.
-    Qed.
-
-    Definition isocanonical_mapping (M : rdf_graph -> rdf_graph) :=
-      forall (g : rdf_graph),
-        iso (M g) g /\ forall (h : rdf_graph), iso (M g) (M h) <-> iso g h.
-
   End CountRdf.
-
 End Rdf.
+

@@ -48,9 +48,7 @@ Section Triple.
     Lemma relabeling_triple_ext (μ1 μ2 : B -> B) : μ1 =1 μ2 -> forall t, relabeling_triple μ1 t = @relabeling_triple μ2 t.
     Proof. move => μpweq t. apply /triple_inj; case t => /= [s p o _ _ _]; by apply (@relabeling_term_ext I B L μ1 μ2 μpweq). Qed.
 
-
   End PolyTriple.
-
   Section EqTriple.
     Variable I B L : eqType.
     
@@ -106,19 +104,15 @@ Section Triple.
            all: by f_equal; apply triple_inj. 
     Qed. 
     
-    (*   Definition triple_eqMixin := PcanEqMixin cancel_triple_encode. *)
     Definition triple_canChoiceMixin := PcanChoiceMixin cancel_triple_encode.
     Definition triple_canCountMixin := PcanCountMixin cancel_triple_encode.
 
-    (*   Canonical triple_eqType := Eval hnf in EqType triple triple_eqMixin. *)
     Canonical triple_choiceType := Eval hnf in ChoiceType triple triple_canChoiceMixin.
     Canonical triple_countType := Eval hnf in CountType triple triple_canCountMixin.
 
     Definition triple_canPOrderMixin := PcanPOrderMixin (@pickleK triple_countType).
     Canonical triple_POrderType := Eval hnf in POrderType tt triple triple_canPOrderMixin.
 
-
   End CountTriple.
-
-
 End Triple.
+

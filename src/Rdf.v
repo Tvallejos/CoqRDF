@@ -14,6 +14,17 @@ Section Rdf.
                                      ; object_in_IBL : all (fun t => @is_in_ibl I B L (object t)) graph
                                      }.
 
+  Lemma forget_hd {T : Type} {t : T} {st : seq T} {p: T -> bool} (pall: all p (t::st)) : all p st.
+  Proof. revert pall=> /=. by move /andP=> [_ ->]. Qed.
+
+  Lemma graph_inj {I B L : Type}: forall (g1 g2: @rdf_graph I B L),
+      graph g1 = graph g2 ->
+      g1 = g2.
+  Proof.
+    move=> [g1 sib1 pi1 oibl1] [g2 sib2 pi2 oibl2] /= geq.
+    by subst; f_equal; apply eq_irrelevance.
+  Qed.
+
   Section PolyRdf.
     Variables I B L : Type.
 
@@ -24,21 +35,18 @@ Section Rdf.
       filter (fun t => is_bnode t) (terms g).
 
     Definition add_sib (ts : seq triple) (pall : all (fun t => is_in_ib (subject t)) ts) (t : triple) : all (fun t => @is_in_ib I B L (subject t)) (t::ts).
-    Proof. induction (t::ts).
-           - apply all_nil.
-           - rewrite /=. apply /andP ; split. by case a=> /= _ _ _ -> _ _. apply IHl.
+    Proof. elim (t::ts) => [//| a l ihl] /=.
+           - apply /andP ; split. by case a=> /= _ _ _ -> _ _. by apply ihl.
     Qed.
 
     Definition add_i (ts : seq triple) (pall : all (fun t => is_in_i (predicate t)) ts) (t : triple) : all (fun t => @is_in_i I B L (predicate t)) (t::ts).
-    Proof. induction (t::ts).
-           - apply all_nil.
-           - rewrite /=. apply /andP ; split. by case a=> /= _ _ _ _ -> _. apply IHl.
+    Proof. elim (t::ts) => [//| a l ihl] /=.
+           - apply /andP ; split. by case a=> /= _ _ _ _ -> _. by apply ihl.
     Qed.
 
     Definition add_ibl (ts : seq triple) (pall : all (fun t => is_in_ibl (object t)) ts) (t : triple) : all (fun t => @is_in_ibl I B L (object t)) (t::ts).
-    Proof. induction (t::ts).
-           - apply all_nil.
-           - rewrite /=. apply /andP ; split. by case a=> /= _ _ _ _ _ ->. apply IHl.
+    Proof. elim (t::ts) => [//| a l ihl] /=.
+           - apply /andP ; split. by case a=> /= _ _ _ _ _ ->. by apply ihl.
     Qed.
 
     Definition add_triple (sg : option (@rdf_graph I B L)) (t : (@triple I B L)) : option (@rdf_graph I B L).
@@ -53,62 +61,58 @@ Section Rdf.
            - exact None.
     Defined.
 
-    Definition relabeling_seq_triple (μ : B -> B) (g : seq (@triple I B L)) : seq triple := map (relabeling_triple μ) g.
+    Definition relabeling_seq_triple (u' : Type) (μ : B -> u') (g : seq (@triple I B L)) : seq (@triple I u' L) :=
+      map (relabeling_triple μ) g.
 
-    Lemma relabeling_seq_triple_comp_P (g1 g2 : seq triple) (eqb : g1 = g2) (μ : B->B) :
-      relabeling_seq_triple μ g1 = relabeling_seq_triple μ g2. by rewrite eqb. Qed.
+    Section Relabeling_seq_triple.
+      Variable B' : Type.
 
-    Lemma relabeling_seq_triple_comp (μ1 μ2 : B -> B) (g : seq triple) : relabeling_seq_triple μ1 (relabeling_seq_triple μ2 g) = (relabeling_seq_triple μ1 \o (relabeling_seq_triple μ2)) g.
-    Proof. by []. Qed.
+      Lemma relabeling_seq_triple_comp_P (g1 g2 : seq triple) (eqb : g1 = g2) (μ : B -> B') :
+        relabeling_seq_triple μ g1 = relabeling_seq_triple μ g2.
+      Proof. by rewrite eqb. Qed.
 
-    Lemma relabeling_seq_triple_preserves_subject_in_IB (g : seq triple) (μ : B -> B) :
-      all (fun t => @is_in_ib I B L (subject t)) g ->
-      all (fun t => @is_in_ib I B L (subject t)) (relabeling_seq_triple μ g).
-    Proof. induction g => [//| /=]. move=> /andP [sinh sint]. apply /andP. split. case a => [s p o /= sintt pint oint].
-           by rewrite relabeling_term_preserves_is_in_ib in sintt; apply sintt.
-           by apply IHg; apply sint.
-    Qed.
+      Lemma relabeling_seq_triple_comp (μ1 μ2 : B -> B) (g : seq triple) : @relabeling_seq_triple B μ1 (relabeling_seq_triple μ2 g) = (@relabeling_seq_triple B μ1 \o (relabeling_seq_triple μ2)) g.
+      Proof. by []. Qed.
 
-    Lemma relabeling_seq_triple_preserves_predicate_in_I (g : seq triple) (μ : B -> B) :
-      all (fun t => is_in_i (predicate t)) g ->
-      all (fun t => is_in_i (predicate t)) (relabeling_seq_triple μ g).
-    Proof. induction g => [//| /=]. move=> /andP [pinh pin]. apply /andP. split. case a => [s p o /= sintt pint oint].
-           by rewrite relabeling_term_preserves_is_in_i in pint; apply pint.
-           by apply IHg; apply pin.
-    Qed.
+      Lemma relabeling_seq_triple_preserves_subject_in_IB (g : seq triple) (μ : B -> B') :
+        all (fun t => @is_in_ib I B L (subject t)) g ->
+        all (fun t => @is_in_ib I B' L (subject t)) (relabeling_seq_triple μ g).
+      Proof. elim g => [//| a l ihl] /andP [sibh sibt]. apply /andP; split.
+             by apply relabeling_triple_preserves_is_in_ib; apply sibh.
+             by apply ihl; apply sibt.
+      Qed.
 
-    Lemma relabeling_seq_triple_preserves_object_in_IBL (g : seq triple) (μ : B -> B) :
-      all (fun t => is_in_ibl (object t)) g ->
-      all (fun t => is_in_ibl (object t)) (relabeling_seq_triple μ g).
-    Proof. induction g => [//| /=]. move=> /andP [oinh ointt]. apply /andP. split. case a => [s p o /= sintt pint oint].
-           by rewrite relabeling_term_preserves_is_in_ibl in oint; apply oint.
-           by apply IHg; apply ointt.
-    Qed.
+      Lemma relabeling_seq_triple_preserves_predicate_in_I (g : seq triple) (μ : B -> B') :
+        all (fun t => is_in_i (predicate t)) g ->
+        all (fun t => is_in_i (predicate t)) (relabeling_seq_triple μ g).
+      Proof. elim g => [//| a l ihl] /andP [pinh pin]; apply /andP; split.
+             by apply relabeling_triple_preserves_is_in_i; apply pinh.
+             by apply ihl; apply pin.
+      Qed.
 
-    Lemma relabeling_seq_triple_id (g : seq triple) : @relabeling_seq_triple id g = g.
-    Proof. induction g => [//|]. rewrite /relabeling_seq_triple /=. f_equal.
-           by rewrite relabeling_triple_id.
-           rewrite /relabeling_seq_triple in IHg. exact IHg.
+      Lemma relabeling_seq_triple_preserves_object_in_IBL (g : seq triple) (μ : B -> B') :
+        all (fun t => is_in_ibl (object t)) g ->
+        all (fun t => is_in_ibl (object t)) (relabeling_seq_triple μ g).
+      Proof. elim g => [//| a l ihl] /andP [oinh oint]; apply /andP; split.
+             by apply relabeling_triple_preserves_is_in_ibl ; apply oinh.
+             by apply ihl; apply oint.
+      Qed.
+
+      Lemma relabeling_seq_triple_ext (μ1 μ2 : B -> B') : μ1 =1 μ2 -> forall g : seq (@triple I B L), relabeling_seq_triple μ1 g = relabeling_seq_triple μ2 g.
+      Proof. move => μpqeq. elim=> [//|h t IHt] /=. rewrite IHt. f_equal. by apply relabeling_triple_ext . Qed.
+    End Relabeling_seq_triple.
+
+    Lemma relabeling_seq_triple_id (g : seq triple) : @relabeling_seq_triple B id g = g.
+    Proof. elim g => [//| a l ihl] /=. by rewrite relabeling_triple_id ihl.
     Qed.
 
     Lemma relabeling_seq_triple_comp_simpl (g : seq triple) (μ12 μ23 : B -> B) :
-      relabeling_seq_triple (μ23 \o μ12) g = (@relabeling_seq_triple μ23 \o (relabeling_seq_triple μ12)) g.
-    Proof. rewrite /relabeling_seq_triple /=.
-           elim g => [//|h t iht] /=. rewrite relabeling_triple_comp /=. by f_equal; apply iht.
+      relabeling_seq_triple (μ23 \o μ12) g = (@relabeling_seq_triple B μ23 \o (relabeling_seq_triple μ12)) g.
+    Proof. elim g => [//|h t iht] /=. by rewrite relabeling_triple_comp; f_equal; apply iht.
     Qed.
 
-    Lemma graph_inj : forall (g1 g2: rdf_graph),
-        @graph I B L g1 = graph g2 ->
-        g1 = g2.
-    Proof.
-      move=> [g1 sib1 pi1 oibl1] [g2 sib2 pi2 oibl2] /= geq. subst. 
-      by f_equal; apply eq_irrelevance.
-    Qed.
 
-    Lemma forget_hd {T : Type} (t : T) (st : seq T) {p: T -> bool} (pall: all p (t::st)) : all p st.
-    Proof. revert pall=> /=. by move /andP=> [_ ->]. Qed.
-
-    Definition relabeling (μ : B -> B) (g : rdf_graph): rdf_graph :=
+    Definition relabeling (u' : Type) (μ : B -> u') (g : rdf_graph): rdf_graph :=
       let (g',siib,pii,oiibl) := g in
       {|
         graph := relabeling_seq_triple μ g';
@@ -117,23 +121,22 @@ Section Rdf.
         object_in_IBL := relabeling_seq_triple_preserves_object_in_IBL μ oiibl
       |}.
 
-    Lemma relabeling_id (g : rdf_graph) : relabeling id g = g.
-    Proof. apply graph_inj. case g=> g' sin pin oin /=.
-           by rewrite relabeling_seq_triple_id.
-    Qed.
-
     Lemma relabeling_comp (g : rdf_graph) (μ12 μ23: B -> B) :
       (relabeling μ23 \o (relabeling μ12)) g = relabeling (μ23 \o μ12) g.
-    Proof.
-      induction g => [//]. rewrite /relabeling /=. apply graph_inj => /=.
-      by rewrite relabeling_seq_triple_comp_simpl.
+    Proof. apply graph_inj; case g => g' /= _ _ _; by rewrite relabeling_seq_triple_comp_simpl.
     Qed.
 
-    Lemma relabeling_seq_triple_ext (μ1 μ2 : B -> B) : μ1 =1 μ2 -> forall g : seq (@triple I B L), relabeling_seq_triple μ1 g = relabeling_seq_triple μ2 g.
-    Proof. move => μpqeq. elim=> [//|h t IHt] /=. rewrite IHt. f_equal. by apply relabeling_triple_ext. Qed.
+    Section Relabeling_graph.
+      Variable B' : Type.
 
-    Lemma relabeling_ext  (μ1 μ2 : B -> B) :  μ1 =1 μ2 -> forall g, relabeling μ1 g = relabeling μ2 g.
-    Proof. move=> μpweq g. induction g. apply /graph_inj => /=. by apply relabeling_seq_triple_ext. Qed.
+      Lemma relabeling_id (g : rdf_graph) : relabeling id g = g.
+      Proof. apply graph_inj. case g => g' /= _ _ _. by rewrite relabeling_seq_triple_id.
+      Qed.
+
+      Lemma relabeling_ext  (μ1 μ2 : B -> B') :  μ1 =1 μ2 -> forall g, relabeling μ1 g = relabeling μ2 g.
+      Proof. move=> μpweq g. apply graph_inj. case g=> g' /= _ _ _. by apply relabeling_seq_triple_ext. Qed.
+
+    End Relabeling_graph.
 
     Lemma relabeling_comp_simpl (μ1 μ2 : B -> B) (g : rdf_graph) : relabeling μ1 (relabeling μ2 g) = relabeling (μ1 \o μ2) g.
     Proof. by rewrite -relabeling_comp. Qed.

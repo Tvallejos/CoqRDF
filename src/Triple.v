@@ -13,6 +13,17 @@ Section Triple.
                                            ; predicate_in_I: is_in_i predicate
                                            ; object_in_IBL: is_in_ibl object
                                    }.
+
+  Lemma triple_inj {I B L: Type}: forall (t1 t2: @triple I B L),
+      subject t1 = subject t2 ->
+      predicate t1 = predicate t2 ->
+      object t1 = object t2 ->
+      t1 = t2.
+  Proof.
+    move=> [s1 p1 o1 sin1 pin1 oin1] [s2 p2 o2 sin2 pin2 oin2] /= seq peq oeq.
+    subst. by f_equal; apply eq_irrelevance.
+  Qed.
+
   Section PolyTriple.
     Variables I B L : Type.
 
@@ -29,14 +40,6 @@ Section Triple.
     Definition bnodes_triple (t : @triple I B L) : seq (@term I B L) :=
       filter (@is_bnode I B L) (terms_triple t).
 
-    Lemma triple_inj : forall (t1 t2: triple),
-        subject t1 = subject t2 ->
-        predicate t1 = predicate t2 ->
-        @object I B L t1 = @object I B L t2 ->
-        t1 = t2.
-    Proof. move=> [s1 p1 o1 sin1 pin1 oin1] [s2 p2 o2 sin2 pin2 oin2] /= seq peq oeq.
-           subst. by f_equal; apply eq_irrelevance.
-    Qed.
 
     Lemma relabeling_triple_id (t : triple) : @relabeling_triple B id t = t.
     Proof.
@@ -45,23 +48,28 @@ Section Triple.
     Lemma relabeling_triple_comp (μ1 μ2 : B -> B) (t : triple) : relabeling_triple (μ2 \o μ1) t = (@relabeling_triple B μ2 \o (relabeling_triple μ1)) t.
     Proof. case t=> [s p o sin pin oin] /=. apply triple_inj=> /=; by rewrite relabeling_term_comp. Qed.
 
-    Lemma relabeling_triple_ext (μ1 μ2 : B -> B) : μ1 =1 μ2 -> forall t, relabeling_triple μ1 t = @relabeling_triple B μ2 t.
-    Proof. move => μpweq t. apply /triple_inj; case t => /= [s p o _ _ _]; by apply (@relabeling_term_ext I B L μ1 μ2 μpweq). Qed.
 
-    Lemma relabeling_triple_preserves_is_in_ib (u' : Type) (μ : B -> u') (t : @triple I B L) :
-      is_in_ib (subject t) <-> is_in_ib (subject (relabeling_triple μ t)).
-    Proof. case t => s /= _ _ _ _ _ /=. by apply relabeling_term_preserves_is_in_ib. Qed.
+    Section Relabeling_triple.
+      Variable B' : Type.
 
-    Lemma relabeling_triple_preserves_is_in_i (u' : Type) (μ : B -> u') (t : @triple I B L) :
-      is_in_i (predicate t) <-> is_in_i (predicate (relabeling_triple μ t)).
-    Proof. by case t => _ p /= _ _ _ _; apply relabeling_term_preserves_is_in_i. Qed.
+      Lemma relabeling_triple_preserves_is_in_ib (μ : B -> B') (t : @triple I B L) :
+        is_in_ib (subject t) <-> is_in_ib (subject (relabeling_triple μ t)).
+      Proof. case t => s /= _ _ _ _ _ /=. by apply relabeling_term_preserves_is_in_ib. Qed.
 
-    Lemma relabeling_triple_preserves_is_in_ibl (u' : Type) (μ : B -> u') (t : @triple I B L) :
-      is_in_ibl (object t) <-> is_in_ibl (object (relabeling_triple μ t)).
-    Proof. by case t => _ _ o /= _ _ _; apply relabeling_term_preserves_is_in_ibl. Qed.
+      Lemma relabeling_triple_preserves_is_in_i (μ : B -> B') (t : @triple I B L) :
+        is_in_i (predicate t) <-> is_in_i (predicate (relabeling_triple μ t)).
+      Proof. by case t => _ p /= _ _ _ _; apply relabeling_term_preserves_is_in_i. Qed.
 
+      Lemma relabeling_triple_preserves_is_in_ibl (μ : B -> B') (t : @triple I B L) :
+        is_in_ibl (object t) <-> is_in_ibl (object (relabeling_triple μ t)).
+      Proof. by case t => _ _ o /= _ _ _; apply relabeling_term_preserves_is_in_ibl. Qed.
 
+      Lemma relabeling_triple_ext (μ1 μ2 : B -> B') : μ1 =1 μ2 -> forall t, relabeling_triple μ1 t = relabeling_triple μ2 t.
+      Proof. move => μpweq t. apply /triple_inj; case t => /= [s p o _ _ _]; by apply (@relabeling_term_ext I B L B' μ1 μ2 μpweq). Qed.
+
+    End Relabeling_triple.
   End PolyTriple.
+
   Section EqTriple.
     Variable I B L : eqType.
 

@@ -71,61 +71,6 @@ Section IsoCan.
       | _,_ => false
       end.
 
-    Section typeRelabel.
-      Variable T : countType.
-
-      (* Definition app_term (t : @term I B L) (f : B -> T) : @term I T L := *)
-      (*   match t with *)
-      (*   | Bnode b => Bnode (f b) *)
-      (*   | Iri i => Iri i *)
-      (*   | Lit l => Lit l *)
-      (*   end. *)
-
-      (* Definition app_p_sib (s : @term I B L) (f : B -> T) : (is_in_ib s) -> (is_in_ib (app_term s f)). *)
-      (* Proof. rewrite /app_term; by case s. Qed. *)
-
-      (* Definition app_p_pii (p : @term I B L) (f : B -> T) : (is_in_i p) -> (is_in_i (app_term p f)). *)
-      (* Proof. rewrite /app_term; by case p. Qed. *)
-
-      (* Definition app_p_ibl (o : @term I B L) (f : B -> T) : (is_in_ibl o) -> (is_in_ibl (app_term o f)). *)
-      (* Proof. rewrite /app_term; by case o. Qed. *)
-
-      (* Definition MoveTriple (f : B -> T) (t : @triple I B L) : @triple I T L := *)
-      (*   let (s,p,o,sin,pin,oin) := t in *)
-      (*   {| subject := relabeling_term s f ; *)
-      (*     predicate := relabeling_term p f ; *)
-      (*     object := relabeling_term o f ; *)
-      (*     subject_in_IB:= app_p_sib f sin ;  *)
-      (*     predicate_in_I:= app_p_pii f pin ; *)
-      (*     object_in_IBL:= app_p_ibl f oin ; *)
-      (*   |}. *)
-
-      Definition map_graph (g : seq (@triple _ B _)) (f : B -> T): seq (@triple I T L) :=
-        map (relabeling_triple f) g.
-
-      Lemma app_st_p_sin (g : seq (@triple _ B _) ) (f : B -> T) :
-        all (fun t => is_in_ib (subject t)) g ->
-        all (fun t => is_in_ib (subject t)) (map_graph g f).
-      Proof. move=> /allP sin; apply /allP => [[s p o /= sint pint oint]] => tg; by apply sint. 
-      Qed.
-
-      Lemma app_st_p_pin (g : seq (@triple I B L)) (μ : B -> T) :
-        all (fun t => is_in_i (predicate t)) g ->
-        all (fun t => is_in_i (predicate t)) (map_graph g μ).
-      Proof. move=> /allP pin; apply /allP => [[s p o /= sint pint oint]] => tg; by apply pint.
-      Qed.
-
-      Lemma app_st_p_oin (g : seq (@triple I B L)) (μ : B -> T) :
-        all (fun t => is_in_ibl (object t)) g ->
-        all (fun t => is_in_ibl (object t)) (map_graph g μ).
-      Proof. move=> /allP oin; apply /allP => [[s p o /= sibt pibt oint]] => tg; by apply oint.
-      Qed.
-
-      Definition graph_map (f : B -> T) (g : rdf_graph): @rdf_graph I T L:=
-        let (g',sin,pin,oin) := g in
-        mkRdfGraph (app_st_p_sin f sin)(app_st_p_pin f pin) (app_st_p_oin f oin).
-
-    End typeRelabel.
     Definition hash_triple := @triple I (hash B) L.
 
     Definition get_triple (t : @term I B L) (trpl : hash_triple) : option hash_term :=
@@ -253,24 +198,6 @@ Section IsoCan.
       Definition is_intermediate (p : partition) :=
         ~~ is_fine p && ~~ is_coarse p.
 
-
-
-      (* Definition lt_part (part1 part2 : part) : bool := *)
-      (*   if size part1 < size part2 then *)
-      (*     true *)
-      (*   else if size part1 == size part2 then *)
-
-
-      (*          Definition le_partition (p1 p2 : partition) : bool :=  *)
-      (*          fun T : Type => T -> pred T *)
-      (*                                eq_refl. *)
-      (*          . *)
-      (*          Definition partition_LePOrderMixin := LePOrderMixin partition. *)
-      (*          forall (T : eqType) (le lt : rel T), *)
-      (*   (forall x y : T, lt x y = (y != x) && le x y) -> *)
-      (*   reflexive le -> antisymmetric le -> transitive le -> lePOrderMixin T *)
-
-      
     End Partition. 
 
 
@@ -279,7 +206,7 @@ Section IsoCan.
       mkHinput b h0.
 
     Definition init_hash (g : rdf_graph) : hash_graph :=
-      graph_map init_bnode g.
+      relabeling init_bnode g.
 
     Definition cmp_part (p1 p2 : part) : bool :=
       all2 (fun b1 b2 => input b1 == input b2) p1 p2.

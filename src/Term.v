@@ -10,77 +10,71 @@ Section Term.
   Open Scope order_scope.
 
   Inductive term {I B L : Type} : Type :=
-  | Iri (id: I) 
-  | Lit (l : L) 
+  | Iri (id: I)
+  | Lit (l : L)
   | Bnode (name : B).
-  
+
+  Definition is_lit (t u v : Type) (t : @term t u v) : bool :=
+    (match t with
+     | Lit _ => true
+     | _ => false
+     end).
+
+  Definition is_iri (t u v : Type) (t : @term t u v) : bool :=
+    (match t with
+     | Iri _ => true
+     | _ => false
+     end).
+
+  Definition is_bnode (t u v : Type) (t : @term t u v) : bool :=
+    (match t with
+     | Bnode _ => true
+     | _ => false
+     end).
+
+  Definition is_in_ib (t u v : Type) (t : @term t u v) : bool :=
+    is_iri t || is_bnode t.
+
+  Definition is_in_i (t u v : Type) (t : @term t u v) : bool :=
+    is_iri t.
+
+  Definition is_in_ibl (t u v : Type) (t : @term t u v) : bool :=
+    is_iri t || is_bnode t || is_lit t.
+
+
   Section Poly.
     Variables I B L : Type.
-    
-    Definition is_lit (t : @term I B L) : bool :=
-      (match t with
-       | Lit _ => true
-       | _ => false
-       end).
 
-    Definition is_iri (t : @term I B L) : bool :=
-      (match t with
-       | Iri _ => true
-       | _ => false
-       end).
-
-    Definition is_bnode (t : @term I B L) : bool :=
-      (match t with
-       | Bnode _ => true
-       | _ => false
-       end).
-
-    Definition is_in_ib (t : @term I B L) : bool :=
-      is_iri t || is_bnode t.
-
-    Definition is_in_i (t : @term I B L) : bool :=
-      is_iri t.
-
-    Definition is_in_ibl (t : @term I B L) : bool :=
-      is_iri t || is_bnode t || is_lit t.
-
-    Definition relabeling_term (μ : B -> B) (t : (@term I B L)) : term :=
-      match t with
+    Definition relabeling_term (B' : Type) (μ : B -> B') (trm : (@term I B L)) : @term I B' L :=
+      match trm with
       | Bnode name => Bnode (μ name)
-      | _ => t
+      | Iri i => Iri i
+      | Lit l => Lit l
       end.
 
-    Lemma relabeling_term_id (t: term) : relabeling_term id t = t.
+    Lemma relabeling_term_id (t: term) : @relabeling_term B id t = t.
     Proof. by case t. Qed.
 
-    Lemma relabeling_term_comp (t: term) (μ1 μ2 : B -> B) : relabeling_term (μ2 \o μ1) t = (relabeling_term μ2 \o (relabeling_term μ1)) t.
+    Lemma relabeling_term_comp (t: term) (μ1 μ2 : B -> B) : relabeling_term (μ2 \o μ1) t = (@relabeling_term B μ2 \o (relabeling_term μ1)) t.
     Proof. by case t. Qed.
 
-    Lemma relabeling_term_id_p_I (t : term) (p: is_iri t) : is_iri (relabeling_term id t).
-    Proof. by rewrite relabeling_term_id p. Qed.
+    Section Relabeling_term.
+      Variable B' : Type.
 
-    Lemma relabeling_term_id_p_L (t : term) (p: is_lit t) : is_lit (relabeling_term id t).
-    Proof. by rewrite relabeling_term_id p. Qed.
+      Lemma relabeling_term_preserves_is_in_ib (μ : B -> B') (t : @term I B L) : is_in_ib t <-> is_in_ib (relabeling_term μ t).
+      Proof. by case t. Qed.
 
-    Lemma relabeling_term_id_p_B (t : term) (p: is_iri t) : is_iri (relabeling_term id t).
-    Proof. by rewrite relabeling_term_id p. Qed.
+      Lemma relabeling_term_preserves_is_in_i (μ : B -> B') (t : @term I B L) : is_in_i t <-> is_in_i (relabeling_term μ t).
+      Proof. by case t. Qed.
 
-    Lemma relabeling_term_preserves_is_in_ib (μ : B -> B) (t : term) :
-      is_in_ib t <-> is_in_ib (relabeling_term μ t).
-    Proof. by case t. Qed.
+      Lemma relabeling_term_preserves_is_in_ibl (μ : B -> B') (t : @term I B L) : is_in_ibl t <-> is_in_ibl (relabeling_term μ t).
+      Proof. by case t. Qed.
 
-    Lemma relabeling_term_preserves_is_in_i (μ : B -> B) (t : term) :
-      is_in_i t <-> is_in_i (relabeling_term μ t).
-    Proof. by case t. Qed.
-
-    Lemma relabeling_term_preserves_is_in_ibl (μ : B -> B) (t : term) :
-      is_in_ibl t <-> is_in_ibl (relabeling_term μ t).
-    Proof. by case t. Qed.
-
-    Lemma relabeling_term_ext (μ1 μ2 : B -> B) : μ1 =1 μ2 -> forall t : @term I B L, relabeling_term μ1 t = relabeling_term μ2 t.
-    Proof. move => μpweq [//| // | b] /=. by rewrite μpweq. Qed.
-
+      Lemma relabeling_term_ext (μ1 μ2 : B -> B') : μ1 =1 μ2 -> forall t : @term I B L, relabeling_term μ1 t = relabeling_term μ2 t.
+      Proof. move => μpweq [//| // | b] /=. by rewrite μpweq. Qed.
+    End Relabeling_term.
   End Poly.
+
   Section EqTerm.
     Variables I B L : eqType.
 
@@ -121,7 +115,7 @@ Section Term.
       end.
 
     Lemma cancel_code_decode : pcancel code_term decode_term.
-    Proof. case => [id | l | name]; by rewrite /= pickleK. Qed.
+    Proof. case => [id | l | name] /=; by rewrite pickleK. Qed.
 
     Definition term_canChoiceMixin := PcanChoiceMixin cancel_code_decode.
     Definition term_canCountMixin := PcanCountMixin cancel_code_decode.

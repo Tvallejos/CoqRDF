@@ -14,126 +14,63 @@ Section IsoCan.
   Section IsoCanAlgorithm.
     Variable h : countType.
     Variables h0 hfwd hbwd hmark : h.
-    Definition hash_eqMixin := PcanEqMixin (@pickleK h).
-    Definition hash_canChoiceMixin := PcanChoiceMixin (@pickleK h).
-    Definition hash_canCountMixin := PcanCountMixin (@pickleK h).
-
-    Canonical hash_eqType := Eval hnf in EqType h hash_eqMixin.
-    Canonical hash_choiceType := Eval hnf in ChoiceType h hash_canChoiceMixin.
-    Canonical hash_countType := Eval hnf in CountType h hash_canCountMixin.
-
-    Definition hash_canPOrderMixin := PcanPOrderMixin (@pickleK hash_countType).
-    Canonical hash_POrderType := Eval hnf in POrderType tt h hash_canPOrderMixin.
     Variable hashTerm : @term I B L -> h.
+    Hypothesis perfectHashingSchemeTerm : injective hashTerm.
+
     Section Hash.
 
-      Record hi_term (T : Type) := mkHinput {
+      Record hash (T : Type) := mkHinput {
                                       input : T ;
                                       current_hash : h
                                     }.
 
-      Hypothesis perfectHashingSchemeTerm : injective hashTerm.
-
       Lemma by_perf_hash (i : @term I B L) (o : h) (eqb : hashTerm i == o) : hashTerm i = o.
       Proof. apply /eqP. apply eqb. Qed.
 
-      Variable T : countType.
-      Definition code_hash (x : hi_term T) : GenTree.tree nat :=
-        let (i,o) := x in
-        GenTree.Node 0 [:: GenTree.Leaf (pickle i); GenTree.Leaf (pickle o)].
+      Section CountHash.
+        Variable T : countType.
+        Definition code_hash (x : hash T) : GenTree.tree nat :=
+          let (i,o) := x in
+          GenTree.Node 0 [:: GenTree.Leaf (pickle i); GenTree.Leaf (pickle o)].
 
-      Definition decode_hash (x : GenTree.tree nat) : option (hi_term T) :=
-        match x with
-        | GenTree.Node 0 [:: GenTree.Leaf n; GenTree.Leaf m] =>
-            match (@unpickle T n, @unpickle hash_countType m) with
-            | (Some i, Some o) => Some (mkHinput i o)
-            | (_, _) => None
-            end
-        | _ => None
-        end.
+        Definition decode_hash (x : GenTree.tree nat) : option (hash T) :=
+          match x with
+          | GenTree.Node 0 [:: GenTree.Leaf n; GenTree.Leaf m] =>
+              match (@unpickle T n, @unpickle h m) with
+              | (Some i, Some o) => Some (mkHinput i o)
+              | (_, _) => None
+              end
+          | _ => None
+          end.
 
-      Definition cancel_hin_encode : pcancel code_hash decode_hash.
-      Proof. case => i o; by rewrite /code_hash /decode_hash !pickleK. Qed.
+        Definition cancel_hin_encode : pcancel code_hash decode_hash.
+        Proof. case => i o; by rewrite /code_hash /decode_hash !pickleK. Qed.
 
-      Definition hin_eqMixin := PcanEqMixin cancel_hin_encode.
-      Definition hin_canChoiceMixin := PcanChoiceMixin cancel_hin_encode.
-      Definition hin_canCountMixin := PcanCountMixin cancel_hin_encode.
+        Definition hin_eqMixin := PcanEqMixin cancel_hin_encode.
+        Definition hin_canChoiceMixin := PcanChoiceMixin cancel_hin_encode.
+        Definition hin_canCountMixin := PcanCountMixin cancel_hin_encode.
 
-      Canonical hin_eqType := Eval hnf in EqType (hi_term T) hin_eqMixin.
-      Canonical hin_choiceType := Eval hnf in ChoiceType (hi_term T) hin_canChoiceMixin.
-      Canonical hin_ct := Eval hnf in CountType (hi_term T) hin_canCountMixin.
-      Definition hin_canPOrderMixin := PcanPOrderMixin (@pickleK hin_ct).
-      Canonical hin_POrderType := Eval hnf in POrderType tt (hi_term T) hin_canPOrderMixin.
+        Canonical hin_eqType := Eval hnf in EqType (hash T) hin_eqMixin.
+        Canonical hin_choiceType := Eval hnf in ChoiceType (hash T) hin_canChoiceMixin.
+        Canonical hin_ct := Eval hnf in CountType (hash T) hin_canCountMixin.
+        Definition hin_canPOrderMixin := PcanPOrderMixin (@pickleK hin_ct).
+        Canonical hin_POrderType := Eval hnf in POrderType tt (hash T) hin_canPOrderMixin.
+      End CountHash.
 
-      Definition hash := hi_term.
+      (* Definition hash := hi_term. *)
     End Hash.
     Definition hash_term := @term I (hash B) L.
 
-    Let is_bnode := (@is_bnode I (hash B) L).
+    (* Let is_bnode := (@is_bnode I (hash B) L). *)
 
     Definition eqb_t_hi (t : @term I B L) (ht : hash_term) : bool :=
       match t, ht with
       | Iri i, Iri i' => i == i'
-      | Bnode b,Bnode hin => b == (input hin)
+      | Bnode b, Bnode hin => b == (input hin)
       | Lit l, Lit l' => l == l'
       | _,_ => false
       end.
 
-    Section typeRelabel.
-      Variable T : countType.
-
-      Definition app_term (t : @term I B L) (f : B -> T) : @term I T L :=
-        match t with
-        | Bnode b => Bnode (f b)
-        | Iri i => Iri i
-        | Lit l => Lit l
-        end.
-
-      Definition app_p_sib (s : @term I B L) (f : B -> T) : (is_in_ib s) -> (is_in_ib (app_term s f)).
-      Proof. rewrite /app_term; by case s. Qed.
-
-      Definition app_p_pii (p : @term I B L) (f : B -> T) : (is_in_i p) -> (is_in_i (app_term p f)).
-      Proof. rewrite /app_term; by case p. Qed.
-
-      Definition app_p_ibl (o : @term I B L) (f : B -> T) : (is_in_ibl o) -> (is_in_ibl (app_term o f)).
-      Proof. rewrite /app_term; by case o. Qed.
-
-      Definition MoveTriple (f : B -> T) (t : @triple I B L) : @triple I T L :=
-        let (s,p,o,sin,pin,oin) := t in
-        {| subject := app_term s f ;
-          predicate := app_term p f ;
-          object := app_term o f ;
-          subject_in_IB:= app_p_sib f sin ; 
-          predicate_in_I:= app_p_pii f pin ;
-          object_in_IBL:= app_p_ibl f oin ;
-        |}.
-
-      Definition map_graph (g : seq (@triple _ B _)) (f : B -> T): seq (@triple I T L) :=
-        map (MoveTriple f) g.
-
-      Lemma app_st_p_sin (g : seq (@triple _ B _) ) (f : B -> T) :
-        all (fun t => is_in_ib (subject t)) g ->
-        all (fun t => is_in_ib (subject t)) (map_graph g f).
-      Proof. move=> /allP sin; apply /allP => [[s p o /= sint pint oint]] => tg; by apply sint. 
-      Qed.
-
-      Lemma app_st_p_pin (g : seq (@triple I B L)) (μ : B -> T) :
-        all (fun t => is_in_i (predicate t)) g ->
-        all (fun t => is_in_i (predicate t)) (map_graph g μ).
-      Proof. move=> /allP pin; apply /allP => [[s p o /= sint pint oint]] => tg; by apply pint.
-      Qed.
-
-      Lemma app_st_p_oin (g : seq (@triple I B L)) (μ : B -> T) :
-        all (fun t => is_in_ibl (object t)) g ->
-        all (fun t => is_in_ibl (object t)) (map_graph g μ).
-      Proof. move=> /allP oin; apply /allP => [[s p o /= sibt pibt oint]] => tg; by apply oint.
-      Qed.
-
-      Definition graph_map (f : B -> T) (g : rdf_graph): @rdf_graph I T L:=
-        let (g',sin,pin,oin) := g in
-        mkRdfGraph (app_st_p_sin f sin)(app_st_p_pin f pin) (app_st_p_oin f oin).
-
-    End typeRelabel.
     Definition hash_triple := @triple I (hash B) L.
 
     Definition get_triple (t : @term I B L) (trpl : hash_triple) : option hash_term :=
@@ -261,24 +198,6 @@ Section IsoCan.
       Definition is_intermediate (p : partition) :=
         ~~ is_fine p && ~~ is_coarse p.
 
-
-
-      (* Definition lt_part (part1 part2 : part) : bool := *)
-      (*   if size part1 < size part2 then *)
-      (*     true *)
-      (*   else if size part1 == size part2 then *)
-
-
-      (*          Definition le_partition (p1 p2 : partition) : bool :=  *)
-      (*          fun T : Type => T -> pred T *)
-      (*                                eq_refl. *)
-      (*          . *)
-      (*          Definition partition_LePOrderMixin := LePOrderMixin partition. *)
-      (*          forall (T : eqType) (le lt : rel T), *)
-      (*   (forall x y : T, lt x y = (y != x) && le x y) -> *)
-      (*   reflexive le -> antisymmetric le -> transitive le -> lePOrderMixin T *)
-
-      
     End Partition. 
 
 
@@ -287,7 +206,7 @@ Section IsoCan.
       mkHinput b h0.
 
     Definition init_hash (g : rdf_graph) : hash_graph :=
-      graph_map init_bnode g.
+      relabeling init_bnode g.
 
     Definition cmp_part (p1 p2 : part) : bool :=
       all2 (fun b1 b2 => input b1 == input b2) p1 p2.

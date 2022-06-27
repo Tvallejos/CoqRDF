@@ -5,18 +5,18 @@ Unset Printing Implicit Defensive.
 From RDF Require Import Term.
 
 Section Triple.
-  
+
   Record triple {I B L : Type} := mkTriple { subject : @term I B L
                                            ; predicate : @term I B L
-                                           ; object: @term I B L 
+                                           ; object: @term I B L
                                            ; subject_in_IB: is_in_ib subject
                                            ; predicate_in_I: is_in_i predicate
                                            ; object_in_IBL: is_in_ibl object
-                                   }. 
+                                   }.
   Section PolyTriple.
     Variables I B L : Type.
-    
-    Definition relabeling_triple (μ : B -> B) (t : @triple I B L) : @triple I B L :=
+
+    Definition relabeling_triple (u' : Type) (μ : B -> u') (t : @triple I B L) : @triple I u' L :=
       let (s,p,o,sin,pin,oin) := t in
       mkTriple ((iffLR (relabeling_term_preserves_is_in_ib μ s)) sin)
                ((iffLR (relabeling_term_preserves_is_in_i μ p)) pin)
@@ -38,20 +38,33 @@ Section Triple.
            subst. by f_equal; apply eq_irrelevance.
     Qed.
 
-    Lemma relabeling_triple_id (t : triple) : @relabeling_triple id t = t.
+    Lemma relabeling_triple_id (t : triple) : @relabeling_triple B id t = t.
     Proof.
       case t => [s p o sin pin oin] /=. apply triple_inj => /=; by apply relabeling_term_id. Qed.
 
-    Lemma relabeling_triple_comp (μ1 μ2 : B -> B) (t : triple) : relabeling_triple (μ2 \o μ1) t = (@relabeling_triple μ2 \o (relabeling_triple μ1)) t.
+    Lemma relabeling_triple_comp (μ1 μ2 : B -> B) (t : triple) : relabeling_triple (μ2 \o μ1) t = (@relabeling_triple B μ2 \o (relabeling_triple μ1)) t.
     Proof. case t=> [s p o sin pin oin] /=. apply triple_inj=> /=; by rewrite relabeling_term_comp. Qed.
 
-    Lemma relabeling_triple_ext (μ1 μ2 : B -> B) : μ1 =1 μ2 -> forall t, relabeling_triple μ1 t = @relabeling_triple μ2 t.
+    Lemma relabeling_triple_ext (μ1 μ2 : B -> B) : μ1 =1 μ2 -> forall t, relabeling_triple μ1 t = @relabeling_triple B μ2 t.
     Proof. move => μpweq t. apply /triple_inj; case t => /= [s p o _ _ _]; by apply (@relabeling_term_ext I B L μ1 μ2 μpweq). Qed.
+
+    Lemma relabeling_triple_preserves_is_in_ib (u' : Type) (μ : B -> u') (t : @triple I B L) :
+      is_in_ib (subject t) <-> is_in_ib (subject (relabeling_triple μ t)).
+    Proof. case t => s /= _ _ _ _ _ /=. by apply relabeling_term_preserves_is_in_ib. Qed.
+
+    Lemma relabeling_triple_preserves_is_in_i (u' : Type) (μ : B -> u') (t : @triple I B L) :
+      is_in_i (predicate t) <-> is_in_i (predicate (relabeling_triple μ t)).
+    Proof. by case t => _ p /= _ _ _ _; apply relabeling_term_preserves_is_in_i. Qed.
+
+    Lemma relabeling_triple_preserves_is_in_ibl (u' : Type) (μ : B -> u') (t : @triple I B L) :
+      is_in_ibl (object t) <-> is_in_ibl (object (relabeling_triple μ t)).
+    Proof. by case t => _ _ o /= _ _ _; apply relabeling_term_preserves_is_in_ibl. Qed.
+
 
   End PolyTriple.
   Section EqTriple.
     Variable I B L : eqType.
-    
+
     Definition eqb_triple  (t1 t2 : @triple I B L) : bool :=
       ((subject t1) == (subject t2)) &&
         ((predicate t1) == (predicate t2)) &&
@@ -70,7 +83,7 @@ Section Triple.
 
   End EqTriple.
 
-  Section CountTriple. 
+  Section CountTriple.
     Variables I B L : countType.
 
     Definition code_triple (t : @triple I B L) :=
@@ -94,16 +107,16 @@ Section Triple.
                                                                           destruct (is_in_ibl dot) eqn: ibl.
 
                                                                         ++ exact (Some (mkTriple iib ii ibl)).
-                                                                        + all: exact None. 
+                                                                        + all: exact None.
     Defined.
-    
+
     Lemma cancel_triple_encode : pcancel code_triple decode_triple.
     Proof. case => s p o sib ii oibl. rewrite /code_triple /decode_triple.
            have cant: forall (t : term), @decode_term I B L (code_term t) = Some t. apply cancel_code_decode.
            rewrite /= !cant; destruct s; destruct p ; destruct o => //=.
-           all: by f_equal; apply triple_inj. 
-    Qed. 
-    
+           all: by f_equal; apply triple_inj.
+    Qed.
+
     Definition triple_canChoiceMixin := PcanChoiceMixin cancel_triple_encode.
     Definition triple_canCountMixin := PcanCountMixin cancel_triple_encode.
 

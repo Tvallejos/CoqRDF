@@ -10,70 +10,62 @@ Section Term.
   Open Scope order_scope.
 
   Inductive term {I B L : Type} : Type :=
-  | Iri (id: I) 
-  | Lit (l : L) 
+  | Iri (id: I)
+  | Lit (l : L)
   | Bnode (name : B).
-  
+
   Section Poly.
     Variables I B L : Type.
-    
-    Definition is_lit (t : @term I B L) : bool :=
+
+    Definition is_lit (t u v : Type) (t : @term t u v) : bool :=
       (match t with
        | Lit _ => true
        | _ => false
        end).
 
-    Definition is_iri (t : @term I B L) : bool :=
+    Definition is_iri (t u v : Type) (t : @term t u v) : bool :=
       (match t with
        | Iri _ => true
        | _ => false
        end).
 
-    Definition is_bnode (t : @term I B L) : bool :=
+    Definition is_bnode (t u v : Type) (t : @term t u v) : bool :=
       (match t with
        | Bnode _ => true
        | _ => false
        end).
 
-    Definition is_in_ib (t : @term I B L) : bool :=
+    Definition is_in_ib (t u v : Type) (t : @term t u v) : bool :=
       is_iri t || is_bnode t.
 
-    Definition is_in_i (t : @term I B L) : bool :=
+    Definition is_in_i (t u v : Type) (t : @term t u v) : bool :=
       is_iri t.
 
-    Definition is_in_ibl (t : @term I B L) : bool :=
+    Definition is_in_ibl (t u v : Type) (t : @term t u v) : bool :=
       is_iri t || is_bnode t || is_lit t.
 
-    Definition relabeling_term (μ : B -> B) (t : (@term I B L)) : term :=
-      match t with
+    Definition relabeling_term (t u u' v : Type) (μ : u -> u') (trm : (@term t u v)) : @term t u' v :=
+      match trm with
       | Bnode name => Bnode (μ name)
-      | _ => t
+      | Iri i => Iri i
+      | Lit l => Lit l
       end.
 
-    Lemma relabeling_term_id (t: term) : relabeling_term id t = t.
+    Lemma relabeling_term_id (t: term) : @relabeling_term I B B L id t = t.
     Proof. by case t. Qed.
 
-    Lemma relabeling_term_comp (t: term) (μ1 μ2 : B -> B) : relabeling_term (μ2 \o μ1) t = (relabeling_term μ2 \o (relabeling_term μ1)) t.
+    Lemma relabeling_term_comp (t: term) (μ1 μ2 : B -> B) : relabeling_term (μ2 \o μ1) t = (@relabeling_term I B B L μ2 \o (relabeling_term μ1)) t.
     Proof. by case t. Qed.
 
-    Lemma relabeling_term_id_p_I (t : term) (p: is_iri t) : is_iri (relabeling_term id t).
-    Proof. by rewrite relabeling_term_id p. Qed.
-
-    Lemma relabeling_term_id_p_L (t : term) (p: is_lit t) : is_lit (relabeling_term id t).
-    Proof. by rewrite relabeling_term_id p. Qed.
-
-    Lemma relabeling_term_id_p_B (t : term) (p: is_iri t) : is_iri (relabeling_term id t).
-    Proof. by rewrite relabeling_term_id p. Qed.
-
-    Lemma relabeling_term_preserves_is_in_ib (μ : B -> B) (t : term) :
+    Lemma relabeling_term_preserves_is_in_ib (u' : Type) (μ : B -> u') (t : @term I B L) :
       is_in_ib t <-> is_in_ib (relabeling_term μ t).
     Proof. by case t. Qed.
 
-    Lemma relabeling_term_preserves_is_in_i (μ : B -> B) (t : term) :
+    Lemma relabeling_term_preserves_is_in_i (u' : Type) (μ : B -> u') (t : @term I B L) :
       is_in_i t <-> is_in_i (relabeling_term μ t).
     Proof. by case t. Qed.
 
-    Lemma relabeling_term_preserves_is_in_ibl (μ : B -> B) (t : term) :
+    Lemma relabeling_term_preserves_is_in_ibl (u' : Type) (μ : B -> u') (t : @term I B L) :
       is_in_ibl t <-> is_in_ibl (relabeling_term μ t).
     Proof. by case t. Qed.
 

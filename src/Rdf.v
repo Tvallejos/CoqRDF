@@ -16,13 +16,13 @@ Section Rdf.
 
   Section PolyRdf.
     Variables I B L : Type.
-    
+
     Definition terms (g : @rdf_graph I B L) : seq term :=
       flatten (map (fun t => terms_triple t) (graph g)).
 
     Definition bnodes (g : @rdf_graph I B L) : seq term :=
       filter (fun t => is_bnode t) (terms g).
-    
+
     Definition add_sib (ts : seq triple) (pall : all (fun t => is_in_ib (subject t)) ts) (t : triple) : all (fun t => @is_in_ib I B L (subject t)) (t::ts).
     Proof. induction (t::ts).
            - apply all_nil.
@@ -124,7 +124,7 @@ Section Rdf.
 
     Lemma relabeling_comp (g : rdf_graph) (μ12 μ23: B -> B) :
       (relabeling μ23 \o (relabeling μ12)) g = relabeling (μ23 \o μ12) g.
-    Proof. 
+    Proof.
       induction g => [//]. rewrite /relabeling /=. apply graph_inj => /=.
       by rewrite relabeling_seq_triple_comp_simpl.
     Qed.
@@ -141,7 +141,7 @@ Section Rdf.
   End PolyRdf.
   Section EqRdf.
     Variables I B L : eqType.
-    
+
     Definition eqb_rdf (g1 g2 : @rdf_graph I B L) : bool :=
       (graph g1) == (graph g2).
     Lemma eqb_rdf_refl (g : rdf_graph) : eqb_rdf g g.
@@ -160,7 +160,7 @@ Section Rdf.
 
     Lemma bijective_eqb_rdf mu nu g1 g2 : cancel mu nu -> eqb_rdf g1 (relabeling mu g2) ->  eqb_rdf g2 (relabeling nu g1).
     Proof.
-      move=> cancel_mu_nu. rewrite /eqb_rdf => /eqP /graph_inj ->. 
+      move=> cancel_mu_nu. rewrite /eqb_rdf => /eqP /graph_inj ->.
       rewrite relabeling_comp_simpl.
       have /relabeling_ext-> : nu \o mu =1 id by [].
       rewrite relabeling_id; exact: eqb_rdf_refl.
@@ -184,11 +184,11 @@ Section Rdf.
       rewrite /iso /is_iso.
       split; case=> mu [mu_bij heqb_rdf]; case: (mu_bij)=> [nu h1 h2];
                                                          (exists nu; split; [exact: bij_can_bij h1 | exact: bijective_eqb_rdf heqb_rdf]).
-    Qed. 
+    Qed.
 
     Lemma iso_trans (g1 g2 g3: rdf_graph) : iso g1 g2 -> iso g2 g3 -> iso g1 g3.
-    Proof. rewrite /iso /is_iso /eqb_rdf => [[μ1 [bij1 /eqP /graph_inj eqb1]] [μ2 [bij2 /eqP /graph_inj eqb2]]].
-           exists (μ1 \o μ2). split. 
+    Proof. rewrite /iso/is_iso/eqb_rdf => [[μ1 [bij1/eqP/graph_inj eqb1]] [μ2 [bij2/eqP/graph_inj eqb2]]].
+           exists (μ1 \o μ2). split.
            rewrite /=. apply bij_comp. apply bij1. apply bij2.
            rewrite -relabeling_comp /= -eqb2 -eqb1. by apply eqb_rdf_refl.
     Qed.

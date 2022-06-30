@@ -55,7 +55,7 @@ Section Term.
     Lemma relabeling_term_id (t: term) : @relabeling_term B id t = t.
     Proof. by case t. Qed.
 
-    Lemma relabeling_term_comp (t: term) (μ1 μ2 : B -> B) : relabeling_term (μ2 \o μ1) t = (@relabeling_term B μ2 \o (relabeling_term μ1)) t.
+    Lemma relabeling_term_comp (T : Type) (t: term) (μ1 μ2 : B -> B) : relabeling_term (μ2 \o μ1) t = (@relabeling_term B μ2 \o (relabeling_term μ1)) t.
     Proof. by case t. Qed.
 
     Section Relabeling_term.
@@ -72,6 +72,7 @@ Section Term.
 
       Lemma relabeling_term_ext (μ1 μ2 : B -> B') : μ1 =1 μ2 -> forall t : @term I B L, relabeling_term μ1 t = relabeling_term μ2 t.
       Proof. move => μpweq [//| // | b] /=. by rewrite μpweq. Qed.
+
     End Relabeling_term.
   End Poly.
 
@@ -90,7 +91,7 @@ Section Term.
     Proof.
       rewrite /Equality.axiom => x y.
       apply: (iffP idP) => //= [| ->]; rewrite /eqb_term; last by case y.
-      by case: x y=> [i1|l1|b1] [i2|l2|b2] // => /eqP ->. 
+      by case: x y=> [i1|l1|b1] [i2|l2|b2] // => /eqP ->.
     Qed.
 
     Canonical term_eqType := EqType term (EqMixin term_eqP).

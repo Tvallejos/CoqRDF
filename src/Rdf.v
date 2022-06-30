@@ -6,6 +6,7 @@ From RDF Require Import Term.
 From RDF Require Import Triple.
 
 Section Rdf.
+  Axiom todo_rdf: forall t, t.
 
   Record rdf_graph {I B L : Type}:= mkRdfGraph {
                                        graph : seq triple
@@ -21,19 +22,29 @@ Section Rdf.
       graph g1 = graph g2 ->
       g1 = g2.
   Proof.
-    move=> [g1 sib1 pi1 oibl1] [g2 sib2 pi2 oibl2] /= geq.
+    move=> [g1 sib1 pi1 oibl1] [g2 sib2 pi2 oibl2] /= geq. 
     by subst; f_equal; apply eq_irrelevance.
   Qed.
+
 
   Section PolyRdf.
     Variables I B L : Type.
 
-    Definition terms (g : @rdf_graph I B L) : seq term :=
-      flatten (map (fun t => terms_triple t) (graph g)).
+    Definition empty_sib : all (fun t => @is_in_ib I B L (subject t)) [::]. Proof. by []. Qed.
+    Definition empty_pii :  all (fun t => @is_in_i I B L (predicate t)) [::]. Proof. by []. Qed.
+    Definition empty_oibl : all (fun t => @is_in_ibl I B L (object t)) [::]. Proof. by []. Qed.
 
-    Definition bnodes (g : @rdf_graph I B L) : seq term :=
-      filter (fun t => is_bnode t) (terms g).
+    Definition empty_rdf_graph : @rdf_graph I B L:= mkRdfGraph empty_sib empty_pii empty_oibl.
 
+    Definition is_ground(g : @rdf_graph I B L) : bool :=
+      foldr andb true (map (@is_ground_triple I B L) (graph g)).
+
+    Definition merge_rdf_graph (g h : @rdf_graph I B L) : @rdf_graph I B L :=
+      todo_rdf _.
+
+    Definition merge_seq_rdf_graph (gs : seq (@rdf_graph I B L)) : @rdf_graph I B L :=
+      foldr merge_rdf_graph empty_rdf_graph gs.
+    
     Definition add_sib (ts : seq triple) (pall : all (fun t => is_in_ib (subject t)) ts) (t : triple) : all (fun t => @is_in_ib I B L (subject t)) (t::ts).
     Proof. elim (t::ts) => [//| a l ihl] /=.
            - apply /andP ; split. by case a=> /= _ _ _ -> _ _. by apply ihl.
@@ -126,6 +137,7 @@ Section Rdf.
     Proof. apply graph_inj; case g => g' /= _ _ _; by rewrite relabeling_seq_triple_comp_simpl.
     Qed.
 
+
     Section Relabeling_graph.
       Variable B' : Type.
 
@@ -160,6 +172,12 @@ Section Rdf.
     Qed.
 
     Canonical rdf_eqType := EqType rdf_graph (EqMixin rdf_eqP).
+
+    Definition terms (g : @rdf_graph I B L) : seq term :=
+      flatten (map (fun t => terms_triple t) (graph g)).
+
+    Definition bnodes (g : @rdf_graph I B L) : seq term :=
+      filter (fun t => is_bnode t) (terms g).
 
     Lemma bijective_eqb_rdf mu nu g1 g2 : cancel mu nu -> eqb_rdf g1 (relabeling mu g2) ->  eqb_rdf g2 (relabeling nu g1).
     Proof.

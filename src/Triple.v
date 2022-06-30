@@ -27,19 +27,15 @@ Section Triple.
   Section PolyTriple.
     Variables I B L : Type.
 
+    Definition is_ground_triple (t : @triple I B L) : bool:=
+      let (s,p,o,_,_,_) := t in
+      ~~ (is_bnode s || is_bnode p || is_bnode o).
+
     Definition relabeling_triple (u' : Type) (μ : B -> u') (t : @triple I B L) : @triple I u' L :=
       let (s,p,o,sin,pin,oin) := t in
       mkTriple ((iffLR (relabeling_term_preserves_is_in_ib μ s)) sin)
                ((iffLR (relabeling_term_preserves_is_in_i μ p)) pin)
                ((iffLR (relabeling_term_preserves_is_in_ibl μ o)) oin).
-
-    Definition terms_triple (t : @triple I B L) : seq term :=
-      let (s,p,o,_,_,_) := t in
-      [:: s ; p ; o].
-
-    Definition bnodes_triple (t : @triple I B L) : seq (@term I B L) :=
-      filter (@is_bnode I B L) (terms_triple t).
-
 
     Lemma relabeling_triple_id (t : triple) : @relabeling_triple B id t = t.
     Proof.
@@ -88,6 +84,13 @@ Section Triple.
     Qed.
 
     Canonical triple_eqType := EqType triple (EqMixin triple_eqP).
+
+    Definition terms_triple (t : @triple I B L) : seq term :=
+      let (s,p,o,_,_,_) := t in
+      undup [:: s ; p ; o].
+
+    Definition bnodes_triple (t : @triple I B L) : seq (@term I B L) :=
+      undup (filter (@is_bnode I B L) (terms_triple t)).
 
   End EqTriple.
 

@@ -190,7 +190,7 @@ Section IsoCan.
     Definition init_bnode (b : B) : (hash B) :=
       mkHinput b h0.
 
-    Definition init_hash (g : rdf_graph) : hash_graph :=
+    Definition init_hash (g : rdf_graph _ _ _) : hash_graph :=
       relabeling init_bnode g.
 
     (* assumes order in the part *)
@@ -214,8 +214,9 @@ Section IsoCan.
           if cmp_partition g h || is_fine (mkPartition h) then h else
             iterate h n'
       end.
-    
-    Definition hashNodes (g : rdf_graph) : hash_graph :=
+
+    (* state hashNodes terminates without getting out of fuel *)
+    Definition hashNodes (g : rdf_graph _ _ _) : hash_graph :=
       let ini := init_hash g in
       iterate ini (size (graph g)).
 

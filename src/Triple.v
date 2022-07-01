@@ -14,53 +14,56 @@ Section Triple.
                                            ; object_in_IBL: is_in_ibl object
                                    }.
 
-  Lemma triple_inj {I B L: Type}: forall (t1 t2: triple I B L),
-      subject t1 = subject t2 ->
-      predicate t1 = predicate t2 ->
-      object t1 = object t2 ->
-      t1 = t2.
-  Proof.
-    move=> [s1 p1 o1 sin1 pin1 oin1] [s2 p2 o2 sin2 pin2 oin2] /= seq peq oeq.
-    subst. by f_equal; apply eq_irrelevance.
-  Qed.
+    Lemma triple_inj (I B L : Type) (t1 t2 : triple I B L) :
+        subject t1 = subject t2 ->
+        predicate t1 = predicate t2 ->
+        object t1 = object t2 ->
+        t1 = t2.
+    Proof.
+      case t1 => [s1 p1 o1 sin1 pin1 oin1]; case t2 =>[s2 p2 o2 sin2 pin2 oin2] /= seq peq oeq.
+      subst. by f_equal; apply eq_irrelevance.
+    Qed.
 
   Section PolyTriple.
     Variables I B L : Type.
+    Implicit Type t : triple I B L.
 
-    Definition is_ground_triple (t : triple I B L) : bool:=
+    Definition is_ground_triple t : bool:=
       let (s,p,o,_,_,_) := t in
       ~~ (is_bnode s || is_bnode p || is_bnode o).
 
-    Definition relabeling_triple (B' : Type) (μ : B -> B') (t : triple I B L) : triple I B' L :=
+    Definition relabeling_triple (B' B'': Type) (μ : B' -> B'')
+               (t : triple I B' L) : triple I B'' L :=
       let (s,p,o,sin,pin,oin) := t in
       mkTriple ((iffLR (relabeling_term_preserves_is_in_ib μ s)) sin)
                ((iffLR (relabeling_term_preserves_is_in_i μ p)) pin)
                ((iffLR (relabeling_term_preserves_is_in_ibl μ o)) oin).
 
-    Lemma relabeling_triple_id (t : triple I B L) : relabeling_triple id t = t.
+    Lemma relabeling_triple_id t : relabeling_triple id t = t.
     Proof.
       case t => [s p o sin pin oin] /=. apply triple_inj => /=; by apply relabeling_term_id. Qed.
 
-    Lemma relabeling_triple_comp (μ1 μ2 : B -> B) (t : (triple I B L)) : relabeling_triple (μ2 \o μ1) t = (relabeling_triple μ2 \o (relabeling_triple μ1)) t.
-    Proof. case t=> [s p o sin pin oin] /=. apply triple_inj=> /=; by rewrite relabeling_term_comp. Qed.
-
+    Lemma relabeling_triple_comp (B' B'' : Type) (μ1 : B -> B') (μ2 : B' -> B'') t :
+      relabeling_triple (μ2 \o μ1) t = relabeling_triple μ2 (relabeling_triple μ1 t).
+    Proof. by case t=> [s p o sin pin oin] ;apply triple_inj ; rewrite /= relabeling_term_comp. Qed.
 
     Section Relabeling_triple.
       Variable B' : Type.
 
-      Lemma relabeling_triple_preserves_is_in_ib (μ : B -> B') (t : triple I B L) :
+      Lemma relabeling_triple_preserves_is_in_ib (μ : B -> B') t :
         is_in_ib (subject t) <-> is_in_ib (subject (relabeling_triple μ t)).
       Proof. case t => s /= _ _ _ _ _ /=. by apply relabeling_term_preserves_is_in_ib. Qed.
 
-      Lemma relabeling_triple_preserves_is_in_i (μ : B -> B') (t : triple I B L) :
+      Lemma relabeling_triple_preserves_is_in_i (μ : B -> B') t :
         is_in_i (predicate t) <-> is_in_i (predicate (relabeling_triple μ t)).
       Proof. by case t => _ p /= _ _ _ _; apply relabeling_term_preserves_is_in_i. Qed.
 
-      Lemma relabeling_triple_preserves_is_in_ibl (μ : B -> B') (t : triple I B L) :
+      Lemma relabeling_triple_preserves_is_in_ibl (μ : B -> B') t :
         is_in_ibl (object t) <-> is_in_ibl (object (relabeling_triple μ t)).
       Proof. by case t => _ _ o /= _ _ _; apply relabeling_term_preserves_is_in_ibl. Qed.
 
-      Lemma relabeling_triple_ext (μ1 μ2 : B -> B') : μ1 =1 μ2 -> forall t, relabeling_triple μ1 t = relabeling_triple μ2 t.
+      Lemma relabeling_triple_ext (μ1 μ2 : B -> B') :
+        μ1 =1 μ2 -> forall t, relabeling_triple μ1 t = relabeling_triple μ2 t.
       Proof. move => μpweq t. apply /triple_inj; case t => /= [s p o _ _ _]; by apply (relabeling_term_ext μpweq). Qed.
 
     End Relabeling_triple.
@@ -68,16 +71,18 @@ Section Triple.
 
   Section EqTriple.
     Variable I B L : eqType.
+    Implicit Type t : triple I B L.
 
-    Definition eqb_triple  (t1 t2 : triple I B L) : bool :=
+    Definition eqb_triple  t1 t2 : bool :=
       ((subject t1) == (subject t2)) &&
         ((predicate t1) == (predicate t2)) &&
         ((object t1) == (object t2)).
 
     Lemma triple_eqP : Equality.axiom eqb_triple.
     Proof.
-      rewrite /Equality.axiom => x y.
-      apply: (iffP idP) => //= [| ->]; rewrite /eqb_triple; case: x y=> [s1 p1 o1 sin1 pin1 oin1] [s2 p2 o2 sin2 pin2 oin2] //=.
+      rewrite /Equality.axiom /eqb_triple => x y.
+      apply: (iffP idP) => //= [| ->];
+                          case: x y=> [s1 p1 o1 sin1 pin1 oin1] [s2 p2 o2 sin2 pin2 oin2] //=.
       case/andP; case/andP=> /eqP eq_s/eqP eq_p/eqP eq_o.
       apply: triple_inj; move=> //= {sin1 sin2 pin1 pin2 oin1 oin2}; by apply /eqP.
       by rewrite !eq_refl //.
@@ -85,19 +90,20 @@ Section Triple.
 
     Canonical triple_eqType := EqType (triple I B L) (EqMixin triple_eqP).
 
-    Definition terms_triple (t : triple I B L) : seq (term I B L) :=
+    Definition terms_triple t : seq (term I B L) :=
       let (s,p,o,_,_,_) := t in
       undup [:: s ; p ; o].
 
-    Definition bnodes_triple (t : triple I B L) : seq (term I B L) :=
+    Definition bnodes_triple t : seq (term I B L) :=
       undup (filter (@is_bnode I B L) (terms_triple t)).
 
   End EqTriple.
 
   Section CountTriple.
     Variables I B L : countType.
+    Implicit Type t : triple I B L.
 
-    Definition code_triple (t : triple I B L) :=
+    Definition code_triple t :=
       let (s,p,o,_,_,_) := t in
       GenTree.Node 0 [:: (code_term s); (code_term p) ; (code_term o)].
 
@@ -123,7 +129,7 @@ Section Triple.
 
     Lemma cancel_triple_encode : pcancel code_triple decode_triple.
     Proof. case => s p o sib ii oibl. rewrite /code_triple /decode_triple.
-           have cant: forall (t : term I B L), decode_term I B L (code_term t) = Some t. apply cancel_code_decode.
+           have cant: forall (trm : term I B L), decode_term I B L (code_term trm) = Some trm. apply cancel_code_decode.
            rewrite /= !cant; destruct s; destruct p ; destruct o => //=.
            all: by f_equal; apply triple_inj.
     Qed.

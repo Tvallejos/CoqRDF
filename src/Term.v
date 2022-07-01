@@ -45,17 +45,17 @@ Section Term.
   Section Poly.
     Variables I B L : Type.
 
-    Definition relabeling_term (B' : Type) (μ : B -> B') (trm : (term I B L)) : term I B' L :=
+    Definition relabeling_term (B' B'' : Type) (μ : B' -> B'') (trm : (term I B' L)) : term I B'' L :=
       match trm with
       | Bnode name => Bnode I L (μ name)
-      | Iri i => Iri B' L i
-      | Lit l => Lit I B' l
+      | Iri i => Iri B'' L i
+      | Lit l => Lit I B'' l
       end.
 
     Lemma relabeling_term_id (t: term I B L) : relabeling_term id t = t.
     Proof. by case t. Qed.
 
-    Lemma relabeling_term_comp (T : Type) (t: term I B L) (μ1 μ2 : B -> B) : relabeling_term (μ2 \o μ1) t = (relabeling_term μ2 \o (relabeling_term μ1)) t.
+    Lemma relabeling_term_comp (B' B'' : Type) (t: term I B L) (μ1: B -> B') (μ2 : B' -> B'') : relabeling_term (μ2 \o μ1) t = (relabeling_term μ2 (relabeling_term μ1 t)).
     Proof. by case t. Qed.
 
     Section Relabeling_term.

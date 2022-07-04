@@ -14,17 +14,18 @@ Section Triple.
                                            ; object_in_IBL: is_in_ibl object
                                    }.
 
-    Lemma triple_inj (I B L : Type) (t1 t2 : triple I B L) :
-        subject t1 = subject t2 ->
-        predicate t1 = predicate t2 ->
-        object t1 = object t2 ->
-        t1 = t2.
-    Proof.
-      case t1 => [s1 p1 o1 sin1 pin1 oin1]; case t2 =>[s2 p2 o2 sin2 pin2 oin2] /= seq peq oeq.
-      subst. by f_equal; apply eq_irrelevance.
-    Qed.
+  Lemma triple_inj (I B L : Type) (t1 t2 : triple I B L) :
+    subject t1 = subject t2 ->
+    predicate t1 = predicate t2 ->
+    object t1 = object t2 ->
+    t1 = t2.
+  Proof.
+    case: t1 t2 => [s1 p1 o1 sin1 pin1 oin1] [s2 p2 o2 sin2 pin2 oin2] /= seq peq oeq.
+    subst. by f_equal; apply eq_irrelevance.
+  Qed.
 
   Section PolyTriple.
+
     Variables I B L : Type.
     Implicit Type t : triple I B L.
 
@@ -49,22 +50,23 @@ Section Triple.
 
     Section Relabeling_triple.
       Variable B' : Type.
+      Implicit Type μ : B -> B'.
 
-      Lemma relabeling_triple_preserves_is_in_ib (μ : B -> B') t :
+      Lemma relabeling_triple_preserves_is_in_ib μ t :
         is_in_ib (subject t) <-> is_in_ib (subject (relabeling_triple μ t)).
-      Proof. case t => s /= _ _ _ _ _ /=. by apply relabeling_term_preserves_is_in_ib. Qed.
+      Proof. by case t => s /= _ _ _ _ _; apply relabeling_term_preserves_is_in_ib. Qed.
 
-      Lemma relabeling_triple_preserves_is_in_i (μ : B -> B') t :
+      Lemma relabeling_triple_preserves_is_in_i μ t :
         is_in_i (predicate t) <-> is_in_i (predicate (relabeling_triple μ t)).
       Proof. by case t => _ p /= _ _ _ _; apply relabeling_term_preserves_is_in_i. Qed.
 
-      Lemma relabeling_triple_preserves_is_in_ibl (μ : B -> B') t :
+      Lemma relabeling_triple_preserves_is_in_ibl μ t :
         is_in_ibl (object t) <-> is_in_ibl (object (relabeling_triple μ t)).
       Proof. by case t => _ _ o /= _ _ _; apply relabeling_term_preserves_is_in_ibl. Qed.
 
-      Lemma relabeling_triple_ext (μ1 μ2 : B -> B') :
+      Lemma relabeling_triple_ext μ1 μ2:
         μ1 =1 μ2 -> forall t, relabeling_triple μ1 t = relabeling_triple μ2 t.
-      Proof. move => μpweq t. apply /triple_inj; case t => /= [s p o _ _ _]; by apply (relabeling_term_ext μpweq). Qed.
+      Proof. by move=> μpweq t; apply /triple_inj; case t => /= [s p o _ _ _]; apply (relabeling_term_ext μpweq). Qed.
 
     End Relabeling_triple.
   End PolyTriple.
@@ -84,7 +86,7 @@ Section Triple.
       apply: (iffP idP) => //= [| ->];
                           case: x y=> [s1 p1 o1 sin1 pin1 oin1] [s2 p2 o2 sin2 pin2 oin2] //=.
       case/andP; case/andP=> /eqP eq_s/eqP eq_p/eqP eq_o.
-      apply: triple_inj; move=> //= {sin1 sin2 pin1 pin2 oin1 oin2}; by apply /eqP.
+      by apply triple_inj => /=.
       by rewrite !eq_refl //.
     Qed.
 
@@ -95,7 +97,7 @@ Section Triple.
       undup [:: s ; p ; o].
 
     Definition bnodes_triple t : seq (term I B L) :=
-      undup (filter (@is_bnode I B L) (terms_triple t)).
+      undup (filter (@is_bnode _ _ _) (terms_triple t)).
 
   End EqTriple.
 
@@ -119,12 +121,12 @@ Section Triple.
                  -- destruct (decode_term I B L s) as [dst | ] eqn:ds;
                       destruct (decode_term I B L p) as [dpt | ] eqn:dp;
                       destruct (decode_term I B L o) as [ dot| ] eqn:do.
-                                                                        destruct (is_in_ib dst) eqn:iib;
-                                                                          destruct (is_in_i dpt) eqn:ii;
-                                                                          destruct (is_in_ibl dot) eqn: ibl.
+                                                                       destruct (is_in_ib dst) eqn:iib;
+                                                                         destruct (is_in_i dpt) eqn:ii;
+                                                                         destruct (is_in_ibl dot) eqn: ibl.
 
-                                                                        ++ exact (Some (mkTriple iib ii ibl)).
-                                                                        + all: exact None.
+                                                                       ++ exact (Some (mkTriple iib ii ibl)).
+                                                                       + all: exact None.
     Defined.
 
     Lemma cancel_triple_encode : pcancel code_triple decode_triple.

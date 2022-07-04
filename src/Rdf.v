@@ -21,7 +21,7 @@ Section Rdf.
     Definition empty_rdf_graph := mkRdfGraph [::] : rdf_graph I B L.
 
     Definition is_ground g : bool :=
-      all (@is_ground_triple I B L) g.
+      all (@is_ground_triple _ _ _) g.
 
     (* assumes shared identifier scope *)
     Definition merge_rdf_graph g1 g2 : rdf_graph I B L :=
@@ -30,11 +30,11 @@ Section Rdf.
     Definition merge_seq_rdf_graph (gs : seq (rdf_graph I B L)) : rdf_graph I B L :=
       foldr merge_rdf_graph empty_rdf_graph gs.
 
-    Definition add_triple (og : option (rdf_graph I B L)) t : option (rdf_graph I B L).
-    Proof. destruct og as [[st] |].
-             exact (Some (mkRdfGraph (t :: st))).
-           - exact None.
-    Defined.
+    Definition add_triple (og : option (rdf_graph I B L)) t : option (rdf_graph I B L) :=
+      match og with
+      | Some ts => Some (mkRdfGraph (t::ts))
+      | None=> None
+      end.
 
     Definition relabeling_seq_triple
                (B' B'': Type) (μ : B' -> B'')
@@ -104,11 +104,11 @@ Section Rdf.
 
     Canonical rdf_eqType := EqType (rdf_graph I B L) (EqMixin rdf_eqP).
 
-    Definition terms g : seq (term _ _ _) :=
-      flatten (map (fun t => terms_triple t) (graph g)).
+    Definition terms g : seq (term I B L) :=
+      undup (flatten (map (@terms_triple I B L) (graph g))).
 
-    Definition bnodes g : seq (term _ _ _) :=
-      filter (@is_bnode I B L) (terms g).
+    Definition bnodes g : seq (term I B L) :=
+      filter (@is_bnode _ _ _) (terms g).
 
     Lemma bijective_eqb_rdf mu nu g1 g2 :
       cancel mu nu -> eqb_rdf g1 (relabeling mu g2) ->  eqb_rdf g2 (relabeling nu g1).
@@ -135,7 +135,7 @@ Section Rdf.
     Proof.
       rewrite /iso /is_iso.
       split; case=> mu [mu_bij heqb_rdf]; case: (mu_bij)=> [nu h1 h2];
-                                                         (exists nu; split; [exact: bij_can_bij h1 | exact: bijective_eqb_rdf heqb_rdf]).
+                                                           (exists nu; split; [exact: bij_can_bij h1 | exact: bijective_eqb_rdf heqb_rdf]).
     Qed.
 
     Lemma iso_trans g1 g2 g3 : iso g1 g2 -> iso g2 g3 -> iso g1 g3.
@@ -147,7 +147,7 @@ Section Rdf.
 
     Definition isocanonical_mapping (M : rdf_graph I B L -> rdf_graph I B L) :=
       forall g1, iso (M g1) g1 /\
-              forall g2, iso (M g1) (M g2) <-> iso g1 g2.
+                   forall g2, iso (M g1) (M g2) <-> iso g1 g2.
 
   End EqRdf.
 

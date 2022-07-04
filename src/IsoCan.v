@@ -16,8 +16,10 @@ Section IsoCan.
   Section IsoCanAlgorithm.
     Variable h : countType.
     Variables h0 hfwd hbwd hmark : h.
-    Variable hashTerm : @term I B L -> h.
+    (* add conditions on the input *)
+    Variable hashTerm : term I B L -> h.
     Hypothesis perfectHashingSchemeTerm : injective hashTerm.
+    Implicit Type trm : term I B L.
 
     Section Hash.
 
@@ -26,7 +28,7 @@ Section IsoCan.
                                    current_hash : h
                                  }.
 
-      Lemma by_perf_hash (i : @term I B L) (o : h) (eqb : hashTerm i == o) : hashTerm i = o.
+      Lemma by_perf_hash trm (o : h) (eqb : hashTerm trm == o) : hashTerm trm = o.
       Proof. apply /eqP. apply eqb. Qed.
 
       Section CountHash.
@@ -46,7 +48,7 @@ Section IsoCan.
           end.
 
         Definition cancel_hin_encode : pcancel code_hash decode_hash.
-        Proof. case => i o; by rewrite /code_hash /decode_hash !pickleK. Qed.
+        Proof. by case => i o; rewrite /code_hash /decode_hash !pickleK. Qed.
 
         Definition hin_eqMixin := PcanEqMixin cancel_hin_encode.
         Definition hin_canChoiceMixin := PcanChoiceMixin cancel_hin_encode.
@@ -61,49 +63,50 @@ Section IsoCan.
       End CountHash.
     End Hash.
 
-    Definition hash_term := @term I (hash B) L.
+    Definition hterm := term I (hash B) L.
 
-    Definition eqb_t_hi (t : @term I B L) (ht : hash_term) : bool :=
-      match t, ht with
+    Definition eqb_trm_hi trm (ht : hterm) : bool :=
+      match trm, ht with
       | Iri i, Iri i' => i == i'
       | Bnode b, Bnode hin => b == (input hin)
       | Lit l, Lit l' => l == l'
       | _,_ => false
       end.
 
-    Definition hash_triple := @triple I (hash B) L.
+    Definition htriple := triple I (hash B) L.
 
-    Definition get_triple (t : @term I B L) (trpl : hash_triple) : option hash_term :=
+    Definition get_triple trm (trpl : htriple) : option hterm :=
       let (s,p,o,_,_,_) := trpl in
-      if eqb_t_hi t s then Some s
-      else if eqb_t_hi t p then Some p
-           else if eqb_t_hi t o then Some o
+      if eqb_trm_hi trm s then Some s
+      else if eqb_trm_hi trm p then Some p
+           else if eqb_trm_hi trm o then Some o
                 else None.
 
     Definition is_some {T : Type} (ot : option T) : bool :=
       match ot with Some _ => true | None => false end.
 
-    Definition hash_graph := @rdf_graph I (hash B) L.
+    Definition hgraph := rdf_graph I (hash B) L.
 
-    Definition get (t : @term I B L) (g : hash_graph) : option hash_term :=
+    Definition get t (g : hgraph) : option hterm :=
       let otrs := (map (get_triple t) (graph g)) in
       head None (filter is_some otrs).
 
-    Definition lookup_hash (b : hash_term): option (hash B) :=
-      match b with
+    Definition lookup_hash (hb : hterm) : option (hash B) :=
+      match hb with
       | Bnode hin => Some hin
       | _ => None
       end.
 
     Section Partition.
 
-      Definition eq_rel (b1 b2 : hash_term) : bool :=
+      Definition eq_hash (b1 b2 : hterm) : bool :=
         match (lookup_hash b1), (lookup_hash b2) with
         | Some hin1, Some hin2 => current_hash hin1 == current_hash hin2
         | _,_ => false
         end.
 
-      Fixpoint partitionate (f : hash_term -> bool) (s:seq hash_term) : seq hash_term * seq hash_term :=
+      (* change for finset *)
+      Fixpoint partitionate (f : hterm -> bool) (s : seq hterm) : seq hterm * seq hterm :=
         match s with
         | nil => (nil, nil)
         | x :: tl => let (g,d) := partitionate f tl in
@@ -113,100 +116,58 @@ Section IsoCan.
       Definition part := seq (hash B).
       Definition partition := seq part.
 
-      Fixpoint unwrap {T : Type} (os : seq (option T)) : seq T :=
+      Fixpoint somet_to_t {T : Type} (os : seq (option T)) : seq T :=
         match os with
         | nil => nil
-        | Some t :: oss => t :: unwrap oss
-        | None :: oss => unwrap oss
+        | Some t :: oss => t :: somet_to_t oss
+        | None :: oss => somet_to_t oss
         end.
 
-      Definition mkPartition (g : hash_graph) : partition :=
+      Definition mkPartition (g : hgraph) : partition :=
         let bnodes := (bnodes g) in
-        let equiv := (fun b => (fun t=> eq_rel b t)) in
+        let equiv := (fun b => (fun t=> eq_hash b t)) in
         (* undup up to permutation *)
         let P := undup (map (fun b=> (partitionate (equiv b) bnodes).1 ) bnodes) in
         let ohs := map (fun bs => map lookup_hash bs) P in
-        map unwrap ohs.
+        map somet_to_t ohs.
 
-      Record Partition := mkPartition_ {
-                             P : partition ;
-                             g : hash_graph ;
-                             p_wf : P == mkPartition g  ;
-                             has_b : all (fun p=> ~~ (nilp p)) P ;
-                             diff_hashes : uniq P
-
-                           }.
-
-      (* Error: Cannot guess decreasing argument of fix. *)
-      (* Definition mkPartition (g : rdf_graph) (hm : hashmap) := *)
-      (*   let fix part (bnodes : seq term) (acc : seq (seq term)) := *)
-      (*                match bnodes with *)
-      (*                | nil => acc *)
-      (*                | b :: bs => *)
-      (*                    let equiv := (fun t=> eq_rel g hm b t) in *)
-      (*                    let (a_part,rest) := partition equiv bs in *)
-      (*                    part rest (a_part::acc) *)
-      (*                end in *)
-      (*   part (bnodes g) hm [::]. *)
-
-      (* Definition mkPartition (g : rdf_graph) (hm : hashmap) := *)
-      (*   let fix aux (bnodes : seq term) (acc : seq (seq term)) := *)
-      (*                match bnodes with *)
-      (*                | nil => acc *)
-      (*                | b :: bs => *)
-      (*                    let equiv := (fun t=> eq_rel g hm b t) in *)
-      (*                    let part := filter equiv bs in *)
-      (*                    let rest := foldr (@rem (term_eqType I B L)) bs part in *)
-      (*                    aux rest (part::acc) *)
-      (*                    (* aux (filter (fun t=>(~~ (equiv t))) bs) (part::acc) *) *)
-      (*                end in *)
-      (*   aux (bnodes g) hm [::]. *)
-
-      (* Record partition := mkPartition { *)
-      (*                        bnodes : seq term ; *)
-      (*                        bnodes_r_bnodes : all is_bnode bnodes ; *)
-      (*                        hm : hashmap ; *)
-
-
-      (*                      }. *)
-
-      Definition is_trivial (part : part) : bool :=
-        size part == 1.
-
-      Definition is_non_trivial (part : part) : bool :=
-        ~~ is_trivial part.
-
-      Definition is_fine (p : partition) : bool :=
-        all is_trivial p.
-
-      Definition is_coarse (p : partition) : bool :=
+      Definition is_trivial (p : part) : bool :=
         size p == 1.
 
-      Definition is_intermediate (p : partition) :=
-        ~~ is_fine p && ~~ is_coarse p.
+      Definition is_non_trivial (p : part) : bool :=
+        ~~ is_trivial p.
+
+      Definition is_fine (P : partition) : bool :=
+        all is_trivial P.
+
+      Definition is_coarse (P : partition) : bool :=
+        size P == 1.
+
+      Definition is_intermediate (P : partition) :=
+        ~~ is_fine P && ~~ is_coarse P.
 
     End Partition.
 
     Definition init_bnode (b : B) : (hash B) :=
       mkHinput b h0.
 
-    Definition init_hash (g : rdf_graph _ _ _) : hash_graph :=
+    Definition init_hash (g : rdf_graph _ _ _) : hgraph :=
       relabeling init_bnode g.
 
-    (* assumes order in the part *)
+    (* assumes order and no dup in parts *)
     Definition cmp_part (p1 p2 : part) : bool :=
       all2 (fun b1 b2 => input b1 == input b2) p1 p2.
 
-    (* assumes order in partition *)
+    (* assumes order and no dup in partition *)
     (* answers true if every part in the partition of g is equal to the respective part in h *)
-    Definition cmp_partition (g h: hash_graph) : bool :=
-      let pg := mkPartition g in
-      let ph := mkPartition h in
-      all2 (fun p1 p2 => cmp_part p1 p2) pg ph.
+    Definition cmp_partition (g h: hgraph) : bool :=
+      let Pg := mkPartition g in
+      let Ph := mkPartition h in
+      all2 (fun p1 p2 => cmp_part p1 p2) Pg Ph.
 
-    Variable update_bnodes : hash_graph -> hash_graph.
+    Variable update_bnodes : hgraph -> hgraph.
 
-    Fixpoint iterate (g : hash_graph) (fuel : nat) : hash_graph :=
+    Fixpoint iterate (g : hgraph) (fuel : nat) : hgraph :=
       match fuel with
       | O => g
       | S n' =>
@@ -216,36 +177,36 @@ Section IsoCan.
       end.
 
     (* state hashNodes terminates without getting out of fuel *)
-    Definition hashNodes (g : rdf_graph _ _ _) : hash_graph :=
+    Definition hashNodes (g : rdf_graph _ _ _) : hgraph :=
       let ini := init_hash g in
       iterate ini (size (graph g)).
 
-    Definition hashNodes_initialized (g : hash_graph) : hash_graph :=
+    Definition hashNodes_initialized (g : hgraph) : hgraph :=
       iterate g (size (graph g)).
 
-    Definition reachability_rel (g : hash_graph) (t1 t2 : hash_triple) : bool :=
+    Definition reachability_rel (g : hgraph) (t1 t2 : htriple) : bool :=
       todo _.
 
-    Definition blank_node_split (t u v : Type) (g : @rdf_graph t u v) : seq (@rdf_graph t u v) :=
+    Definition blank_node_split (t u v : Type) (g : rdf_graph t u v) : seq (rdf_graph t u v) :=
       todo _.
 
-    Definition ground_split {t u v : Type} (g : @rdf_graph t u v) : @rdf_graph t u v :=
+    Definition ground_split {t u v : Type} (g : rdf_graph t u v) : rdf_graph t u v :=
       todo _.
 
     Lemma merge_split {t u v : Type} (g : @rdf_graph t u v) :
       merge_rdf_graph (merge_seq_rdf_graph (blank_node_split g)) (ground_split g) = g. Admitted.
 
-    Definition hashBnodesPerSplit (g : hash_graph) : hash_graph :=
+    Definition hashBnodesPerSplit (g : hgraph) : hgraph :=
       let splitG := blank_node_split g in
-      foldr (@merge_rdf_graph I (hash B) L) (@empty_rdf_graph I (hash B) L) splitG.
+      foldr (@merge_rdf_graph _ _ _) (empty_rdf_graph _ _ _) splitG.
 
-    Definition cmp_bnode (b : B) (t : hash_term) : bool :=
-      match t with
+    Definition cmp_bnode (b : B) (ht : hterm) : bool :=
+      match ht with
       | Bnode hin => b == (input hin)
       | _ => false
       end.
 
-    Definition lookup_bnode_in_triple (t : hash_triple) (b : B) : hash_term :=
+    Definition lookup_bnode_in_triple (t : htriple) (b : B) : hterm :=
       let (s,p,o,_,_,_) := t in
       if cmp_bnode b s then s
       else if cmp_bnode b p then p

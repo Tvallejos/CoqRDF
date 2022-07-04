@@ -14,36 +14,36 @@ Section Term.
   | Lit (l : L)
   | Bnode (name : B).
 
-  Definition is_lit (t u v : Type) (t : term t u v) : bool :=
-    (match t with
-     | Lit _ => true
-     | _ => false
-     end).
+  Definition is_lit (I B L : Type) (trm : term I B L) : bool :=
+    match trm with
+    | Lit _ => true
+    | _ => false
+    end.
 
-  Definition is_iri (t u v : Type) (t : term t u v) : bool :=
-    (match t with
-     | Iri _ => true
-     | _ => false
-     end).
+  Definition is_iri(I B L : Type) (trm : term I B L) : bool :=
+    match trm with
+    | Iri _ => true
+    | _ => false
+    end.
 
-  Definition is_bnode (t u v : Type) (t : term t u v) : bool :=
-    (match t with
-     | Bnode _ => true
-     | _ => false
-     end).
+  Definition is_bnode (I B L : Type) (trm : term I B L) : bool :=
+    match trm with
+    | Bnode _ => true
+    | _ => false
+    end.
 
-  Definition is_in_ib (t u v : Type) (t : term t u v) : bool :=
-    is_iri t || is_bnode t.
+  Definition is_in_ib (I B L : Type) (trm : term I B L) : bool :=
+    is_iri trm || is_bnode trm.
 
-  Definition is_in_i (t u v : Type) (t : term t u v) : bool :=
-    is_iri t.
+  Definition is_in_i (I B L : Type) (trm : term I B L) : bool :=
+    is_iri trm.
 
-  Definition is_in_ibl (t u v : Type) (t : term t u v) : bool :=
-    is_iri t || is_bnode t || is_lit t.
-
+  Definition is_in_ibl (I B L : Type) (trm : term I B L) : bool :=
+    is_iri trm || is_bnode trm || is_lit trm.
 
   Section Poly.
     Variables I B L : Type.
+    Implicit Type trm : term I B L.
 
     Definition relabeling_term (B' B'' : Type) (μ : B' -> B'') (trm : (term I B' L)) : term I B'' L :=
       match trm with
@@ -52,35 +52,42 @@ Section Term.
       | Lit l => Lit I B'' l
       end.
 
-    Lemma relabeling_term_id (t: term I B L) : relabeling_term id t = t.
-    Proof. by case t. Qed.
+    Lemma relabeling_term_id trm : relabeling_term id trm = trm.
+    Proof. by case trm. Qed.
 
-    Lemma relabeling_term_comp (B' B'' : Type) (t: term I B L) (μ1: B -> B') (μ2 : B' -> B'') : relabeling_term (μ2 \o μ1) t = (relabeling_term μ2 (relabeling_term μ1 t)).
-    Proof. by case t. Qed.
+    Lemma relabeling_term_comp (B' B'' : Type) trm (μ1: B -> B') (μ2 : B' -> B'') :
+      relabeling_term (μ2 \o μ1) trm = relabeling_term μ2 (relabeling_term μ1 trm).
+    Proof. by case trm. Qed.
 
     Section Relabeling_term.
       Variable B' : Type.
+      Implicit Type μ : B -> B'.
 
-      Lemma relabeling_term_preserves_is_in_ib (μ : B -> B') (t : term I B L) : is_in_ib t <-> is_in_ib (relabeling_term μ t).
-    Proof. by case t. Qed.
+      Lemma relabeling_term_preserves_is_in_ib μ trm :
+        is_in_ib  trm <-> is_in_ib (relabeling_term μ trm).
+      Proof. by case trm. Qed.
 
-      Lemma relabeling_term_preserves_is_in_i (μ : B -> B') (t : term I B L) : is_in_i t <-> is_in_i (relabeling_term μ t).
-      Proof. by case t. Qed.
+      Lemma relabeling_term_preserves_is_in_i μ trm :
+        is_in_i trm <-> is_in_i (relabeling_term μ trm).
+      Proof. by case trm. Qed.
 
-      Lemma relabeling_term_preserves_is_in_ibl (μ : B -> B') (t : term I B L) : is_in_ibl t <-> is_in_ibl (relabeling_term μ t).
-      Proof. by case t. Qed.
+      Lemma relabeling_term_preserves_is_in_ibl μ trm :
+        is_in_ibl trm <-> is_in_ibl (relabeling_term μ trm).
+      Proof. by case trm. Qed.
 
-      Lemma relabeling_term_ext (μ1 μ2 : B -> B') : μ1 =1 μ2 -> forall t : term I B L, relabeling_term μ1 t = relabeling_term μ2 t.
-      Proof. move => μpweq [//| // | b] /=. by rewrite μpweq. Qed.
+      Lemma relabeling_term_ext μ1 μ2 :
+        μ1 =1 μ2 -> forall trm, relabeling_term μ1 trm = relabeling_term μ2 trm.
+      Proof. by move=> μpweq [//| // | b] /=; rewrite μpweq. Qed.
 
     End Relabeling_term.
   End Poly.
 
   Section EqTerm.
     Variables I B L : eqType.
+    Implicit Type trm : term I B L.
 
-    Definition eqb_term (t1 t2 : term I B L) : bool :=
-      match t1, t2 with
+    Definition eqb_term trm1 trm2 : bool :=
+      match trm1, trm2 with
       | Iri i1, Iri i2 => i1 == i2
       | Bnode b1, Bnode b2 => b1 == b2
       | Lit l1, Lit l2 => l1 == l2
@@ -99,10 +106,11 @@ Section Term.
   End EqTerm.
   Section CountTerm.
     Variable I B L: countType.
+    Implicit Type trm : term I B L.
 
-    Definition code_term (x : (term I B L)) :=
-      match x with
-      | Iri id => GenTree.Node 0 (GenTree.Leaf (pickle id) :: nil)
+    Definition code_term trm :=
+      match trm with
+      | Iri i => GenTree.Node 0 (GenTree.Leaf (pickle i) :: nil)
       | Lit l => GenTree.Node 1 (GenTree.Leaf (pickle l) :: nil)
       | Bnode name => GenTree.Node 2 (GenTree.Leaf (pickle name) :: nil)
       end.
@@ -116,7 +124,7 @@ Section Term.
       end.
 
     Lemma cancel_code_decode : pcancel code_term decode_term.
-    Proof. case => [id | l | name] /=; by rewrite pickleK. Qed.
+    Proof. case => [i | l | name] /=; by rewrite pickleK. Qed.
 
     Definition term_canChoiceMixin := PcanChoiceMixin cancel_code_decode.
     Definition term_canCountMixin := PcanCountMixin cancel_code_decode.

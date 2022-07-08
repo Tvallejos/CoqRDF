@@ -104,11 +104,11 @@ Section Rdf.
 
     Canonical rdf_eqType := EqType (rdf_graph I B L) (EqMixin rdf_eqP).
 
-    Variable g : rdf_graph I B L.
-    Variable trm : term I B L.
-    Print SetDef.finset.
-    (* requieres trm to be finType *)
-    Fail Check finset (trm \in g).
+    (* Variable g : rdf_graph I B L. *)
+    (* Variable trm : term I B L. *)
+    (* Print SetDef.finset. *)
+    (* (* requieres trm to be finType *) *)
+    (* Fail Check finset (trm \in g). *)
 
     Definition terms g : seq (term I B L) :=
       undup (flatten (map (@terms_triple I B L) (graph g))).

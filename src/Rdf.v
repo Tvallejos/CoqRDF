@@ -8,9 +8,10 @@ From RDF Require Import Triple.
 Section Rdf.
   Axiom todo_rdf: forall t, t.
 
-  Record rdf_graph (I B L : Type) := mkRdfGraph {
+   Record rdf_graph (I B L : Type) := mkRdfGraph {
                                         graph :> seq (triple I B L) ;
-                                     }.
+                                      }.
+
 
   Section PolyRdf.
     Variables I B L : Type.
@@ -194,8 +195,22 @@ Section Rdf.
 
     Section FinTypeRdf.
       
-      
+    Lemma uniq_bnodes g : uniq (bnodes g).
+    Proof. exact: undup_uniq. Qed.
+Check bnodes.
+    (* Variables (s : rdf_graph I B L) (t : triple I B L). *)
+(* Check t \in s. requires declaring an instance of predtype TODO *)
 
+    Variables (g : rdf_graph I  B L) (p : pred (term I B L))  (q : pred (seq_sub (bnodes g))).
+
+    Definition A := [set x | q x]. (* seq_sub (bnodes g) is a fintype! *)
+    Fail Check [set x in A | p x]. (* need to compose p with the coercion from 
+(seq_sub (bnodes g)) to term I B L *)
+
+
+
+
+    (A : {set (seq_sub (bnodes g))}).
 
 
     End FinTypeRdf.

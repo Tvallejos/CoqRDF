@@ -8,8 +8,8 @@ From RDF Require Import Triple.
 Section Rdf.
   Axiom todo_rdf: forall t, t.
 
-  Record rdf_graph (I B L : Type):= mkRdfGraph {
-                                       graph :> seq (triple I B L)
+  Record rdf_graph (I B L : Type) := mkRdfGraph {
+                                        graph :> seq (triple I B L) ;
                                      }.
 
   Section PolyRdf.
@@ -104,11 +104,17 @@ Section Rdf.
 
     Canonical rdf_eqType := EqType (rdf_graph I B L) (EqMixin rdf_eqP).
 
+    Variable g : rdf_graph I B L.
+    Variable trm : term I B L.
+    Print SetDef.finset.
+    (* requieres trm to be finType *)
+    Fail Check finset (trm \in g).
+
     Definition terms g : seq (term I B L) :=
       undup (flatten (map (@terms_triple I B L) (graph g))).
 
     Definition bnodes g : seq (term I B L) :=
-      filter (@is_bnode _ _ _) (terms g).
+      undup (filter (@is_bnode _ _ _) (terms g)).
 
     Lemma bijective_eqb_rdf mu nu g1 g2 :
       cancel mu nu -> eqb_rdf g1 (relabeling mu g2) ->  eqb_rdf g2 (relabeling nu g1).
@@ -185,6 +191,14 @@ Section Rdf.
 
     Definition rdf_canPOrderMixin := PcanPOrderMixin (@pickleK rdf_countType).
     Canonical rdf_POrderType := Eval hnf in POrderType tt (rdf_graph I B L) rdf_canPOrderMixin.
+
+    Section FinTypeRdf.
+      
+      
+
+
+
+    End FinTypeRdf.
 
   End CountRdf.
 End Rdf.

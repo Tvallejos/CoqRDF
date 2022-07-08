@@ -113,14 +113,18 @@ Section IsoCan.
                    if f x then (x::g,d) else (g,x::d)
         end.
 
+      (* should be parameterized by a hgraph
+         part shoud be the finset of (hash B) that shares hash in g *)
       Definition part := seq (hash B).
+
+      (* the finset of parts in g *)
       Definition partition := seq part.
 
-      Fixpoint somet_to_t {T : Type} (os : seq (option T)) : seq T :=
+      Fixpoint someT_to_T {T : Type} (os : seq (option T)) : seq T :=
         match os with
         | nil => nil
-        | Some t :: oss => t :: somet_to_t oss
-        | None :: oss => somet_to_t oss
+        | Some t :: oss => t :: someT_to_T oss
+        | None :: oss => someT_to_T oss
         end.
 
       Definition mkPartition (g : hgraph) : partition :=
@@ -129,7 +133,7 @@ Section IsoCan.
         (* undup up to permutation *)
         let P := undup (map (fun b=> (partitionate (equiv b) bnodes).1 ) bnodes) in
         let ohs := map (fun bs => map lookup_hash bs) P in
-        map somet_to_t ohs.
+        map someT_to_T ohs.
 
       Definition is_trivial (p : part) : bool :=
         size p == 1.
@@ -165,7 +169,7 @@ Section IsoCan.
       let Ph := mkPartition h in
       all2 (fun p1 p2 => cmp_part p1 p2) Pg Ph.
 
-    Variable update_bnodes : hgraph -> hgraph.
+    Definition update_bnodes : hgraph -> hgraph := todo _.
 
     Fixpoint iterate (g : hgraph) (fuel : nat) : hgraph :=
       match fuel with
@@ -176,16 +180,23 @@ Section IsoCan.
             iterate h n'
       end.
 
-    (* state hashNodes terminates without getting out of fuel *)
-    Definition hashNodes (g : rdf_graph _ _ _) : hgraph :=
-      let ini := init_hash g in
-      iterate ini (size (graph g)).
 
     Definition hashNodes_initialized (g : hgraph) : hgraph :=
       iterate g (size (graph g)).
 
+    (* need the lemma stating hashNodes terminates without
+       getting out of fuel *)
+    Definition hashNodes (g : rdf_graph _ _ _) : hgraph :=
+      hashNodes_initialized (init_hash g).
+
     Definition reachability_rel (g : hgraph) (t1 t2 : htriple) : bool :=
-      todo _.
+      let (s1, _, o1, _, _, _) := t1 in
+      let (s2, _, o2, _, _, _) := t2 in
+      let s1s2 := (s1 == s2) && is_bnode s1 in
+      let s1o2 := (s1 == o2) && is_bnode s1 in
+      let o1s2 := (o1 == s2) && is_bnode o1 in
+      let o1o2 := (o1 == o2) && is_bnode o1 in
+      s1s2 || s1o2 || o1s2 || o1o2.
 
     Definition blank_node_split (t u v : Type) (g : rdf_graph t u v) : seq (rdf_graph t u v) :=
       todo _.
@@ -211,6 +222,56 @@ Section IsoCan.
       if cmp_bnode b s then s
       else if cmp_bnode b p then p
            else o.
+
+    Definition mark_bnode (b : hash B) : hterm :=
+      todo _.
+
+    Definition replace_bnode (b : hash B) (b' : hterm) (g : hgraph) : hgraph :=
+      todo _.
+
+    Definition choose_part (P : partition) : part :=
+      todo _.
+
+    (* b is_bnode *)
+    Definition distinguishBnode g (b : (hash B)) : hgraph :=
+      let b' := mark_bnode b in
+      let g' := replace_bnode b b' g in
+      hashNodes_initialized g'.
+
+    (* choose canonical graph from sequence of graphs that have fine partitions *)
+    Definition choose_graph (gs : seq hgraph) : hgraph :=
+      todo _.
+
+    (* give partition and proof that partition is not fine *)
+    (* or compute it again ... *)
+    Fixpoint distinguish_ g (fuel:nat) : hgraph :=
+      match fuel with
+      | O => g
+      | S n' =>
+          let P := mkPartition g in
+          if is_fine P then g
+          else
+            let p := choose_part P in
+            let gs := map (distinguishBnode g) p in
+            let Ps := map mkPartition gs in
+            let gP := zip gs Ps in
+            let just_fine := (fun (gP : hgraph * partition) =>
+                                if is_fine gP.2 then gP.1
+                                else distinguish_ gP.1 n') in
+            choose_graph (map just_fine gP)
+      end.
+
+    Definition distinguish g : hgraph :=
+      distinguish_ g (size g).
+                                                 
+    Definition isoCanonicalise g : hgraph :=
+      let g' := hashBnodesPerSplit g in
+      let P := mkPartition g' in
+      if is_fine P then g'
+      else distinguish g.
+
+
+
 
     (* Definition lookup_bnode (b : B) (g : hash_graph) : option h := *)
     (*   filter (fun t => match t with *)

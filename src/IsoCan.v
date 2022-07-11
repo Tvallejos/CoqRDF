@@ -158,6 +158,20 @@ Section IsoCan.
     Definition init_hash (g : rdf_graph _ _ _) : hgraph :=
       relabeling init_bnode g.
 
+    Hypothesis to_string : h -> B.
+
+    Definition label_bnode (hb : (hash B)) : B :=
+      to_string (current_hash hb).
+
+    Definition label_term (htrm : hterm) : term I B L :=
+      relabeling_term label_bnode htrm.
+
+    Definition label_triple ht : triple I B L :=
+      relabeling_triple label_bnode ht.
+
+    Definition label (g : hgraph) : rdf_graph I B L :=
+      relabeling label_bnode g.
+
     (* assumes order and no dup in parts *)
     Definition cmp_part (p1 p2 : part) : bool :=
       all2 (fun b1 b2 => input b1 == input b2) p1 p2.
@@ -229,14 +243,15 @@ Section IsoCan.
     Definition replace_bnode (b : hash B) (b' : hterm) (g : hgraph) : hgraph :=
       todo _.
 
+    (* from the Partition choose the canonical part that is not fine *)
     Definition choose_part (P : partition) : part :=
       todo _.
 
     (* b is_bnode *)
-    Definition distinguishBnode g (b : (hash B)) : hgraph :=
+    Definition distinguishBnode g (color_refine : hgraph -> hgraph ) (b : (hash B)) : hgraph :=
       let b' := mark_bnode b in
       let g' := replace_bnode b b' g in
-      hashNodes_initialized g'.
+      color_refine g'.
 
     (* choose canonical graph from sequence of graphs that have fine partitions *)
     Definition choose_graph (gs : seq hgraph) : hgraph :=
@@ -244,7 +259,7 @@ Section IsoCan.
 
     (* give partition and proof that partition is not fine *)
     (* or compute it again ... *)
-    Fixpoint distinguish_ g (fuel:nat) : hgraph :=
+    Fixpoint distinguish_ g (color : hgraph -> hgraph) (fuel:nat) : hgraph :=
       match fuel with
       | O => g
       | S n' =>
@@ -252,25 +267,51 @@ Section IsoCan.
           if is_fine P then g
           else
             let p := choose_part P in
-            let gs := map (distinguishBnode g) p in
+            let gs := map (distinguishBnode g color) p in
             let Ps := map mkPartition gs in
             let gP := zip gs Ps in
             let just_fine := (fun (gP : hgraph * partition) =>
                                 if is_fine gP.2 then gP.1
-                                else distinguish_ gP.1 n') in
+                                else distinguish_ gP.1 color n') in
             choose_graph (map just_fine gP)
       end.
 
-    Definition distinguish g : hgraph :=
-      distinguish_ g (size g).
-                                                 
-    Definition isoCanonicalise g : hgraph :=
-      let g' := hashBnodesPerSplit g in
+    Definition distinguish g (color_refine : hgraph -> hgraph) : hgraph :=
+      distinguish_ g color_refine (size g).
+
+    Definition isoCanonicalTemplate g (color color_refine: hgraph -> hgraph) refine : rdf_graph I B L:=
+      let g' := color (init_hash g) in
       let P := mkPartition g' in
-      if is_fine P then g'
-      else distinguish g.
+      let g_iso := if is_fine P then g' else refine g' color_refine in
+      label g_iso.
 
+    (* first approach *)
+    Definition justDistinguish g :=
+      isoCanonicalTemplate g id id distinguish.
 
+    Definition isoCanonicalNoIter g :=
+      isoCanonicalTemplate g update_bnodes update_bnodes distinguish.
+
+    Definition isoCanonicalIter g :=
+      isoCanonicalTemplate g hashNodes_initialized hashNodes_initialized distinguish.
+
+    Definition isoCanonicalise g :=
+      isoCanonicalTemplate g hashBnodesPerSplit hashNodes_initialized distinguish.
+
+    Lemma singleton_g_is_fine (g: hgraph) : size g = 1 -> is_fine (mkPartition g).
+      Proof. rewrite /mkPartition => singleton_g. Abort.
+
+    Lemma distinguish_preserves_isomorphism g : iso (justDistinguish g) g.
+    Proof. rewrite /iso/justDistinguish/isoCanonicalTemplate/is_iso.
+           elim (graph g) => [|t ts ihts].
+           - exists id. split. by exists id.
+             rewrite relabeling_id.
+           (* need to build μ. and μ bij.
+               *)
+           Abort.
+
+    Lemma justDistinguish_isocan : isocanonical_mapping justDistinguish.
+    Proof. rewrite /isocanonical_mapping=> g1; split. Abort.
 
 
     (* Definition lookup_bnode (b : B) (g : hash_graph) : option h := *)

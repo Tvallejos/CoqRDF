@@ -104,6 +104,7 @@ Section Rdf.
     Qed.
 
     Canonical rdf_eqType := EqType (rdf_graph I B L) (EqMixin rdf_eqP).
+    Canonical rdf_predType := PredType (pred_of_seq \o (@graph I B L)).
 
     (* Variable g : rdf_graph I B L. *)
     (* Variable trm : term I B L. *)
@@ -116,6 +117,9 @@ Section Rdf.
 
     Definition bnodes g : seq (term I B L) :=
       undup (filter (@is_bnode _ _ _) (terms g)).
+
+    Lemma uniq_bnodes g : uniq (bnodes g).
+    Proof. exact: undup_uniq. Qed.
 
     Lemma bijective_eqb_rdf mu nu g1 g2 :
       cancel mu nu -> eqb_rdf g1 (relabeling mu g2) ->  eqb_rdf g2 (relabeling nu g1).
@@ -156,36 +160,22 @@ Section Rdf.
       forall g1, iso (M g1) g1 /\
                    forall g2, iso (M g1) (M g2) <-> iso g1 g2.
 
+
   End EqRdf.
 
   Section CountRdf.
     Variables I B L : countType.
     Implicit Type g : rdf_graph I B L.
 
-    Definition code_rdf g :=
-      GenTree.Node 0 (map (@code_triple I B L) g).
 
-    Definition decode_rdf (x : GenTree.tree nat) : option (rdf_graph I B L).
-    Proof. destruct x.
-           - exact None.
-           - destruct n as [| n'].
-             + induction l as [| gen gens IHgens].
-               * exact (Some (mkRdfGraph [::])).
-               * destruct (@decode_triple I B L gen) as [t'|].
-                 -- apply (@add_triple I B L IHgens t').
-                 -- exact None.
-             + exact None.
-    Defined.
+    Definition code_rdf g := graph g.
+    Definition decode_rdf (ts : seq (triple I B L)) := mkRdfGraph ts.
 
-    Lemma cancel_rdf_encode : pcancel code_rdf decode_rdf.
-    Proof. case => g. rewrite /code_rdf /decode_rdf.
-           induction g as [| t ts IHts].
-           - by [].
-           - by rewrite /= cancel_triple_encode IHts.
-    Qed.
+    Lemma cancel_rdf_encode : cancel code_rdf decode_rdf.
+    Proof. by case. Qed.
 
-    Definition rdf_canChoiceMixin := PcanChoiceMixin cancel_rdf_encode.
-    Definition rdf_canCountMixin := PcanCountMixin cancel_rdf_encode.
+    Definition rdf_canChoiceMixin := CanChoiceMixin cancel_rdf_encode.
+    Definition rdf_canCountMixin := CanCountMixin cancel_rdf_encode.
 
     Canonical rdf_choiceType := Eval hnf in ChoiceType (rdf_graph I B L) rdf_canChoiceMixin.
     Canonical rdf_countType := Eval hnf in CountType (rdf_graph I B L) rdf_canCountMixin.
@@ -195,22 +185,16 @@ Section Rdf.
 
     Section FinTypeRdf.
       
-    Lemma uniq_bnodes g : uniq (bnodes g).
-    Proof. exact: undup_uniq. Qed.
-Check bnodes.
-    (* Variables (s : rdf_graph I B L) (t : triple I B L). *)
-(* Check t \in s. requires declaring an instance of predtype TODO *)
+    Check bnodes.
+    Variables (s : rdf_graph I B L) (t : triple I B L).
+    Check t \in s.
 
     Variables (g : rdf_graph I  B L) (p : pred (term I B L))  (q : pred (seq_sub (bnodes g))).
 
     Definition A := [set x | q x]. (* seq_sub (bnodes g) is a fintype! *)
     Fail Check [set x in A | p x]. (* need to compose p with the coercion from 
 (seq_sub (bnodes g)) to term I B L *)
-
-
-
-
-    (A : {set (seq_sub (bnodes g))}).
+    Check A : {set (seq_sub (bnodes g))}.
 
 
     End FinTypeRdf.

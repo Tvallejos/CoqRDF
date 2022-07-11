@@ -41,9 +41,16 @@ Section Term.
   Definition is_in_ibl (I B L : Type) (trm : term I B L) : bool :=
     is_iri trm || is_bnode trm || is_lit trm.
 
+
   Section Poly.
     Variables I B L : Type.
     Implicit Type trm : term I B L.
+
+    Definition get_b_term trm : is_bnode trm -> B.
+    Proof. rewrite /is_bnode=> is_b. case trm eqn:E;
+             try discriminate is_b.
+           exact name.
+    Defined.
 
     Definition relabeling_term (B' B'' : Type) (μ : B' -> B'') (trm : (term I B' L)) : term I B'' L :=
       match trm with

@@ -8,7 +8,7 @@ From RDF Require Import Triple.
 Section Rdf.
   Axiom todo_rdf: forall t, t.
 
-   Record rdf_graph (I B L : Type) := mkRdfGraph {
+  Record rdf_graph (I B L : Type) := mkRdfGraph {
                                         graph :> seq (triple I B L) ;
                                       }.
 
@@ -118,6 +118,9 @@ Section Rdf.
     Definition bnodes g : seq (term I B L) :=
       undup (filter (@is_bnode _ _ _) (terms g)).
 
+    Definition get_b g : seq B.
+    Proof. case g=> g'. elim g' => [|t ts ihts]. exact [::]. apply get_b_triple in t. exact (undup (t ++ ihts)). Defined.
+
     Lemma uniq_bnodes g : uniq (bnodes g).
     Proof. exact: undup_uniq. Qed.
 
@@ -184,17 +187,23 @@ Section Rdf.
     Canonical rdf_POrderType := Eval hnf in POrderType tt (rdf_graph I B L) rdf_canPOrderMixin.
 
     Section FinTypeRdf.
+      Local Notation fbnodes g := {set (seq_sub (bnodes g))}.
+      Variables (g : rdf_graph I B L) (bns : fbnodes g) (b : term I B L).
+      Check b \in (bnodes g).
+      Check enum bns.
+      Check partition.
+      Fail Check b \in bns.
       
-    Check bnodes.
-    Variables (s : rdf_graph I B L) (t : triple I B L).
-    Check t \in s.
+      Definition mapping g (μ : fbnodes g -> term I B L) := [ffun b : (fbnodes g) => (μ b)].
 
-    Variables (g : rdf_graph I  B L) (p : pred (term I B L))  (q : pred (seq_sub (bnodes g))).
+      Variables (p : pred (term I B L))  (q : pred (seq_sub (bnodes g))).
 
-    Definition A := [set x | q x]. (* seq_sub (bnodes g) is a fintype! *)
-    Fail Check [set x in A | p x]. (* need to compose p with the coercion from 
+      Check mapping.
+
+      Definition A := [set x | q x]. (* seq_sub (bnodes g) is a fintype! *)
+      Fail Check [set x in A | p x]. (* need to compose p with the coercion from 
 (seq_sub (bnodes g)) to term I B L *)
-    Check A : {set (seq_sub (bnodes g))}.
+      Check A : {set (seq_sub (bnodes g))}.
 
 
     End FinTypeRdf.

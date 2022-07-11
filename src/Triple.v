@@ -96,8 +96,24 @@ Section Triple.
       let (s,p,o,_,_,_) := t in
       undup [:: s ; p ; o].
 
+    Canonical triple_predType := PredType (pred_of_seq \o terms_triple).
+
+    (* Definition bnodes_triple t :[seq x <- terms_triple t | x is_bnode] := *)
+    (*   undup (filter (@is_bnode _ _ _) (terms_triple t)). *)
+
     Definition bnodes_triple t : seq (term I B L) :=
       undup (filter (@is_bnode _ _ _) (terms_triple t)).
+
+    
+    Definition all_bnodes_triple_is_bnode t : all (@is_bnode I B L) (bnodes_triple t).
+    Proof. rewrite /bnodes_triple -filter_undup; apply filter_all. Qed.
+
+    Definition get_b_triple t : seq B.
+    Proof. apply bnodes_triple in t as bns. 
+           elim bns => [|b bs ibs].
+           + exact [::].
+           + case b=> x. exact [::]. exact [::]. exact (undup (x::ibs)).
+    Defined.
 
   End EqTriple.
 

@@ -240,6 +240,9 @@ Section IsoCan.
     Definition mark_bnode (b : hash B) : hterm :=
       todo _.
 
+    Definition mark_bnode' (b : term I (hash B) L) : hterm :=
+      todo _.
+
     Definition replace_bnode (b : hash B) (b' : hterm) (g : hgraph) : hgraph :=
       todo _.
 
@@ -279,6 +282,46 @@ Section IsoCan.
     Definition distinguish g (color_refine : hgraph -> hgraph) : hgraph :=
       distinguish_ g color_refine (size g).
 
+    Definition build_mapping_from_graph (g : hgraph) : B -> B :=
+      let f := fun ht mapping =>
+                 (fun b =>
+                    if (input ht) == b
+                    then (to_string (current_hash ht))
+                    else mapping b) in
+      foldr f id (get_b g).
+
+    (* Definition build_mapping_from_seq (g : seq (term I (hash B) L)) : B -> B :=  *)
+    (*   let f := fun ht mapping => *)
+    (*              (fun trm => *)
+    (*                 match trm with *)
+    (*                 | Bnode b =>  if (input ht) == b *)
+    (*                              then (to_string (current_hash ht)) *)
+    (*                              else mapping trm *)
+    (*                 | Iri l  *)
+    (*                 | Lit l => mapping trm *)
+    (*   end) in *)
+    (*   foldr f g. *)
+
+    Fixpoint app_n (n:nat) (f : hterm -> hterm) (x : hterm) :=
+      match n with
+      | O => x
+      | S n' => app_n n' f (f x)
+      end.
+    
+    Fixpoint k_distinguish bns : seq (term I (hash B) L) :=
+      let fix help bns n :=
+        match bns with
+        | nil => nil
+        | trm :: trms => app_n n mark_bnode' trm :: help trms (S n)
+        end in
+      help bns 0.
+
+    Definition k_mapping (g : rdf_graph I B L) : B -> B :=
+      let bns := bnodes (init_hash g) in
+      todo _.
+    (* build_mapping (k_distinguish (mkRdfGraph bns)). *)
+    
+
     Definition isoCanonicalTemplate g (color color_refine: hgraph -> hgraph) refine : rdf_graph I B L:=
       let g' := color (init_hash g) in
       let P := mkPartition g' in
@@ -299,16 +342,16 @@ Section IsoCan.
       isoCanonicalTemplate g hashBnodesPerSplit hashNodes_initialized distinguish.
 
     Lemma singleton_g_is_fine (g: hgraph) : size g = 1 -> is_fine (mkPartition g).
-      Proof. rewrite /mkPartition => singleton_g. Abort.
+    Proof. rewrite /mkPartition => singleton_g. Abort.
 
     Lemma distinguish_preserves_isomorphism g : iso (justDistinguish g) g.
     Proof. rewrite /iso/justDistinguish/isoCanonicalTemplate/is_iso.
            elim (graph g) => [|t ts ihts].
            - exists id. split. by exists id.
-             rewrite relabeling_id.
-           (* need to build μ. and μ bij.
-               *)
-           Abort.
+                               rewrite relabeling_id.
+    (* need to build μ. and μ bij.
+     *)
+    Abort.
 
     Lemma justDistinguish_isocan : isocanonical_mapping justDistinguish.
     Proof. rewrite /isocanonical_mapping=> g1; split. Abort.
@@ -323,7 +366,7 @@ Section IsoCan.
     (* Lemma hash_dont_get_equal (g : hash_graph) (b1 b2: B) : True. *)
 
 
-    (* { hash_term | is_true is_bnode }) : forall n, n+1. *)
+    (* { hash_term | is_true is_bnode }) : forall n, n+1. *) 
 
     (* () *)
     (*     forall (g : rdf_graph) (hms : seq hashmap) *)

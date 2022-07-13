@@ -155,6 +155,8 @@ Section IsoCan.
     Definition init_bnode (b : B) : (hash B) :=
       mkHinput b h0.
 
+    (* Algorithm 1, lines 2-8
+       initializes every blank node with a known default name *)
     Definition init_hash (g : rdf_graph _ _ _) : hgraph :=
       relabeling init_bnode g.
 
@@ -183,8 +185,16 @@ Section IsoCan.
       let Ph := mkPartition h in
       all2 (fun p1 p2 => cmp_part p1 p2) Pg Ph.
 
+    (* Algorithm 1, lines 12-17
+       update the hashes of blank nodes using the neighborhood
+       it hashes differently outgoing edges from incoming ones *)
     Definition update_bnodes : hgraph -> hgraph := todo _.
 
+    (* Algorithm 1, lines 9-18
+       the iteration: computes the update of blank nodes until
+           - the partition is fine
+           - the partition did not change with respect to the previous one
+     *)
     Fixpoint iterate (g : hgraph) (fuel : nat) : hgraph :=
       match fuel with
       | O => g
@@ -200,9 +210,11 @@ Section IsoCan.
 
     (* need the lemma stating hashNodes terminates without
        getting out of fuel *)
+    (* Algorithm 1*)
     Definition hashNodes (g : rdf_graph _ _ _) : hgraph :=
       hashNodes_initialized (init_hash g).
 
+    (* Definition 4.6 ≡ ~G *)
     Definition reachability_rel (g : hgraph) (t1 t2 : htriple) : bool :=
       let (s1, _, o1, _, _, _) := t1 in
       let (s2, _, o2, _, _, _) := t2 in
@@ -212,15 +224,21 @@ Section IsoCan.
       let o1o2 := (o1 == o2) && is_bnode o1 in
       s1s2 || s1o2 || o1s2 || o1o2.
 
+    (* Algorithm 2, line 2:
+       computes the connected components based on definition 4.6 (~G)
+     *)
     Definition blank_node_split (t u v : Type) (g : rdf_graph t u v) : seq (rdf_graph t u v) :=
       todo _.
 
+    (* The graph that contains all (and only the) ground triples of G *)
     Definition ground_split {t u v : Type} (g : rdf_graph t u v) : rdf_graph t u v :=
-      todo _.
+      let groundTriples := filter (@is_ground_triple t u v) (graph g) in
+      mkRdfGraph groundTriples.
 
     Lemma merge_split {t u v : Type} (g : @rdf_graph t u v) :
       merge_rdf_graph (merge_seq_rdf_graph (blank_node_split g)) (ground_split g) = g. Admitted.
 
+    (* Algorithm 2 *)
     Definition hashBnodesPerSplit (g : hgraph) : hgraph :=
       let splitG := blank_node_split g in
       foldr (@merge_rdf_graph _ _ _) (empty_rdf_graph _ _ _) splitG.
@@ -237,21 +255,28 @@ Section IsoCan.
       else if cmp_bnode b p then p
            else o.
 
-    Definition mark_bnode (b : hash B) : hterm :=
+    (* TODO define hashTuple *)
+    (* Algorithm 3, line 13
+       hashes b incorporating an arbitrary hash hmark *)
+    Definition mark_bnode (b : hash B) : hash B :=
       todo _.
 
-    Definition mark_bnode' (b : term I (hash B) L) : hterm :=
+    Definition mark_bnode' (b : hterm) : hterm :=
       todo _.
 
-    Definition replace_bnode (b : hash B) (b' : hterm) (g : hgraph) : hgraph :=
+    (* updates the current hash of b by b' in all the ocurrences
+       in g *)
+    Definition replace_bnode (b b': hash B) (g : hgraph) : hgraph :=
       todo _.
 
-    (* from the Partition choose the canonical part that is not fine *)
+    (* Algorithm 3, lines 9-10
+       chooses the canonical part which is not fine *)
     Definition choose_part (P : partition) : part :=
       todo _.
 
-    (* b is_bnode *)
-    Definition distinguishBnode g (color_refine : hgraph -> hgraph ) (b : (hash B)) : hgraph :=
+    (* Algorithm 3, lines 13-14 when color refine is hashBnodes_initialized.
+       b is_bnode *)
+    Definition distinguishBnode g (color_refine : hgraph -> hgraph ) (b : hash B) : hgraph :=
       let b' := mark_bnode b in
       let g' := replace_bnode b b' g in
       color_refine g'.
@@ -262,6 +287,10 @@ Section IsoCan.
 
     (* give partition and proof that partition is not fine *)
     (* or compute it again ... *)
+    (* Algorithm 3, function distinguish, lines 9-20
+       lines 16-18 were moved to a higher level: should consume more space
+       FIXME just call distinguish_ with not fine partitions so
+       is not needed to repeat the question *)
     Fixpoint distinguish_ g (color : hgraph -> hgraph) (fuel:nat) : hgraph :=
       match fuel with
       | O => g
@@ -271,17 +300,21 @@ Section IsoCan.
           else
             let p := choose_part P in
             let gs := map (distinguishBnode g color) p in
-            let Ps := map mkPartition gs in
-            let gP := zip gs Ps in
-            let just_fine := (fun (gP : hgraph * partition) =>
-                                if is_fine gP.2 then gP.1
-                                else distinguish_ gP.1 color n') in
-            choose_graph (map just_fine gP)
+            let just_fine := (fun g: hgraph =>
+                                if is_fine (mkPartition g) then g
+                                else distinguish_ g color n') in
+            choose_graph (map just_fine gs)
       end.
 
+    (* Algorithm 3, function distinguish
+       when color_refine is hashBnodes_initialized *)
     Definition distinguish g (color_refine : hgraph -> hgraph) : hgraph :=
       distinguish_ g color_refine (size g).
 
+
+    (* FIXME replace by padding function
+     if ht in g then lookup in a finfun else
+     just the input of the hterm *)
     Definition build_mapping_from_graph (g : hgraph) : B -> B :=
       let f := fun ht mapping =>
                  (fun b =>
@@ -289,18 +322,6 @@ Section IsoCan.
                     then (to_string (current_hash ht))
                     else mapping b) in
       foldr f id (get_b g).
-
-    (* Definition build_mapping_from_seq (g : seq (term I (hash B) L)) : B -> B :=  *)
-    (*   let f := fun ht mapping => *)
-    (*              (fun trm => *)
-    (*                 match trm with *)
-    (*                 | Bnode b =>  if (input ht) == b *)
-    (*                              then (to_string (current_hash ht)) *)
-    (*                              else mapping trm *)
-    (*                 | Iri l  *)
-    (*                 | Lit l => mapping trm *)
-    (*   end) in *)
-    (*   foldr f g. *)
 
     Fixpoint app_n (n:nat) (f : hterm -> hterm) (x : hterm) :=
       match n with
@@ -319,7 +340,8 @@ Section IsoCan.
     Definition k_mapping (g : rdf_graph I B L) : B -> B :=
       let bns := bnodes (init_hash g) in
       todo _.
-    (* build_mapping (k_distinguish (mkRdfGraph bns)). *)
+    (* need the proof that is a blank node!
+       build_mapping (k_distinguish (mkRdfGraph bns)). *)
     
 
     Definition isoCanonicalTemplate g (color color_refine: hgraph -> hgraph) refine : rdf_graph I B L:=
@@ -342,50 +364,20 @@ Section IsoCan.
       isoCanonicalTemplate g hashBnodesPerSplit hashNodes_initialized distinguish.
 
     Lemma singleton_g_is_fine (g: hgraph) : size g = 1 -> is_fine (mkPartition g).
-    Proof. rewrite /mkPartition => singleton_g. Abort.
+    Proof. rewrite /mkPartition => singleton_g. Admitted.
 
     Lemma distinguish_preserves_isomorphism g : iso (justDistinguish g) g.
     Proof. rewrite /iso/justDistinguish/isoCanonicalTemplate/is_iso.
-           elim (graph g) => [|t ts ihts].
-           - exists id. split. by exists id.
-                               rewrite relabeling_id.
-    (* need to build μ. and μ bij.
-     *)
-    Abort.
+           case g=> g'. elim g'=> [|t ts ihts].
+           - exists id. split.
+             + by exists id.
+                    + by rewrite relabeling_id. 
+                    - 
+                      (* need to build μ. and μ bij. *)
+    Admitted.
 
     Lemma justDistinguish_isocan : isocanonical_mapping justDistinguish.
-    Proof. rewrite /isocanonical_mapping=> g1; split. Abort.
-
-
-    (* Definition lookup_bnode (b : B) (g : hash_graph) : option h := *)
-    (*   filter (fun t => match t with *)
-    (*                    | Bnode hin => b == hin *)
-    (*                    | _ => false *)
-    (*                    end) (graph g). *)
-
-    (* Lemma hash_dont_get_equal (g : hash_graph) (b1 b2: B) : True. *)
-
-
-    (* { hash_term | is_true is_bnode }) : forall n, n+1. *) 
-
-    (* () *)
-    (*     forall (g : rdf_graph) (hms : seq hashmap) *)
-    (*            (ghashh : hashNodes g = hms) *)
-    (*            (i j : nat) (ileqj : i <= j) (lim : j < size hms) *)
-    (*            (x y : term) (bnx : is_bnode x) (bny : is_bnode y) *)
-    (*            (xing : x \in (terms g)) (ying : y \in (terms g)), *)
-    (*       (lookup_hashmap (nth [::] hms i) x != lookup_hashmap (nth [::] hms i) y) *)
-    (*       -> lookup_hashmap (nth [::] hms j) x != lookup_hashmap (nth [::] hms j) y. *)
-
-    (*
-    Hypothesis hashNodes_preserves_isomorphism :
-      forall (g h: rdf_graph) (isogh : iso g h)
-             (hash_g hash_h: hashmap)
-             (hashg_hm : hash_g = last [::] (hashNodes g))
-             (hashh_hm : hash_h = last [::] (hashNodes h))
-             (b : term) (bing : b \in (bnodes (g)))
-             (c : term) (cinh : c \in (bnodes (h))),
-      exists μ, (relabeling_term μ b) = c -> lookup_hashmap hash_g b = lookup_hashmap hash_h c. *)
+    Proof. rewrite /isocanonical_mapping=> g1; split. Admitted.
 
     (* Hypothesis perfectHashingSchemeTriple : injective hashTriple. *)
 
@@ -396,7 +388,5 @@ Section IsoCan.
         hashBag (l1 ++ l2) = hashBag (l2 ++ l1).
 
   End IsoCanAlgorithm.
-  (* Hypothesis rdf_total_order   *)
-
 End IsoCan.
 

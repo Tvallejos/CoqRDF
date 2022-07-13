@@ -108,6 +108,9 @@ Section Rdf.
 
     (* Variable g : rdf_graph I B L. *)
     (* Variable trm : term I B L. *)
+    (* Variable t : triple I B L. *)
+    (* Check trm \in t. *)
+    (* Check t \in g. *)
     (* Print SetDef.finset. *)
     (* (* requieres trm to be finType *) *)
     (* Fail Check finset (trm \in g). *)
@@ -188,15 +191,26 @@ Section Rdf.
 
     Section FinTypeRdf.
       Local Notation fbnodes g := {set (seq_sub (bnodes g))}.
-      Variables (g : rdf_graph I B L) (bns : fbnodes g) (b : term I B L).
-      Check b \in (bnodes g).
+      Variables (g' : rdf_graph I B L) (bns : fbnodes g') (b : term I B L).
+      Check b \in (bnodes g').
       Check enum bns.
       Check partition.
       Fail Check b \in bns.
+      Print rel.
+
       
+      Definition term_of_bnode {g} (b : fbnodes g) : term I B L :=
+
+        
+      Coercion {g} fbnodes g
+      (* Maybe μ has type (subType (term I B L) (fun t => t \in g)) -> term I B L *)
       Definition mapping g (μ : fbnodes g -> term I B L) := [ffun b : (fbnodes g) => (μ b)].
 
-      Variables (p : pred (term I B L))  (q : pred (seq_sub (bnodes g))).
+      
+
+      Variables (p : pred (term I B L))  (q : pred (seq_sub (bnodes g'))).
+      Definition term_of_bnode g : seq_sub (bnodes g) -> term I B L:=
+        todo_rdf _.
 
       Check mapping.
 

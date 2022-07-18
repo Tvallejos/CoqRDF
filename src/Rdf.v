@@ -199,25 +199,20 @@ Section Rdf.
       Print rel.
 
       
-      Definition term_of_bnode {g} (b : fbnodes g) : term I B L :=
+      Definition term_of_bnode {g} (b : fbnodes g) : term I B L := todo_rdf _.
 
         
-      Coercion {g} fbnodes g
+      (* Coercion {g} fbnodes g *)
       (* Maybe μ has type (subType (term I B L) (fun t => t \in g)) -> term I B L *)
-      Definition mapping g (μ : fbnodes g -> term I B L) := [ffun b : (fbnodes g) => (μ b)].
+        Definition mapping g (μ : fbnodes g -> term I B L) := [ffun b : (fbnodes g) => (μ b)]. 
 
       
-
       Variables (p : pred (term I B L))  (q : pred (seq_sub (bnodes g'))).
-      Definition term_of_bnode g : seq_sub (bnodes g) -> term I B L:=
-        todo_rdf _.
-
-      Check mapping.
 
       Definition A := [set x | q x]. (* seq_sub (bnodes g) is a fintype! *)
       Fail Check [set x in A | p x]. (* need to compose p with the coercion from 
 (seq_sub (bnodes g)) to term I B L *)
-      Check A : {set (seq_sub (bnodes g))}.
+      Check A : {set (seq_sub (bnodes g'))}.
 
 
     End FinTypeRdf.

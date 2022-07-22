@@ -15,7 +15,7 @@ Section IsoCan.
 
   Section IsoCanAlgorithm.
     Variable h : countType.
-    Variables h0 hfwd hbwd hmark : h.
+    Variables h0 hfwd hbwd hmark herror: h.
     (* add conditions on the input *)
     Variable hashTerm : term I B L -> h.
     Hypothesis perfectHashingSchemeTerm : injective hashTerm.
@@ -73,6 +73,12 @@ Section IsoCan.
       | _,_ => false
       end.
 
+    Definition eqb_b_hterm b (ht : hterm) : bool :=
+      match ht with
+      | Bnode hb => b == (input hb)
+      | _ => false
+      end.
+
     Definition htriple := triple I (hash B) L.
 
     Definition get_triple trm (trpl : htriple) : option hterm :=
@@ -95,6 +101,12 @@ Section IsoCan.
       match hb with
       | Bnode hin => Some hin
       | _ => None
+      end.
+
+    Definition lookup_hash_default (hb : hterm) : h :=
+      match hb with
+      | Bnode hin => (current_hash hin)
+      | _ => herror
       end.
 
     Section Partition.
@@ -282,7 +294,7 @@ Section IsoCan.
       color_refine g'.
 
     (* choose canonical graph from sequence of graphs that have fine partitions *)
-    Definition choose_graph (gs : seq hgraph) : hgraph :=
+    Definition choose_graph {I B L} (gs : seq (rdf_graph I B L) ) : rdf_graph I B L :=
       todo _.
 
     (* give partition and proof that partition is not fine *)
@@ -323,12 +335,20 @@ Section IsoCan.
                     else mapping b) in
       foldr f id (get_b g).
 
+    Definition build_mapping_from_seq (trms : seq hterm) : B -> B :=
+      fun b =>
+        if has (eqb_b_hterm b) trms then
+          let the_bnode := nth (@Bnode I (hash B) L (@mkHinput B b herror)) trms (find (eqb_b_hterm b) trms) in
+          to_string (lookup_hash_default the_bnode)
+        else
+          b.
+
     Fixpoint app_n (n:nat) (f : hterm -> hterm) (x : hterm) :=
       match n with
       | O => x
       | S n' => app_n n' f (f x)
       end.
-    
+
     Fixpoint k_distinguish bns : seq (term I (hash B) L) :=
       let fix help bns n :=
         match bns with
@@ -337,12 +357,21 @@ Section IsoCan.
         end in
       help bns 0.
 
-    Definition k_mapping (g : rdf_graph I B L) : B -> B :=
+    Definition mapi {A B : Type} (f : A -> nat ->  B) (s : seq A) : seq B :=
+      map (fun an => (f an.1) an.2) (zip s (iota 0 (size s))).
+
+    Definition ak_mapping (g : rdf_graph I B L) : seq hterm :=
       let bns := bnodes (init_hash g) in
-      todo _.
+      mapi (fun b i => app_n i mark_bnode' b) bns.
+
+    Definition k_mapping (g : rdf_graph I B L) : rdf_graph I B L :=
+      let all_maps := permutations (ak_mapping g) in
+      let mus := map build_mapping_from_seq all_maps in
+      let isocans := map (fun mu => relabeling mu g) mus in
+      choose_graph isocans.
+
     (* need the proof that is a blank node!
        build_mapping (k_distinguish (mkRdfGraph bns)). *)
-    
 
     Definition isoCanonicalTemplate g (color color_refine: hgraph -> hgraph) refine : rdf_graph I B L:=
       let g' := color (init_hash g) in

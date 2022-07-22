@@ -124,6 +124,9 @@ Section Rdf.
     Definition get_b g : seq B.
     Proof. case g=> g'. elim g' => [|t ts ihts]. exact [::]. apply get_b_triple in t. exact (undup (t ++ ihts)). Defined.
 
+
+    (* Definition all_b_in_g g : all (\in g) (get_b g). *)
+
     Lemma uniq_bnodes g : uniq (bnodes g).
     Proof. exact: undup_uniq. Qed.
 
@@ -137,7 +140,10 @@ Section Rdf.
     Qed.
 
     Definition is_iso g1 g2 (μ : B -> B) :=
-      (bijective μ) /\ eqb_rdf g1 (relabeling μ g2).
+      (* ({in bnodes g2, bijective μ}) *)
+      (bijective μ) 
+
+        /\ eqb_rdf g1 (relabeling μ g2).
 
     Definition iso g1 g2 := exists (μ : B -> B),
         is_iso g1 g2 μ.

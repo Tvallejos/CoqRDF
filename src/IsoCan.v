@@ -343,17 +343,17 @@ Section IsoCan.
         else
           b.
 
-    Fixpoint app_n (n:nat) (f : hterm -> hterm) (x : hterm) :=
+    Fixpoint app_n (f : hterm -> hterm) (x : hterm) (n:nat) :=
       match n with
       | O => x
-      | S n' => app_n n' f (f x)
+      | S n' => app_n f (f x) n'
       end.
 
     Fixpoint k_distinguish bns : seq (term I (hash B) L) :=
       let fix help bns n :=
         match bns with
         | nil => nil
-        | trm :: trms => app_n n mark_bnode' trm :: help trms (S n)
+        | trm :: trms => app_n mark_bnode' trm n :: help trms (S n)
         end in
       help bns 0.
 
@@ -362,13 +362,16 @@ Section IsoCan.
 
     Definition ak_mapping (g : rdf_graph I B L) : seq hterm :=
       let bns := bnodes (init_hash g) in
-      mapi (fun b i => app_n i mark_bnode' b) bns.
+      mapi (app_n mark_bnode') bns.
 
     Definition k_mapping (g : rdf_graph I B L) : rdf_graph I B L :=
       let all_maps := permutations (ak_mapping g) in
       let mus := map build_mapping_from_seq all_maps in
       let isocans := map (fun mu => relabeling mu g) mus in
       choose_graph isocans.
+      (* let isoG := choose_graph isocans in *)
+      (* let isoMu := nth id mus (find (eqb_rdf isoG) isocans) in *)
+      (* isoMu. *)
 
     (* need the proof that is a blank node!
        build_mapping (k_distinguish (mkRdfGraph bns)). *)
@@ -407,6 +410,21 @@ Section IsoCan.
 
     Lemma justDistinguish_isocan : isocanonical_mapping justDistinguish.
     Proof. rewrite /isocanonical_mapping=> g1; split. Admitted.
+
+    Lemma k_mapping_preserves_isomorphism g : iso (k_mapping g) g.
+    Proof. rewrite /iso. Admitted.
+
+    Lemma k_mapping_isocan : isocanonical_mapping k_mapping.
+    Proof. rewrite /isocanonical_mapping/iso => g1; split.
+           - apply k_mapping_preserves_isomorphism.
+           - split => isoH.
+             + admit.
+             + admit.
+    Admitted.
+              
+     
+
+           
 
     (* Hypothesis perfectHashingSchemeTriple : injective hashTriple. *)
 

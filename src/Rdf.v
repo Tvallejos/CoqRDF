@@ -144,7 +144,7 @@ Section Rdf.
       (bijective μ) 
 
         /\ eqb_rdf g1 (relabeling μ g2).
-
+    
     Definition iso g1 g2 := exists (μ : B -> B),
         is_iso g1 g2 μ.
 
@@ -195,6 +195,10 @@ Section Rdf.
     Definition rdf_canPOrderMixin := PcanPOrderMixin (@pickleK rdf_countType).
     Canonical rdf_POrderType := Eval hnf in POrderType tt (rdf_graph I B L) rdf_canPOrderMixin.
 
+    Definition alt_is_iso g1 g2  (μ : B -> B) :=
+      exists mu : {ffun (seq_sub (bnodes g1)) -> B}, bijective mu
+      /\ eqb_rdf g1 (relabeling μ g2).
+    
     Section FinTypeRdf.
       Local Notation fbnodes g := {set (seq_sub (bnodes g))}.
       Variables (g' : rdf_graph I B L) (bns : fbnodes g') (b : term I B L).

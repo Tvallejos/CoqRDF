@@ -70,13 +70,15 @@ Section IsoCan.
 
     Definition hterm := term I (hash B) L.
 
-    Definition eqb_trm_hi trm (ht : hterm) : bool :=
-      match trm, ht with
-      | Iri i, Iri i' => i == i'
-      | Bnode b, Bnode hin => b == (input hin)
-      | Lit l, Lit l' => l == l'
-      | _,_ => false
+    (* should this be a coercion? let's see *)
+    Definition term_of_hterm (ht : hterm) : term I B L :=
+      match ht with
+      |Iri i => Iri i
+      |Bnode hb => Bnode (input hb)
+      |Lit l => Lit l
       end.
+
+    Definition eqb_trm_hi trm (ht : hterm) : bool := trm == (term_of_hterm ht).
 
     Definition eqb_b_hterm b (ht : hterm) : bool :=
       match ht with
@@ -86,6 +88,7 @@ Section IsoCan.
 
     Definition htriple := triple I (hash B) L.
 
+    (* misnommer ? *)
     Definition get_triple trm (trpl : htriple) : option hterm :=
       let (s,p,o,_,_,_) := trpl in
       if eqb_trm_hi trm s then Some s

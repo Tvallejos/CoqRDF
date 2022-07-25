@@ -14,6 +14,11 @@ Section Term.
   | Lit (l : L)
   | Bnode (name : B).
 
+  Arguments Iri {I B L}.
+  Arguments Lit {I B L}.
+  Arguments Bnode {I B L}.
+
+  
   Definition is_lit (I B L : Type) (trm : term I B L) : bool :=
     match trm with
     | Lit _ => true
@@ -54,9 +59,9 @@ Section Term.
 
     Definition relabeling_term (B' B'' : Type) (μ : B' -> B'') (trm : (term I B' L)) : term I B'' L :=
       match trm with
-      | Bnode name => Bnode I L (μ name)
-      | Iri i => Iri B'' L i
-      | Lit l => Lit I B'' l
+      | Bnode name => Bnode (μ name)
+      | Iri i => Iri i
+      | Lit l => Lit l
       end.
 
     Lemma relabeling_term_id trm : relabeling_term id trm = trm.

@@ -150,3 +150,6 @@ Section Term.
   End CountTerm.
 End Term.
 
+  Arguments Iri {I B L}.
+  Arguments Lit {I B L}.
+  Arguments Bnode {I B L}.

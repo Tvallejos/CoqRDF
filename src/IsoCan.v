@@ -4,8 +4,48 @@ Unset Strict Implicit.
 Unset Printing Implicit Defensive.
 From RDF Require Export Rdf Triple Term.
 
+Section HashedData.
+
+(* A type for a data (t : T) paired with its current hash (h : H) *)
+
+Variables (H T : Type).
+
+Inductive hash  := Hash of T * H.
+
+Definition input h :=  let: Hash th := h in th.1.
+
+Definition current_hash h := let: Hash th := h in th.2.
+
+Definition mkHinput (t : T) (h : H) := Hash (t, h).
+
+Definition pair_of_hash h := let: Hash th := h in th.
+
+Canonical hash_subType := [newType for pair_of_hash].
+
+
+End HashedData.
+
+(* Various transfers of structures *)
+Definition hash_eqMixin (H T : eqType) := Eval hnf in [eqMixin of hash H T by <:].
+Canonical hash_eqType (H T : eqType) :=
+  Eval hnf in EqType (hash H T) (hash_eqMixin H T).
+Definition hash_choiceMixin (H T : choiceType) := [choiceMixin of hash H T by <:].
+Canonical hash_choiceType (H T : choiceType) :=
+  Eval hnf in ChoiceType (hash H T) (hash_choiceMixin H T).
+Definition hash_countMixin (H T : countType) := [countMixin of hash H T by <:].
+Canonical hash_countType (H T : countType) :=
+  Eval hnf in CountType (hash H T) (hash_countMixin H T).
+Canonical hash_subCountType (H T : countType) :=
+  Eval hnf in [subCountType of hash H T]. 
+
+(* Waiting for inisight on using subtypes for automated transfer *)
+Axiom hin_canPOrderMixin : forall (H T : countType), lePOrderMixin (hash_eqType H T).
+Canonical hin_POrderType (H T : countType) :=
+  Eval hnf in POrderType tt (hash H T) (hin_canPOrderMixin H T).
+
+
 Section IsoCan.
-  Axiom todo: forall t,t.
+  Axiom todo : forall t, t.
 
   Variable I B L: countType.
 
@@ -14,54 +54,19 @@ Section IsoCan.
       forall (h : rdf_graph_), iso g h <-> (relabeling M g) = (relabeling M h). *)
 
   Section IsoCanAlgorithm.
+
     Variable h : countType.
     Variables h0 hfwd hbwd hmark herror: h.
     (* add conditions on the input *)
     Variable hashTerm : term I B L -> h.
     Hypothesis perfectHashingSchemeTerm : injective hashTerm.
+
     Implicit Type trm : term I B L.
 
-    Section Hash.
-
-      Record hash (T : Type) := mkHinput {
-                                   input : T ;
-                                   current_hash : h
-                                 }.
-
-      Lemma by_perf_hash trm (o : h) (eqb : hashTerm trm == o) : hashTerm trm = o.
-      Proof. apply /eqP. apply eqb. Qed.
-
-      Section CountHash.
-        Variable T : countType.
-        Definition code_hash (x : hash T) : GenTree.tree nat :=
-          let (i,o) := x in
-          GenTree.Node 0 [:: GenTree.Leaf (pickle i); GenTree.Leaf (pickle o)].
-
-        Definition decode_hash (x : GenTree.tree nat) : option (hash T) :=
-          match x with
-          | GenTree.Node 0 [:: GenTree.Leaf n; GenTree.Leaf m] =>
-              match (@unpickle T n, @unpickle h m) with
-              | (Some i, Some o) => Some (mkHinput i o)
-              | (_, _) => None
-              end
-          | _ => None
-          end.
-
-        Definition cancel_hin_encode : pcancel code_hash decode_hash.
-        Proof. by case => i o; rewrite /code_hash /decode_hash !pickleK. Qed.
-
-        Definition hin_eqMixin := PcanEqMixin cancel_hin_encode.
-        Definition hin_canChoiceMixin := PcanChoiceMixin cancel_hin_encode.
-        Definition hin_canCountMixin := PcanCountMixin cancel_hin_encode.
-
-        Canonical hin_eqType := Eval hnf in EqType (hash T) hin_eqMixin.
-        Canonical hin_choiceType := Eval hnf in ChoiceType (hash T) hin_canChoiceMixin.
-        Canonical hin_ct := Eval hnf in CountType (hash T) hin_canCountMixin.
-        Definition hin_canPOrderMixin := PcanPOrderMixin (@pickleK hin_ct).
-        Canonical hin_POrderType := Eval hnf in POrderType tt (hash T) hin_canPOrderMixin.
-
-      End CountHash.
-    End Hash.
+    Local Notation hash := (hash h).
+    
+    Lemma by_perf_hash trm (o : h) (eqb : hashTerm trm == o) : hashTerm trm = o.
+    Proof. apply /eqP. apply eqb. Qed.
 
     Definition hterm := term I (hash B) L.
 
@@ -338,7 +343,7 @@ Section IsoCan.
     Definition build_mapping_from_seq (trms : seq hterm) : B -> B :=
       fun b =>
         if has (eqb_b_hterm b) trms then
-          let the_bnode := nth (@Bnode I (hash B) L (@mkHinput B b herror)) trms (find (eqb_b_hterm b) trms) in
+          let the_bnode := nth (@Bnode I (hash B) L (@mkHinput h B b herror)) trms (find (eqb_b_hterm b) trms) in
           to_string (lookup_hash_default the_bnode)
         else
           b.

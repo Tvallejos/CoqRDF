@@ -45,14 +45,16 @@ Section Rdf.
     Section Relabeling_seq_triple.
       Variable B' : Type.
 
-      Lemma relabeling_seq_triple_ext (μ1 μ2 : B -> B') :
-        μ1 =1 μ2 -> forall ts, relabeling_seq_triple μ1 ts = relabeling_seq_triple μ2 ts.
-      Proof. move => μpqeq. elim=> [//|t ts' IHts] /=.
-             by rewrite IHts; f_equal; apply relabeling_triple_ext. Qed.
+    Lemma relabeling_seq_triple_ext (μ1 μ2 : B -> B') ts :
+        μ1 =1 μ2 -> relabeling_seq_triple μ1 ts = relabeling_seq_triple μ2 ts.
+    Proof. move=> mu_eq; apply: eq_map; exact: relabeling_triple_ext. Qed.
 
-      Lemma relabeling_seq_triple_comp (B'' : Type) (μ2 : B -> B') (μ1 : B' -> B'') ts :
-        relabeling_seq_triple μ1 (relabeling_seq_triple μ2 ts) = relabeling_seq_triple (μ1 \o μ2) ts.
-      Proof. by elim ts => [//| t ts' ihts] /=; rewrite relabeling_triple_comp ihts. Qed.
+    Lemma relabeling_seq_triple_comp (B'' : Type) (μ2 : B -> B') (μ1 : B' -> B'') ts :
+      relabeling_seq_triple μ1 (relabeling_seq_triple μ2 ts) = relabeling_seq_triple (μ1 \o μ2) ts.
+    Proof.
+      rewrite /relabeling_seq_triple -map_comp -/relabeling_seq_triple; apply: eq_map=> x.
+      by rewrite relabeling_triple_comp. 
+    Qed.
 
     End Relabeling_seq_triple.
 
@@ -77,8 +79,8 @@ Section Rdf.
       Proof. case g => g' /=. by rewrite /relabeling relabeling_seq_triple_id.
       Qed.
 
-      Lemma relabeling_ext  (μ1 μ2 : B -> B') :  μ1 =1 μ2 -> forall g, relabeling μ1 g = relabeling μ2 g.
-      Proof. move=> μpweq g. by case g=> g'; rewrite /relabeling (relabeling_seq_triple_ext μpweq). Qed.
+      Lemma relabeling_ext  (μ1 μ2 : B -> B') g :  μ1 =1 μ2 -> relabeling μ1 g = relabeling μ2 g.
+      Proof. by move=> μpweq; rewrite /relabeling (relabeling_seq_triple_ext _ μpweq). Qed.
 
     End Relabeling_graph.
   End PolyRdf.
@@ -195,10 +197,10 @@ Section Rdf.
     Definition rdf_canPOrderMixin := PcanPOrderMixin (@pickleK rdf_countType).
     Canonical rdf_POrderType := Eval hnf in POrderType tt (rdf_graph I B L) rdf_canPOrderMixin.
 
-    Definition alt_is_iso g1 g2  (μ : B -> B) :=
-      exists mu : {ffun (seq_sub (bnodes g1)) -> B}, bijective mu
-      /\ eqb_rdf g1 (relabeling μ g2).
-    
+    (* Definition alt_is_iso g1 g2  (μ :  {ffun (seq_sub (bnodes g1)) -> B}) := *)
+    (*   bijective μ /\ eqb_rdf g2 (relabeling μ g1). *)
+
+        
     Section FinTypeRdf.
       Local Notation fbnodes g := {set (seq_sub (bnodes g))}.
       Variables (g' : rdf_graph I B L) (bns : fbnodes g') (b : term I B L).

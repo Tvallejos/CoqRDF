@@ -90,7 +90,7 @@ Section IsoCan.
 
     (* misnommer ? *)
     Definition get_triple trm (trpl : htriple) : option hterm :=
-      let (s,p,o,_,_,_) := trpl in
+      let (s,p,o,_,_) := trpl in
       if eqb_trm_hi trm s then Some s
       else if eqb_trm_hi trm p then Some p
            else if eqb_trm_hi trm o then Some o
@@ -156,7 +156,7 @@ Section IsoCan.
         map someT_to_T ohs.
 
       Definition is_trivial (p : part) : bool :=
-        size p == 1.
+        size p == 1%N.
 
       Definition is_non_trivial (p : part) : bool :=
         ~~ is_trivial p.
@@ -165,7 +165,7 @@ Section IsoCan.
         all is_trivial P.
 
       Definition is_coarse (P : partition) : bool :=
-        size P == 1.
+        size P == 1%N.
 
       Definition is_intermediate (P : partition) :=
         ~~ is_fine P && ~~ is_coarse P.
@@ -236,8 +236,8 @@ Section IsoCan.
 
     (* Definition 4.6 ≡ ~G *)
     Definition reachability_rel (g : hgraph) (t1 t2 : htriple) : bool :=
-      let (s1, _, o1, _, _, _) := t1 in
-      let (s2, _, o2, _, _, _) := t2 in
+      let (s1, _, o1, _, _) := t1 in
+      let (s2, _, o2, _, _) := t2 in
       let s1s2 := (s1 == s2) && is_bnode s1 in
       let s1o2 := (s1 == o2) && is_bnode s1 in
       let o1s2 := (o1 == s2) && is_bnode o1 in
@@ -270,7 +270,7 @@ Section IsoCan.
       end.
 
     Definition lookup_bnode_in_triple (t : htriple) (b : B) : hterm :=
-      let (s,p,o,_,_,_) := t in
+      let (s,p,o,_,_) := t in
       if cmp_bnode b s then s
       else if cmp_bnode b p then p
            else o.
@@ -403,7 +403,7 @@ Section IsoCan.
     Definition isoCanonicalise g :=
       isoCanonicalTemplate g hashBnodesPerSplit hashNodes_initialized distinguish.
 
-    Lemma singleton_g_is_fine (g: hgraph) : size g = 1 -> is_fine (mkPartition g).
+    Lemma singleton_g_is_fine (g: hgraph) : size g = 1%N -> is_fine (mkPartition g).
     Proof. rewrite /mkPartition => singleton_g. Admitted.
 
     Lemma distinguish_preserves_isomorphism g : iso (justDistinguish g) g.

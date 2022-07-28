@@ -197,6 +197,11 @@ Section Rdf.
     Definition rdf_canPOrderMixin := PcanPOrderMixin (@pickleK rdf_countType).
     Canonical rdf_POrderType := Eval hnf in POrderType tt (rdf_graph I B L) rdf_canPOrderMixin.
 
+    (* assia : this requires rewriting relabeling function. cf error message
+The term "g1" has type "rdf_graph I B L" while it is expected to have type
+ "rdf_graph I (seq_sub_finType (bnodes g1)) ?L" *)
+
+
     (* Definition alt_is_iso g1 g2  (μ :  {ffun (seq_sub (bnodes g1)) -> B}) := *)
     (*   bijective μ /\ eqb_rdf g2 (relabeling μ g1). *)
 

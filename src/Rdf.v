@@ -45,16 +45,16 @@ Section Rdf.
     Section Relabeling_seq_triple.
       Variable B' : Type.
 
-    Lemma relabeling_seq_triple_ext (μ1 μ2 : B -> B') ts :
+      Lemma relabeling_seq_triple_ext (μ1 μ2 : B -> B') ts :
         μ1 =1 μ2 -> relabeling_seq_triple μ1 ts = relabeling_seq_triple μ2 ts.
-    Proof. move=> mu_eq; apply: eq_map; exact: relabeling_triple_ext. Qed.
+      Proof. move=> mu_eq; apply: eq_map; exact: relabeling_triple_ext. Qed.
 
-    Lemma relabeling_seq_triple_comp (B'' : Type) (μ2 : B -> B') (μ1 : B' -> B'') ts :
-      relabeling_seq_triple μ1 (relabeling_seq_triple μ2 ts) = relabeling_seq_triple (μ1 \o μ2) ts.
-    Proof.
-      rewrite /relabeling_seq_triple -map_comp -/relabeling_seq_triple; apply: eq_map=> x.
-      by rewrite relabeling_triple_comp. 
-    Qed.
+      Lemma relabeling_seq_triple_comp (B'' : Type) (μ2 : B -> B') (μ1 : B' -> B'') ts :
+        relabeling_seq_triple μ1 (relabeling_seq_triple μ2 ts) = relabeling_seq_triple (μ1 \o μ2) ts.
+      Proof.
+        rewrite /relabeling_seq_triple -map_comp -/relabeling_seq_triple; apply: eq_map=> x.
+        by rewrite relabeling_triple_comp. 
+      Qed.
 
     End Relabeling_seq_triple.
 
@@ -145,7 +145,7 @@ Section Rdf.
       (* ({in bnodes g2, bijective μ}) *)
       (bijective μ) 
 
-        /\ eqb_rdf g1 (relabeling μ g2).
+      /\ eqb_rdf g1 (relabeling μ g2).
     
     Definition iso g1 g2 := exists (μ : B -> B),
         is_iso g1 g2 μ.
@@ -160,7 +160,7 @@ Section Rdf.
     Proof.
       rewrite /iso /is_iso.
       split; case=> mu [mu_bij heqb_rdf]; case: (mu_bij)=> [nu h1 h2];
-                                                           (exists nu; split; [exact: bij_can_bij h1 | exact: bijective_eqb_rdf heqb_rdf]).
+                                                         (exists nu; split; [exact: bij_can_bij h1 | exact: bijective_eqb_rdf heqb_rdf]).
     Qed.
 
     Lemma iso_trans g1 g2 g3 : iso g1 g2 -> iso g2 g3 -> iso g1 g3.
@@ -172,7 +172,7 @@ Section Rdf.
 
     Definition isocanonical_mapping (M : rdf_graph I B L -> rdf_graph I B L) :=
       forall g1, iso (M g1) g1 /\
-                   forall g2, iso (M g1) (M g2) <-> iso g1 g2.
+              forall g2, iso (M g1) (M g2) <-> iso g1 g2.
 
 
   End EqRdf.
@@ -203,9 +203,9 @@ The term "g1" has type "rdf_graph I B L" while it is expected to have type
 
 
     (* Definition alt_is_iso g1 g2  (μ :  {ffun (seq_sub (bnodes g1)) -> B}) := *)
-    (*   bijective μ /\ eqb_rdf g2 (relabeling μ g1). *)
+    (* bijective μ /\ eqb_rdf g2 (relabeling μ g1). *)
 
-        
+    
     Section FinTypeRdf.
       Local Notation fbnodes g := {set (seq_sub (bnodes g))}.
       Variables (g' : rdf_graph I B L) (bns : fbnodes g') (b : term I B L).
@@ -218,10 +218,10 @@ The term "g1" has type "rdf_graph I B L" while it is expected to have type
       
       Definition term_of_bnode {g} (b : fbnodes g) : term I B L := todo_rdf _.
 
-        
+      
       (* Coercion {g} fbnodes g *)
       (* Maybe μ has type (subType (term I B L) (fun t => t \in g)) -> term I B L *)
-        Definition mapping g (μ : fbnodes g -> term I B L) := [ffun b : (fbnodes g) => (μ b)]. 
+      Definition mapping g (μ : fbnodes g -> term I B L) := [ffun b : (fbnodes g) => (μ b)]. 
 
       
       Variables (p : pred (term I B L))  (q : pred (seq_sub (bnodes g'))).

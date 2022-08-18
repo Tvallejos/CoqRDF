@@ -6,21 +6,21 @@ From RDF Require Export Rdf Triple Term.
 
 Section HashedData.
 
-(* A type for a data (t : T) paired with its current hash (h : H) *)
+  (* A type for a data (t : T) paired with its current hash (h : H) *)
 
-Variables (H T : Type).
+  Variables (H T : Type).
 
-Inductive hash  := Hash of T * H.
+  Inductive hash  := Hash of T * H.
 
-Definition input h :=  let: Hash th := h in th.1.
+  Definition input h :=  let: Hash th := h in th.1.
 
-Definition current_hash h := let: Hash th := h in th.2.
+  Definition current_hash h := let: Hash th := h in th.2.
 
-Definition mkHinput (t : T) (h : H) := Hash (t, h).
+  Definition mkHinput (t : T) (h : H) := Hash (t, h).
 
-Definition pair_of_hash h := let: Hash th := h in th.
+  Definition pair_of_hash h := let: Hash th := h in th.
 
-Canonical hash_subType := [newType for pair_of_hash].
+  Canonical hash_subType := [newType for pair_of_hash].
 
 
 End HashedData.
@@ -377,9 +377,9 @@ Section IsoCan.
       let mus := map build_mapping_from_seq all_maps in
       let isocans := map (fun mu => relabeling mu g) mus in
       choose_graph isocans.
-      (* let isoG := choose_graph isocans in *)
-      (* let isoMu := nth id mus (find (eqb_rdf isoG) isocans) in *)
-      (* isoMu. *)
+    (* let isoG := choose_graph isocans in *)
+    (* let isoMu := nth id mus (find (eqb_rdf isoG) isocans) in *)
+    (* isoMu. *)
 
     (* need the proof that is a blank node!
        build_mapping (k_distinguish (mkRdfGraph bns)). *)
@@ -411,9 +411,9 @@ Section IsoCan.
            case g=> g'. elim g'=> [|t ts ihts].
            - exists id. split.
              + by exists id.
-                    + by rewrite relabeling_id. 
-                    - 
-                      (* need to build μ. and μ bij. *)
+                         + by rewrite relabeling_id. 
+                         - 
+                           (* need to build μ. and μ bij. *)
     Admitted.
 
     Lemma justDistinguish_isocan : isocanonical_mapping justDistinguish.
@@ -429,10 +429,10 @@ Section IsoCan.
              + admit.
              + admit.
     Admitted.
-              
-     
+    
+    
 
-           
+    
 
     (* Hypothesis perfectHashingSchemeTriple : injective hashTriple. *)
 

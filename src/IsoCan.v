@@ -419,25 +419,12 @@ Section IsoCan.
     Lemma justDistinguish_isocan : isocanonical_mapping justDistinguish.
     Proof. rewrite /isocanonical_mapping=> g1; split. Admitted.
 
-    Definition mapping_preserves_isomorphism (μ : rdf_graph I B L -> rdf_graph I B L) := forall g, iso (μ g) g.
-
-    Definition mapping_preserves_iso_isocan μ : mapping_preserves_isomorphism μ -> isocanonical_mapping μ.
-    Proof. rewrite /isocanonical_mapping => μ_psrv_iso.
-           split ; first apply μ_psrv_iso.
-           + split; move=> isoH; apply iso_symm; eapply iso_trans.
-           - apply iso_symm; apply (iso_trans isoH (μ_psrv_iso _)).
-           - apply μ_psrv_iso. 
-           - apply μ_psrv_iso.
-           - apply iso_symm; apply (iso_trans (μ_psrv_iso _) isoH).
-    Qed.
-
     Lemma k_mapping_preserves_isomorphism : mapping_preserves_isomorphism k_mapping.
     Proof. rewrite /mapping_preserves_isomorphism/iso/is_iso. 
            (* exists inv_relabel_of_k_mapping. *)
            (* apply bijective_by_construction. *)
            (* elim [//= eqb_rdf_refl | h t IHt]. case: h => [//= | cancel_μ | //=] *)
     Admitted.
-
 
     Lemma k_mapping_isocan : isocanonical_mapping k_mapping.
     Proof. apply: mapping_preserves_iso_isocan k_mapping_preserves_isomorphism. Qed.

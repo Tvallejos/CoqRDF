@@ -170,10 +170,19 @@ Section Rdf.
            by rewrite eqb1 eqb2 relabeling_seq_triple_comp.
     Qed.
 
+    Definition mapping_preserves_isomorphism (μ : rdf_graph I B L -> rdf_graph I B L) := forall g, iso (μ g) g.
     Definition isocanonical_mapping (M : rdf_graph I B L -> rdf_graph I B L) :=
-      forall g1, iso (M g1) g1 /\
-              forall g2, iso (M g1) (M g2) <-> iso g1 g2.
+      mapping_preserves_isomorphism M /\
+              forall g1 g2, iso (M g1) (M g2) <-> iso g1 g2.
 
+    Definition mapping_preserves_iso_isocan μ : mapping_preserves_isomorphism μ -> isocanonical_mapping μ.
+    Proof. rewrite /isocanonical_mapping => μ_psrv_iso. split; first apply μ_psrv_iso.
+           + split; move=> isoH; apply iso_symm; eapply iso_trans.
+           - apply iso_symm; apply (iso_trans isoH (μ_psrv_iso _)).
+           - apply μ_psrv_iso. 
+           - apply μ_psrv_iso.
+           - apply iso_symm; apply (iso_trans (μ_psrv_iso _) isoH).
+    Qed.
 
   End EqRdf.
 

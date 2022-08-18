@@ -57,6 +57,7 @@ Section IsoCan.
 
     Variable h : countType.
     Variables h0 hfwd hbwd hmark herror: h.
+    Variable b0 : B.
     (* add conditions on the input *)
     Variable hashTerm : term I B L -> h.
     Hypothesis perfectHashingSchemeTerm : injective hashTerm.
@@ -205,10 +206,23 @@ Section IsoCan.
       let Ph := mkPartition h in
       all2 (fun p1 p2 => cmp_part p1 p2) Pg Ph.
 
+
+    Variable hashBag : (seq (hash B) -> (hash B)).
+    Hypothesis hashBag_assoc : forall (l1 l2 l3: seq (hash B)),
+        hashBag ([:: hashBag (l1 ++ l2)] ++ l3) = hashBag (l1 ++ [:: hashBag (l2 ++ l3)]).
+    Hypothesis hashBag_comm : forall (l1 l2: seq (hash B)),
+        hashBag (l1 ++ l2) = hashBag (l2 ++ l1).
+
     (* Algorithm 1, lines 12-17
        update the hashes of blank nodes using the neighborhood
        it hashes differently outgoing edges from incoming ones *)
-    Definition update_bnodes : hgraph -> hgraph := todo _.
+    Definition update_bnodes (g : hgraph) : hgraph. Proof. Admitted.
+      (* let help_update := (fun (t : triple I (hash B) L) => let (s,p,o,_,_) := t in *)
+      (*                                                   if is_bnode s then *)
+      (*                                                     let c := hashTuple() *)
+
+      (*     t) *)
+      (* mkRdfGraph (map  g). *)
 
     (* Algorithm 1, lines 9-18
        the iteration: computes the update of blank nodes until
@@ -247,8 +261,16 @@ Section IsoCan.
     (* Algorithm 2, line 2:
        computes the connected components based on definition 4.6 (~G)
      *)
-    Definition blank_node_split (t u v : Type) (g : rdf_graph t u v) : seq (rdf_graph t u v) :=
-      todo _.
+    Definition blank_node_split (t u v : Type) (g : rdf_graph t u v) : seq (rdf_graph t u v).
+    Proof.
+      (* compute the graph G,
+         where V := g and
+         (t,u) : (triple I B L * triple I B L) \in E iff
+         [:: t ; u] is graph and bnodes(t) ∩ bnodes(u) ≠ ϕ
+
+       Then compute the connected componens using reachability rel*)
+    Admitted.
+
 
     (* The graph that contains all (and only the) ground triples of G *)
     Definition ground_split {t u v : Type} (g : rdf_graph t u v) : rdf_graph t u v :=
@@ -275,19 +297,24 @@ Section IsoCan.
       else if cmp_bnode b p then p
            else o.
 
+    Variable hashTuple : seq h -> h.
+
     (* TODO define hashTuple *)
     (* Algorithm 3, line 13
        hashes b incorporating an arbitrary hash hmark *)
     Definition mark_bnode (b : hash B) : hash B :=
-      todo _.
+      mkHinput (input b) (hashTuple [:: (current_hash b) ; hmark]).
 
     Definition mark_bnode' (b : hterm) : hterm :=
-      todo _.
+      match b with
+      | Iri i| Lit i => Bnode (mkHinput b0 herror)
+      | Bnode hb=> Bnode (mark_bnode hb)
+      end.
 
     (* updates the current hash of b by b' in all the ocurrences
        in g *)
     Definition replace_bnode (b b': hash B) (g : hgraph) : hgraph :=
-      todo _.
+      relabeling (fun a_hash => if a_hash == b then b' else a_hash) g.
 
     (* Algorithm 3, lines 9-10
        chooses the canonical part which is not fine *)
@@ -447,11 +474,6 @@ Section IsoCan.
 
     (* Hypothesis perfectHashingSchemeTriple : injective hashTriple. *)
 
-    Variable hashBag : (seq (hash B) -> (hash B)).
-    Hypothesis hashBag_assoc : forall (l1 l2 l3: seq (hash B)),
-        hashBag ([:: hashBag (l1 ++ l2)] ++ l3) = hashBag (l1 ++ [:: hashBag (l2 ++ l3)]).
-    Hypothesis hashBag_comm : forall (l1 l2: seq (hash B)),
-        hashBag (l1 ++ l2) = hashBag (l2 ++ l1).
 
   End IsoCanAlgorithm.
 End IsoCan.

@@ -36,7 +36,7 @@ Definition hash_countMixin (H T : countType) := [countMixin of hash H T by <:].
 Canonical hash_countType (H T : countType) :=
   Eval hnf in CountType (hash H T) (hash_countMixin H T).
 Canonical hash_subCountType (H T : countType) :=
-  Eval hnf in [subCountType of hash H T]. 
+  Eval hnf in [subCountType of hash H T].
 
 (* Waiting for inisight on using subtypes for automated transfer *)
 Axiom hin_canPOrderMixin : forall (H T : countType), lePOrderMixin (hash_eqType H T).
@@ -64,7 +64,7 @@ Section IsoCan.
     Implicit Type trm : term I B L.
 
     Local Notation hash := (hash h).
-    
+
     Lemma by_perf_hash trm (o : h) (eqb : hashTerm trm == o) : hashTerm trm = o.
     Proof. apply /eqP. apply eqb. Qed.
 
@@ -357,7 +357,7 @@ Section IsoCan.
       | S n' => app_n f (f x) n'
       end.
 
-    Fixpoint k_distinguish bns : seq (term I (hash B) L) :=
+    Definition k_distinguish bns : seq (term I (hash B) L) :=
       let fix help bns n :=
         match bns with
         | nil => nil
@@ -420,19 +420,23 @@ Section IsoCan.
     Proof. rewrite /isocanonical_mapping=> g1; split. Admitted.
 
     Lemma k_mapping_preserves_isomorphism g : iso (k_mapping g) g.
-    Proof. rewrite /iso. Admitted.
+    Proof. rewrite /iso/is_iso. 
+           (* exists inv_relabel_of_k_mapping. *)
+           (* apply bijective_by_construction. *)
+           (* elim [//= eqb_rdf_refl | h t IHt]. case: h => [//= | cancel_μ | //=] *)
+    Admitted.
 
     Lemma k_mapping_isocan : isocanonical_mapping k_mapping.
     Proof. rewrite /isocanonical_mapping/iso => g1; split.
            - apply k_mapping_preserves_isomorphism.
-           - split => isoH.
-             + admit.
-             + admit.
-    Admitted.
-    
-    
-
-    
+           - move=> g2.
+             have iso_g1_kg1: iso (k_mapping g1) g1. apply k_mapping_preserves_isomorphism.
+             have iso_g2_kg2: iso (k_mapping g2) g2. apply k_mapping_preserves_isomorphism.
+             have iso_g2_kg1: iso g2 (k_mapping g1). apply iso_symm. apply (iso_trans iso_g2_kg2 (iso_refl g2)).
+             split => _; apply iso_symm; eapply iso_trans.
+             + apply iso_g2_kg1. apply iso_g1_kg1.
+             + apply iso_g2_kg2. apply iso_g2_kg1. 
+   Qed.
 
     (* Hypothesis perfectHashingSchemeTriple : injective hashTriple. *)
 

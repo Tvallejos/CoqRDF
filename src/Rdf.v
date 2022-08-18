@@ -6,7 +6,6 @@ From RDF Require Import Term.
 From RDF Require Import Triple.
 
 Section Rdf.
-  Axiom todo_rdf: forall t, t.
 
   Record rdf_graph (I B L : Type) := mkRdfGraph {
                                         graph :> seq (triple I B L) ;
@@ -25,8 +24,9 @@ Section Rdf.
       all (@is_ground_triple _ _ _) g.
 
     (* assumes shared identifier scope *)
-    Definition merge_rdf_graph g1 g2 : rdf_graph I B L :=
-      todo_rdf _.
+    Definition merge_rdf_graph g1 g2 : rdf_graph I B L.
+      Proof.
+      Admitted.
 
     Definition merge_seq_rdf_graph (gs : seq (rdf_graph I B L)) : rdf_graph I B L :=
       foldr merge_rdf_graph empty_rdf_graph gs.
@@ -216,8 +216,8 @@ The term "g1" has type "rdf_graph I B L" while it is expected to have type
 
     
     Section FinTypeRdf.
-      Local Notation fbnodes g := {set (seq_sub (bnodes g))}.
-      Variables (g' : rdf_graph I B L) (bns : fbnodes g') (b : term I B L).
+      Local Notation fbnode g := (seq_sub (bnodes g)).
+      Variables (g' : rdf_graph I B L) (bns : {set (fbnode g')}) (b : term I B L).
       Check b \in (bnodes g').
       Check enum bns.
       Check partition.
@@ -225,20 +225,20 @@ The term "g1" has type "rdf_graph I B L" while it is expected to have type
       Print rel.
 
       
-      Definition term_of_bnode {g} (b : fbnodes g) : term I B L := todo_rdf _.
+      (* Definition term_of_bnode {g} (b : fbnodes g) : term I B L :=  *)
 
       
       (* Coercion {g} fbnodes g *)
       (* Maybe μ has type (subType (term I B L) (fun t => t \in g)) -> term I B L *)
-      Definition mapping g (μ : fbnodes g -> term I B L) := [ffun b : (fbnodes g) => (μ b)]. 
+      Definition mapping g (μ : fbnode g -> term I B L) := [ffun b : (fbnode g) => (μ b)]. 
 
       
-      Variables (p : pred (term I B L))  (q : pred (seq_sub (bnodes g'))).
+      Variables (p : pred (term I B L))  (q : pred (fbnode g')).
 
       Definition A := [set x | q x]. (* seq_sub (bnodes g) is a fintype! *)
       Fail Check [set x in A | p x]. (* need to compose p with the coercion from 
 (seq_sub (bnodes g)) to term I B L *)
-      Check A : {set (seq_sub (bnodes g'))}.
+      Check A : {set (fbnode g')}.
 
 
     End FinTypeRdf.

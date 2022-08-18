@@ -403,11 +403,27 @@ Section IsoCan.
     Definition isoCanonicalise g :=
       isoCanonicalTemplate g hashBnodesPerSplit hashNodes_initialized distinguish.
 
-    Lemma singleton_g_is_fine (g: hgraph) : size g = 1%N -> is_fine (mkPartition g).
-    Proof. rewrite /mkPartition => singleton_g. Admitted.
+    Lemma size_0_nil (T : Type) (s : seq T) : size s = 0 -> s = [::].
+    Proof. by case s. Qed.
+
+
+    (* Lemma singleton_g_is_coarse (g : hgraph) : size (bnodes g) = 1%N -> is_coarse (mkPartition g). *)
+    (* Proof. rewrite /mkPartition/bnodes. case g => g'. case g' => [// | [s p o sib pi] tl] => /= singleton.  *)
+    (*        rewrite /terms/terms_triple. case trpl=> s p o sib pi. case s. *)
+
+    Lemma singleton_g_is_fine (g: hgraph) : size (bnodes g) = 1%N -> is_fine (mkPartition g).
+    Proof. rewrite /mkPartition/is_fine. case g=> /= g'. 
+           elim g'=> [//| hd t ih] /= => singleton.
+           (* injection singleton as tsize. *)
+           (* apply size_0_nil in tsize. rewrite tsize /=. *)
+           case hd=> s p o ? ? /=. rewrite /bnodes/terms/terms_triple /=.
+           case (s \in [:: p;o]) => /=. 
+           case s. case p. case o=> /=.
+           Abort.
 
     Lemma distinguish_preserves_isomorphism g : iso (justDistinguish g) g.
-    Proof. rewrite /iso/justDistinguish/isoCanonicalTemplate/is_iso.
+    Proof. 
+    rewrite /iso/justDistinguish/isoCanonicalTemplate/is_iso.
            case g=> g'. elim g'=> [|t ts ihts].
            - exists id. split.
              + by exists id.
@@ -417,7 +433,7 @@ Section IsoCan.
     Admitted.
 
     Lemma justDistinguish_isocan : isocanonical_mapping justDistinguish.
-    Proof. rewrite /isocanonical_mapping=> g1; split. Admitted.
+    Proof. apply: mapping_preserves_iso_isocan distinguish_preserves_isomorphism. Qed. 
 
     Lemma k_mapping_preserves_isomorphism : mapping_preserves_isomorphism k_mapping.
     Proof. rewrite /mapping_preserves_isomorphism/iso/is_iso. 

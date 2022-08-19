@@ -82,10 +82,7 @@ Section IsoCan.
     Definition eqb_trm_hi trm (ht : hterm) : bool := trm == (term_of_hterm ht).
 
     Definition eqb_b_hterm b (ht : hterm) : bool :=
-      match ht with
-      | Bnode hb => b == (input hb)
-      | _ => false
-      end.
+      if ht is Bnode hb then b == (input hb) else false.
 
     Definition htriple := triple I (hash B) L.
 
@@ -107,16 +104,10 @@ Section IsoCan.
       head None (filter is_some otrs).
 
     Definition lookup_hash (hb : hterm) : option (hash B) :=
-      match hb with
-      | Bnode hin => Some hin
-      | _ => None
-      end.
+      if hb is Bnode hin then some hin else None.
 
     Definition lookup_hash_default (hb : hterm) : h :=
-      match hb with
-      | Bnode hin => (current_hash hin)
-      | _ => herror
-      end.
+      if hb is Bnode hin then current_hash hin else herror.
 
     Section Partition.
 
@@ -207,24 +198,67 @@ Section IsoCan.
       all2 (fun p1 p2 => cmp_part p1 p2) Pg Ph.
 
 
-    Variable hashBag : (seq (hash B) -> (hash B)).
-    Hypothesis hashBag_assoc : forall (l1 l2 l3: seq (hash B)),
+    Variable hashBag : seq h -> h.
+    Hypothesis hashBag_assoc : forall (l1 l2 l3: seq h),
         hashBag ([:: hashBag (l1 ++ l2)] ++ l3) = hashBag (l1 ++ [:: hashBag (l2 ++ l3)]).
-    Hypothesis hashBag_comm : forall (l1 l2: seq (hash B)),
+    Hypothesis hashBag_comm : forall (l1 l2: seq h),
         hashBag (l1 ++ l2) = hashBag (l2 ++ l1).
 
     Variable hashTuple : seq h -> h.
 
+
+    (* Definition update_bnode_triple (b : )(t : triple I (hash B) L) : *)
+    Definition term_hash (trm : hterm) : h :=
+      match trm with
+      | Iri x | Lit x => hashTerm (term_of_hterm trm)
+      | Bnode hb => current_hash hb
+      end.
+
+    (* updates the current hash of b by b' in all the ocurrences
+       in g *)
+    Definition replace_bnode (b b': hash B) (g : hgraph) : hgraph :=
+      relabeling (fun a_hash => if a_hash == b then b' else a_hash) g.
+
+
+    Definition cmp_bnode (b : B) (ht : hterm) : bool :=
+      match ht with
+      | Bnode hin => b == (input hin)
+      | _ => false
+      end.
+
+    Definition lookup_bnode_in_triple (b : B) (t : htriple) : option hterm :=
+      let (s,p,o,_,_) := t in
+      if cmp_bnode b s then Some s
+      else if cmp_bnode b p then Some p
+           else if cmp_bnode b o then Some o else None.
+
+    Definition lookup_bnode_in_graph (g : hgraph) (b : B) : option hterm :=
+      let otrms := map (lookup_bnode_in_triple b) g in
+      head None (filter is_some otrms).
+
+    (* Definition update_bnodes_fwd s p o *)
+
+
     (* Algorithm 1, lines 12-17
        update the hashes of blank nodes using the neighborhood
        it hashes differently outgoing edges from incoming ones *)
-    Definition update_bnodes (g : hgraph) : hgraph := todo _.
-      (* let help_update := (fun (t : triple I (hash B) L) => let (s,p,o,_,_) := t in *)
-      (*                                                   if is_bnode s then *)
-      (*                                                     let c := hashTuple() *)
-
-      (*     t) *)
-      (* mkRdfGraph (map  g). *)
+    Definition update_bnodes (g : hgraph) : hgraph :=
+      let fix help g gacc :=
+        match g with
+        | nil => gacc
+        | cons t ts => let (s,p,o,_,_) := t : htriple in
+                        if s is Bnode hb then
+                          let c := hashTuple [:: (term_hash o) ; (term_hash p) ; hfwd] in
+                          let b_curr :=
+                            if lookup_bnode_in_graph gacc (input hb) is Some trm
+                            then term_hash trm
+                            else herror in
+                          let newhash := mkHinput (input hb) (hashBag [:: c ; b_curr ]) in
+                          let gacc' := replace_bnode hb newhash gacc in
+                          help ts gacc'
+                        else help ts gacc
+      end in
+      help g g.
 
     (* Algorithm 1, lines 9-18
        the iteration: computes the update of blank nodes until
@@ -265,7 +299,7 @@ Section IsoCan.
      *)
     Definition blank_node_split (t u v : Type) (g : rdf_graph t u v) : seq (rdf_graph t u v).
     Proof.
-      (* compute the graph G,
+    (* compute the graph G,
          where V := g and
          (t,u) : (triple I B L * triple I B L) \in E iff
          [:: t ; u] is graph and bnodes(t) ∩ bnodes(u) ≠ ϕ
@@ -276,28 +310,16 @@ Section IsoCan.
 
     (* The graph that contains all (and only the) ground triples of G *)
     Definition ground_split {t u v : Type} (g : rdf_graph t u v) : rdf_graph t u v :=
-      let groundTriples := filter (@is_ground_triple t u v) (graph g) in
+      let groundTriples := filter (fun t => is_ground_triple t) g in
       mkRdfGraph groundTriples.
 
-    Lemma merge_split {t u v : Type} (g : @rdf_graph t u v) :
+    Lemma merge_split {t u v : Type} (g : rdf_graph t u v) :
       merge_rdf_graph (merge_seq_rdf_graph (blank_node_split g)) (ground_split g) = g. Admitted.
 
     (* Algorithm 2 *)
     Definition hashBnodesPerSplit (g : hgraph) : hgraph :=
       let splitG := blank_node_split g in
       foldr (@merge_rdf_graph _ _ _) (empty_rdf_graph _ _ _) splitG.
-
-    Definition cmp_bnode (b : B) (ht : hterm) : bool :=
-      match ht with
-      | Bnode hin => b == (input hin)
-      | _ => false
-      end.
-
-    Definition lookup_bnode_in_triple (t : htriple) (b : B) : hterm :=
-      let (s,p,o,_,_) := t in
-      if cmp_bnode b s then s
-      else if cmp_bnode b p then p
-           else o.
 
 
     (* TODO define hashTuple *)
@@ -311,11 +333,6 @@ Section IsoCan.
       | Iri i| Lit i => Bnode (mkHinput b0 herror)
       | Bnode hb=> Bnode (mark_bnode hb)
       end.
-
-    (* updates the current hash of b by b' in all the ocurrences
-       in g *)
-    Definition replace_bnode (b b': hash B) (g : hgraph) : hgraph :=
-      relabeling (fun a_hash => if a_hash == b then b' else a_hash) g.
 
     (* algorithm 3, lines 9-10
        chooses the canonical part which is not fine *)
@@ -379,7 +396,7 @@ Section IsoCan.
     Definition build_mapping_from_seq (trms : seq hterm) : B -> B :=
       fun b =>
         if has (eqb_b_hterm b) trms then
-          let the_bnode := nth (@Bnode I (hash B) L (@mkHinput h B b herror)) trms (find (eqb_b_hterm b) trms) in
+          let the_bnode := nth (Bnode (mkHinput b herror)) trms (find (eqb_b_hterm b) trms) in
           to_string (lookup_hash_default the_bnode)
         else
           b.
@@ -453,17 +470,17 @@ Section IsoCan.
            case hd=> s p o ? ? /=. rewrite /bnodes/terms/terms_triple /=.
            (* case (s \in [:: p;o]) => /=.  *)
            (* case s. case p. case o=> /=. *)
-           Abort.
+    Abort.
 
     Lemma distinguish_preserves_isomorphism g : iso (justDistinguish g) g.
     Proof. 
-    rewrite /iso/justDistinguish/isoCanonicalTemplate/is_iso.
-           case g=> g'. elim g'=> [|t ts ihts].
-           - exists id. split.
-             + by exists id.
-                         + by rewrite relabeling_id. 
-                         - 
-                           (* need to build μ. and μ bij. *)
+      rewrite /iso/justDistinguish/isoCanonicalTemplate/is_iso.
+      case g=> g'. elim g'=> [|t ts ihts].
+      - exists id. split.
+        + by exists id.
+                    + by rewrite relabeling_id. 
+                    - 
+                      (* need to build μ. and μ bij. *)
     Admitted.
 
     Lemma justDistinguish_isocan : isocanonical_mapping justDistinguish.

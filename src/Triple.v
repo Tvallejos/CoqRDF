@@ -135,7 +135,7 @@ Section OperationsOnTriples.
   Canonical triple_predType := PredType (pred_of_seq \o (terms_triple)).
 
   Definition bnodes_triple (t : triple I B L) : seq (term I B L) :=
-    undup (filter (@is_bnode _ _ _) (@terms_triple t)).
+    undup (filter (@is_bnode I B L) (terms_triple t)).
 
   Canonical triple_predType2 := PredType (pred_of_seq \o (bnodes_triple)).
 

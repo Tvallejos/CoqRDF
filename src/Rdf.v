@@ -25,8 +25,8 @@ Section Rdf.
 
     (* assumes shared identifier scope *)
     Definition merge_rdf_graph g1 g2 : rdf_graph I B L.
-      Proof.
-      Admitted.
+    Proof.
+    Admitted.
 
     Definition merge_seq_rdf_graph (gs : seq (rdf_graph I B L)) : rdf_graph I B L :=
       foldr merge_rdf_graph empty_rdf_graph gs.
@@ -118,13 +118,16 @@ Section Rdf.
     (* Fail Check finset (trm \in g). *)
 
     Definition terms g : seq (term I B L) :=
-      undup (flatten (map (@terms_triple I B L) (graph g))).
+      undup (flatten (map (@terms_triple I B L) g)).
 
     Definition bnodes g : seq (term I B L) :=
       undup (filter (@is_bnode _ _ _) (terms g)).
 
     Definition get_b g : seq B.
-    Proof. case g=> g'. elim g' => [|t ts ihts]. exact [::]. apply get_b_triple in t. exact (undup (t ++ ihts)). Defined.
+    Proof. case g=> g'. elim g' => [| t ts ihts].
+           + exact : [::].
+           + apply get_b_triple in t. exact (undup (t ++ ihts)).
+    Defined.
 
 
     (* Definition all_b_in_g g : all (\in g) (get_b g). *)
@@ -173,7 +176,7 @@ Section Rdf.
     Definition mapping_preserves_isomorphism (μ : rdf_graph I B L -> rdf_graph I B L) := forall g, iso (μ g) g.
     Definition isocanonical_mapping (M : rdf_graph I B L -> rdf_graph I B L) :=
       mapping_preserves_isomorphism M /\
-              forall g1 g2, iso (M g1) (M g2) <-> iso g1 g2.
+        forall g1 g2, iso (M g1) (M g2) <-> iso g1 g2.
 
     Definition mapping_preserves_iso_isocan μ : mapping_preserves_isomorphism μ -> isocanonical_mapping μ.
     Proof. rewrite /isocanonical_mapping => μ_psrv_iso. split; first apply μ_psrv_iso.
@@ -214,7 +217,7 @@ The term "g1" has type "rdf_graph I B L" while it is expected to have type
     (* Definition alt_is_iso g1 g2  (μ :  {ffun (seq_sub (bnodes g1)) -> B}) := *)
     (* bijective μ /\ eqb_rdf g2 (relabeling μ g1). *)
 
-    
+
     Section FinTypeRdf.
       Local Notation fbnode g := (seq_sub (bnodes g)).
       Variables (g' : rdf_graph I B L) (bns : {set (fbnode g')}) (b : term I B L).
@@ -224,15 +227,15 @@ The term "g1" has type "rdf_graph I B L" while it is expected to have type
       Fail Check b \in bns.
       Print rel.
 
-      
+
       (* Definition term_of_bnode {g} (b : fbnodes g) : term I B L :=  *)
 
-      
+
       (* Coercion {g} fbnodes g *)
       (* Maybe μ has type (subType (term I B L) (fun t => t \in g)) -> term I B L *)
       Definition mapping g (μ : fbnode g -> term I B L) := [ffun b : (fbnode g) => (μ b)]. 
 
-      
+
       Variables (p : pred (term I B L))  (q : pred (fbnode g')).
 
       Definition A := [set x | q x]. (* seq_sub (bnodes g) is a fintype! *)

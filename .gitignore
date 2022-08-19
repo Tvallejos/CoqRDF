@@ -34,3 +34,5 @@ nra.cache
 
 CoqMakefile 
 CoqMakefile.conf
+
+.vscode/

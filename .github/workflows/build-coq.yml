@@ -6,6 +6,7 @@ on:
             - main
             - 'model/**'
             - 'ci/**'
+            - 'impl/**'
         pull_request:
             branches:
                 - '**'
@@ -19,7 +20,7 @@ jobs:
         # Browse URL: https://github.com/coq-community/docker-coq/wiki#supported-tags
         # to get the list of supported (coq, ocaml) versions in coqorg/coq.
         coq_version:
-          - '8.12'
+          - '8.14'
         ocaml_version:
           - '4.07-flambda'
           # - '4.11-flambda'
@@ -67,10 +68,10 @@ jobs:
         # Browse URL: https://hub.docker.com/r/mathcomp/mathcomp#supported-tags
         # to get the list of supported tags in mathcomp/mathcomp
         image:
-          - mathcomp/mathcomp:1.12.0-coq-8.12
-          - mathcomp/mathcomp:1.12.0-coq-8.13
+          - mathcomp/mathcomp:1.14.0-coq-8.14
+          # - mathcomp/mathcomp:1.12.0-coq-8.13
           # - mathcomp/mathcomp:latest-coq-dev
-          - mathcomp/mathcomp-dev:coq-dev
+          # - mathcomp/mathcomp-dev:coq-dev
       # at most 20 concurrent jobs per free account:
       # https://help.github.com/en/actions/reference/workflow-syntax-for-github-actions#usage-limits
       max-parallel: 4

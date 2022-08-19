@@ -213,10 +213,12 @@ Section IsoCan.
     Hypothesis hashBag_comm : forall (l1 l2: seq (hash B)),
         hashBag (l1 ++ l2) = hashBag (l2 ++ l1).
 
+    Variable hashTuple : seq h -> h.
+
     (* Algorithm 1, lines 12-17
        update the hashes of blank nodes using the neighborhood
        it hashes differently outgoing edges from incoming ones *)
-    Definition update_bnodes (g : hgraph) : hgraph. Proof. Admitted.
+    Definition update_bnodes (g : hgraph) : hgraph := todo _.
       (* let help_update := (fun (t : triple I (hash B) L) => let (s,p,o,_,_) := t in *)
       (*                                                   if is_bnode s then *)
       (*                                                     let c := hashTuple() *)
@@ -297,7 +299,6 @@ Section IsoCan.
       else if cmp_bnode b p then p
            else o.
 
-    Variable hashTuple : seq h -> h.
 
     (* TODO define hashTuple *)
     (* Algorithm 3, line 13
@@ -316,10 +317,13 @@ Section IsoCan.
     Definition replace_bnode (b b': hash B) (g : hgraph) : hgraph :=
       relabeling (fun a_hash => if a_hash == b then b' else a_hash) g.
 
-    (* Algorithm 3, lines 9-10
+    (* algorithm 3, lines 9-10
        chooses the canonical part which is not fine *)
-    Definition choose_part (P : partition) : part :=
-      todo _.
+    Fixpoint choose_part (P : partition) : part :=
+      match P with
+      | nil => nil (* FIXME: is this the good way to do it? *)
+      | cons p t => if is_trivial p then choose_part t else p
+      end.
 
     (* Algorithm 3, lines 13-14 when color refine is hashBnodes_initialized.
        b is_bnode *)
@@ -329,8 +333,10 @@ Section IsoCan.
       color_refine g'.
 
     (* choose canonical graph from sequence of graphs that have fine partitions *)
-    Definition choose_graph {I B L} (gs : seq (rdf_graph I B L) ) : rdf_graph I B L :=
-      todo _.
+    Definition choose_graph (gs : seq hgraph) : hgraph :=
+      if insub gs : {? x | all (is_fine \o mkPartition) x} is Some _
+      then foldl Order.min (mkRdfGraph [::]) gs
+      else mkRdfGraph [::].
 
     (* give partition and proof that partition is not fine *)
     (* or compute it again ... *)
@@ -403,7 +409,8 @@ Section IsoCan.
       let all_maps := permutations (ak_mapping g) in
       let mus := map build_mapping_from_seq all_maps in
       let isocans := map (fun mu => relabeling mu g) mus in
-      choose_graph isocans.
+      foldl Order.min (mkRdfGraph [::]) isocans.
+
     (* let isoG := choose_graph isocans in *)
     (* let isoMu := nth id mus (find (eqb_rdf isoG) isocans) in *)
     (* isoMu. *)
@@ -444,8 +451,8 @@ Section IsoCan.
            (* injection singleton as tsize. *)
            (* apply size_0_nil in tsize. rewrite tsize /=. *)
            case hd=> s p o ? ? /=. rewrite /bnodes/terms/terms_triple /=.
-           case (s \in [:: p;o]) => /=. 
-           case s. case p. case o=> /=.
+           (* case (s \in [:: p;o]) => /=.  *)
+           (* case s. case p. case o=> /=. *)
            Abort.
 
     Lemma distinguish_preserves_isomorphism g : iso (justDistinguish g) g.

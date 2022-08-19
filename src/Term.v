@@ -1,18 +1,50 @@
 From mathcomp Require Import all_ssreflect.
+(* all_algebra. *)
 Set Implicit Arguments.
 Unset Strict Implicit.
 Unset Printing Implicit Defensive.
 
+Import Order.Theory.
+(* GRing.Theory Num.Theory. *)
 Section Term.
 
   (* literals should be of Datatype type, is not important for the moment*)
-  Variable I B L: eqType.
+  Open Scope order_scope.
+  Variable I B L: countType.
 
   Inductive term : Type :=
   | Iri (id: I) 
   | Lit (l : L) 
   | Bnode (name : B).
 
+  Definition code_term (x : term) :=
+    match x with
+    | Iri id => GenTree.Node 0 (GenTree.Leaf (pickle id) :: nil)
+    | Lit l => GenTree.Node 1 (GenTree.Leaf (pickle l) :: nil)
+    | Bnode name => GenTree.Node 2 (GenTree.Leaf (pickle name) :: nil)
+    end.
+
+  Definition decode_term (x : GenTree.tree nat) : option term :=
+    match x with
+    | GenTree.Node 0 (GenTree.Leaf id :: nil) => omap Iri (unpickle id)
+    | GenTree.Node 1 (GenTree.Leaf l :: nil) =>  omap Lit (unpickle l)
+    | GenTree.Node 2 (GenTree.Leaf name :: nil) => omap Bnode (unpickle name)
+    | _ => None
+    end.
+
+  Lemma cancel_code_decode : pcancel code_term decode_term.
+  Proof. case => [id | l | name]; by rewrite /= pickleK. Qed.
+
+  Definition term_eqMixin := PcanEqMixin cancel_code_decode.
+  Definition term_canChoiceMixin := PcanChoiceMixin cancel_code_decode.
+  Definition term_canCountMixin := PcanCountMixin cancel_code_decode.
+
+  Canonical term_eqType := Eval hnf in EqType term term_eqMixin.
+  Canonical term_choiceType := Eval hnf in ChoiceType term term_canChoiceMixin.
+  Canonical term_countType := Eval hnf in CountType term term_canCountMixin.
+
+  Definition term_canPOrderMixin := PcanPOrderMixin (@pickleK term_countType).
+  Canonical term_POrderType := Eval hnf in POrderType tt term term_canPOrderMixin.
 
   Definition is_lit (t : term ): bool :=
     (match t with
@@ -32,14 +64,6 @@ Section Term.
      | _ => false
      end).
 
-  Definition eqb_term (t1 t2 : term) : bool :=
-    (match t1, t2 with
-     | (Iri id1), (Iri id2) => id1 == id2
-     | (Lit l1),(Lit l2) => l1 == l2
-     | (Bnode b1),(Bnode b2) => b1 == b2
-     | _,_ => false
-     end).
-
   Definition is_in_ib (t : term) : bool :=
     is_iri t || is_bnode t.
 
@@ -48,15 +72,6 @@ Section Term.
 
   Definition is_in_ibl (t : term) : bool :=
     is_iri t || is_bnode t || is_lit t.
-
-  Lemma term_eqP : Equality.axiom eqb_term.
-  Proof.
-    rewrite /Equality.axiom => x y.
-    apply: (iffP idP) => //= [| ->]; rewrite /eqb_term; last by case y.
-    by case: x y=> [i1|l1|b1] [i2|l2|b2] // => /eqP ->. 
-  Qed.
-
-  Canonical term_eqType := EqType term (EqMixin term_eqP).
 
   Definition relabeling_term (μ : B -> B) (t : term) : term :=
     match t with

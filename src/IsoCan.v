@@ -45,7 +45,6 @@ Canonical hin_POrderType (H T : countType) :=
 
 
 Section IsoCan.
-  Axiom todo : forall t, t.
 
   Variable I B L: countType.
 
@@ -236,29 +235,39 @@ Section IsoCan.
       let otrms := map (lookup_bnode_in_triple b) g in
       head None (filter is_some otrms).
 
-    (* Definition update_bnodes_fwd s p o *)
+    Definition lookup_bnode_in_graph_default (g : hgraph) (b : B) : h :=
+      if lookup_bnode_in_graph g b is Some trm then term_hash trm else herror.
 
+    Definition new_hash (s p o : hterm) gacc hldr : option ((hash B) * (hash B)) :=
+      if s is Bnode hb
+      then
+        let c := hashTuple [:: (term_hash o) ; (term_hash p) ; hldr] in
+        let b_curr := lookup_bnode_in_graph_default gacc (input hb) in
+        Some (hb,(mkHinput (input hb) (hashBag [:: c ; b_curr ])))
+      else None.
+
+    Definition new_hash_fwd (s p o: hterm) gacc : option ((hash B) * (hash B)) :=
+      new_hash s p o gacc hfwd.
+
+    Definition new_hash_bwd (s p o : hterm) gacc : option ((hash B) * (hash B)) :=
+      new_hash o p s gacc hbwd.
 
     (* Algorithm 1, lines 12-17
        update the hashes of blank nodes using the neighborhood
        it hashes differently outgoing edges from incoming ones *)
     Definition update_bnodes (g : hgraph) : hgraph :=
-      let fix help g gacc :=
+      let fix help g gacc hf :=
         match g with
         | nil => gacc
         | cons t ts => let (s,p,o,_,_) := t : htriple in
-                        if s is Bnode hb then
-                          let c := hashTuple [:: (term_hash o) ; (term_hash p) ; hfwd] in
-                          let b_curr :=
-                            if lookup_bnode_in_graph gacc (input hb) is Some trm
-                            then term_hash trm
-                            else herror in
-                          let newhash := mkHinput (input hb) (hashBag [:: c ; b_curr ]) in
-                          let gacc' := replace_bnode hb newhash gacc in
-                          help ts gacc'
-                        else help ts gacc
+                      let newhash := hf s p o gacc in
+                      if newhash is Some (hb,hb')
+                      then let gacc' := replace_bnode hb hb' gacc in
+                           help ts gacc' hf
+                      else help ts gacc hf
       end in
-      help g g.
+      let g_fwd := help g g new_hash_fwd in
+    help g g_fwd new_hash_bwd.
 
     (* Algorithm 1, lines 9-18
        the iteration: computes the update of blank nodes until
@@ -322,7 +331,6 @@ Section IsoCan.
       foldr (@merge_rdf_graph _ _ _) (empty_rdf_graph _ _ _) splitG.
 
 
-    (* TODO define hashTuple *)
     (* Algorithm 3, line 13
        hashes b incorporating an arbitrary hash hmark *)
     Definition mark_bnode (b : hash B) : hash B :=

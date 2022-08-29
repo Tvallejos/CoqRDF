@@ -209,7 +209,7 @@ Section Rdf.
     Definition rdf_canPOrderMixin := PcanPOrderMixin (@pickleK rdf_countType).
     Canonical rdf_POrderType := Eval hnf in POrderType tt (rdf_graph I B L) rdf_canPOrderMixin.
 
-    (* assia : this requires rewriting relabeling function. cf error message
+    (* assia : this requires rewriting relabeling function(. cf error message
 The term "g1" has type "rdf_graph I B L" while it is expected to have type
  "rdf_graph I (seq_sub_finType (bnodes g1)) ?L" *)
 
@@ -217,10 +217,45 @@ The term "g1" has type "rdf_graph I B L" while it is expected to have type
     (* Definition alt_is_iso g1 g2  (μ :  {ffun (seq_sub (bnodes g1)) -> B}) := *)
     (* bijective μ /\ eqb_rdf g2 (relabeling μ g1). *)
 
-
+    
     Section FinTypeRdf.
       Local Notation fbnode g := (seq_sub (bnodes g)).
-      Variables (g' : rdf_graph I B L) (bns : {set (fbnode g')}) (b : term I B L).
+      
+      Variables (g' : rdf_graph I B L).
+
+      Variables (bns : {set (seq_sub (bnodes g'))}) (b : term I B L).
+
+Search _ seq_sub.
+
+      Definition p1 (A : {set (seq_sub (bnodes g'))}) : option (term I B L) :=
+        if (enum A) is h :: tl then Some (ssval h) else None.
+
+      Definition p2 (A : {set (seq_sub (bnodes g'))}) : option (term I B L) :=
+        if (pickP (mem A)) is Pick x Ax then Some (ssval x) else None.
+
+      Definition p3 (A : {set (seq_sub (bnodes g'))}) : option (seq_sub (bnodes g')) :=
+        if (pickP (mem A)) is Pick x Ax then Some x else None.
+
+
+      Lemma p3_mem A z : p3 A = Some z -> z \in A.
+      Proof. by rewrite /p3; case: (pickP (mem A)) => // x Ax; case=> <-. Qed.
+     
+     Variable z : fbnode g'.
+     Check ssval z : term I B L.
+
+      (* Other option *)
+      Check bnodes g'.
+      (* membership function of list (bnodes g') has type (term I B L) -> bool. but 
+         (term I B L) is NOT a finite type so this fails: *)
+      Fail Check [set x in (bnodes g')].
+      (* but once we have a finite type, we can use this notation *)
+      Variable l : seq (fbnode g').
+      Check [set x in l].
+
+
+
+
+      
       Check b \in (bnodes g').
       Check enum bns.
       Check partition.

@@ -173,21 +173,20 @@ Section Rdf.
            by rewrite eqb1 eqb2 relabeling_seq_triple_comp.
     Qed.
 
-    Definition mapping_preserves_isomorphism (μ : rdf_graph I B L -> rdf_graph I B L) := forall g, iso (μ g) g.
-    Definition isocanonical_mapping (M : rdf_graph I B L -> rdf_graph I B L) :=
-      mapping_preserves_isomorphism M /\
-        forall g1 g2, iso (M g1) (M g2) <-> iso g1 g2.
+    (* Definition mapping_preserves_isomorphism (μ : rdf_graph I B L -> rdf_graph I B L) := forall g, iso (μ g) g. *)
 
-    Definition mapping_preserves_iso_isocan μ : mapping_preserves_isomorphism μ -> isocanonical_mapping μ.
-    Proof. rewrite /isocanonical_mapping => μ_psrv_iso. split; first apply μ_psrv_iso.
-           + split; move=> isoH; apply iso_symm; eapply iso_trans.
-           - apply iso_symm; apply (iso_trans isoH (μ_psrv_iso _)).
-           - apply μ_psrv_iso. 
-           - apply μ_psrv_iso.
-           - apply iso_symm; apply (iso_trans (μ_psrv_iso _) isoH).
-    Qed.
+    Definition isocanonical_mapping (M : rdf_graph I B L -> rdf_graph I B L) :=
+      forall g, iso (M g) g /\
+        (forall g1 g2, eqb_rdf (M g1) (M g2) <-> iso g1 g2).
+
 
   End EqRdf.
+  Section Relabeling_alt.
+    Variables I B L : choiceType.
+    Implicit Type g : rdf_graph I B L.
+    Definition relabeling_alt {g} (mu : {ffun (seq_sub (bnodes g)) -> B}) g1 : rdf_graph I B L. Admitted.
+
+  End Relabeling_alt.
 
   Section CountRdf.
     Variables I B L : countType.
@@ -212,20 +211,24 @@ Section Rdf.
     (* assia : this requires rewriting relabeling function(. cf error message
 The term "g1" has type "rdf_graph I B L" while it is expected to have type
  "rdf_graph I (seq_sub_finType (bnodes g1)) ?L" *)
+    Definition is_iso_alt g1 g2  (μ :  {ffun (seq_sub (bnodes g1)) -> B}) :=
+      bijective μ /\ eqb_rdf g2 (relabeling_alt μ g1).
+
+    Definition iso_alt g1 g2:= exists mu, @is_iso_alt g1 g2 mu.
+
+    Definition isocanonical_mapping_alt (M : rdf_graph I B L -> rdf_graph I B L) :=
+      forall g, iso_alt (M g) g /\
+        (forall g1 g2, eqb_rdf (M g1) (M g2) <-> iso g1 g2).
 
 
-    (* Definition alt_is_iso g1 g2  (μ :  {ffun (seq_sub (bnodes g1)) -> B}) := *)
-    (* bijective μ /\ eqb_rdf g2 (relabeling μ g1). *)
-
-    
     Section FinTypeRdf.
       Local Notation fbnode g := (seq_sub (bnodes g)).
-      
+
       Variables (g' : rdf_graph I B L).
 
       Variables (bns : {set (seq_sub (bnodes g'))}) (b : term I B L).
 
-Search _ seq_sub.
+      Search _ seq_sub.
 
       Definition p1 (A : {set (seq_sub (bnodes g'))}) : option (term I B L) :=
         if (enum A) is h :: tl then Some (ssval h) else None.
@@ -239,9 +242,9 @@ Search _ seq_sub.
 
       Lemma p3_mem A z : p3 A = Some z -> z \in A.
       Proof. by rewrite /p3; case: (pickP (mem A)) => // x Ax; case=> <-. Qed.
-     
-     Variable z : fbnode g'.
-     Check ssval z : term I B L.
+
+      Variable z : fbnode g'.
+      Check ssval z : term I B L.
 
       (* Other option *)
       Check bnodes g'.

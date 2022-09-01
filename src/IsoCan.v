@@ -260,14 +260,14 @@ Section IsoCan.
         match g with
         | nil => gacc
         | cons t ts => let (s,p,o,_,_) := t : htriple in
-                      let newhash := hf s p o gacc in
-                      if newhash is Some (hb,hb')
-                      then let gacc' := replace_bnode hb hb' gacc in
-                           help ts gacc' hf
-                      else help ts gacc hf
-      end in
+                       let newhash := hf s p o gacc in
+                       if newhash is Some (hb,hb')
+                       then let gacc' := replace_bnode hb hb' gacc in
+                            help ts gacc' hf
+                       else help ts gacc hf
+        end in
       let g_fwd := help g g new_hash_fwd in
-    help g g_fwd new_hash_bwd.
+      help g g_fwd new_hash_bwd.
 
     (* Algorithm 1, lines 9-18
        the iteration: computes the update of blank nodes until
@@ -430,12 +430,14 @@ Section IsoCan.
       let bns := bnodes (init_hash g) in
       mapi (app_n mark_bnode') bns.
 
-    Definition k_mapping (g : rdf_graph I B L) : rdf_graph I B L :=
+    Definition k_mapping_ (g : rdf_graph I B L) : rdf_graph I B L * (B -> B) :=
       let all_maps := permutations (ak_mapping g) in
       let mus := map build_mapping_from_seq all_maps in
-      let isocans := map (fun mu => relabeling mu g) mus in
-      foldl Order.min (mkRdfGraph [::]) isocans.
+      let isocans := map (fun mu => (relabeling mu g,mu)) mus in
+      foldl (fun g1 g2=> if g1.1 < g2.1 then g1 else g2) (mkRdfGraph [::],id) isocans.
 
+    Definition k_mapping := fst \o k_mapping_.
+    Definition muk_mapping := snd \o k_mapping_.
     (* let isoG := choose_graph isocans in *)
     (* let isoMu := nth id mus (find (eqb_rdf isoG) isocans) in *)
     (* isoMu. *)
@@ -486,27 +488,72 @@ Section IsoCan.
       case g=> g'. elim g'=> [|t ts ihts].
       - exists id. split.
         + by exists id.
-                    + by rewrite relabeling_id. 
-                    - 
-                      (* need to build μ. and μ bij. *)
+               + by rewrite relabeling_id. 
+               - 
+                 (* need to build μ. and μ bij. *)
     Admitted.
+    
+    Lemma empty_permutations (T:eqType) : @permutations T [::] = [:: [::]]. Proof. by []. Qed. 
+    Lemma empty_ak_mapping : ak_mapping (mkRdfGraph [::]) = [::]. Proof. by []. Qed.
 
-    Lemma justDistinguish_isocan : isocanonical_mapping justDistinguish.
-    Proof. apply: mapping_preserves_iso_isocan distinguish_preserves_isomorphism. Qed. 
+    Lemma inv_of_ak_mapping g : exists mu, eqb_rdf (relabeling mu g) (relabeling (build_mapping_from_seq (ak_mapping g)) g).
+    Proof. by exists (build_mapping_from_seq (ak_mapping g)); apply eqb_rdf_refl. Qed.
 
-    Lemma k_mapping_preserves_isomorphism : mapping_preserves_isomorphism k_mapping.
-    Proof. rewrite /mapping_preserves_isomorphism/iso/is_iso. 
-           (* exists inv_relabel_of_k_mapping. *)
-           (* apply bijective_by_construction. *)
-           (* elim [//= eqb_rdf_refl | h t IHt]. case: h => [//= | cancel_μ | //=] *)
-    Admitted.
 
-    Lemma k_mapping_isocan : isocanonical_mapping k_mapping.
-    Proof. apply: mapping_preserves_iso_isocan k_mapping_preserves_isomorphism. Qed.
+    Lemma inv_of_perm_ak_mapping g p : p \in (permutations (ak_mapping g)) -> exists mu, eqb_rdf (relabeling mu g) (relabeling (build_mapping_from_seq p) g).
+    Proof. Admitted.
 
-    (* Hypothesis perfectHashingSchemeTriple : injective hashTriple. *)
+    Lemma inv_of_k_mapping g : exists mu, eqb_rdf (relabeling mu g) (k_mapping g).
+    Proof. rewrite /k_mapping. exists (muk_mapping g). rewrite /muk_mapping /=.
+           elim g=> gs; elim gs => [//| t ts IHts ]. Admitted.
 
+
+           (* Definition oget_bnode (t : term I B L) : option B := *)
+           (*   if t is Bnode b then Some b else None. *)
+           (* Lemma foo_term : forall f trm, *)
+           (*     ((is_iri trm \/ is_lit trm) -> f trm = trm) -> exists mu, oget_bnode (f trm) = omap mu (oget_bnode trm). *)
+           (* Proof. rewrite /oget_bnode => f trm. case trm=> /= [ i | l | name] idf. *)
+           (*        + exists id. rewrite idf. by []. left. by []. *)
+           (*        + exists id. rewrite idf. by []. right. by []. *)
+           
+
+           (* Hypothesis perfectHashingSchemeTriple : injective hashTriple. *)
 
   End IsoCanAlgorithm.
+
+  Section Example.
+    (* From Coq Require Import Strings.String. *)
+    Require Import Strings.Ascii.
+    Variables (b : seq ascii) (p : nat).
+    Definition B_ := (@Bnode nat (seq ascii) nat b).
+    Definition P := (@Iri nat (seq ascii) nat p).
+    Lemma inib : is_in_ib B_.
+    Proof. by []. Qed.
+
+    Lemma ini : is_in_i P. Proof. by []. Qed.
+    (* Check nat : countType. *)
+
+    Definition t := mkTriple B_ inib ini.
+    Definition g := mkRdfGraph [:: t].
+    Variable h:countType.
+    Variable h0 h1 h2 h3 h4: h.
+    Check g.
+    (* Open *)
+    Open Scope char_scope.
+    Check ascii.
+    Definition berror := [:: "e"; "r"; "r"; "o"; "r"] : seq ascii.
+    About Countable.pack.
+    About Countable.mixin_of.
+    Variable ascii_countMixin : Countable.mixin_of ascii.
+    Fail Canonical ascii_countType := Eval hnf in CountType ascii ascii_countMixin.
+    (* CountType ascii ascii_countMixin. *)
+
+    Fail Compute isoCanonicalise h0 h1 h2 h3 h4 berror g .
+
+
+  End Example.
+
+
 End IsoCan.
+
 

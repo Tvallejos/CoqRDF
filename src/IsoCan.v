@@ -436,7 +436,8 @@ Section IsoCan.
       let isocans := map (fun mu => (relabeling mu g,mu)) mus in
       foldl (fun g1 g2=> if g1.1 < g2.1 then g1 else g2) (mkRdfGraph [::],id) isocans.
 
-    Definition k_mapping := fst \o k_mapping_.
+  
+    Definition k_mapping := fst \o k_mapping_. 
     Definition muk_mapping := snd \o k_mapping_.
     (* let isoG := choose_graph isocans in *)
     (* let isoMu := nth id mus (find (eqb_rdf isoG) isocans) in *)
@@ -502,12 +503,35 @@ Section IsoCan.
     Proof. by exists (build_mapping_from_seq (ak_mapping g)); apply eqb_rdf_refl. Qed.
 
 
-    Lemma inv_of_perm_ak_mapping g p : p \in (permutations (ak_mapping g)) -> exists mu, eqb_rdf (relabeling mu g) (relabeling (build_mapping_from_seq p) g).
-    Proof. Admitted.
+    Lemma inv_of_perm_ak_mapping g p :
+      p \in (permutations (ak_mapping g)) ->
+            exists mu, eqb_rdf (relabeling mu g) (relabeling (build_mapping_from_seq p) g).
+    Proof.
+    move=> hp.
+    exists (build_mapping_from_seq p).
+    exact: eqb_rdf_refl.
+    Qed.
 
     Lemma inv_of_k_mapping g : exists mu, eqb_rdf (relabeling mu g) (k_mapping g).
-    Proof. rewrite /k_mapping. exists (muk_mapping g). rewrite /muk_mapping /=.
-           elim g=> gs; elim gs => [//| t ts IHts ]. Admitted.
+    Proof.
+    rewrite /k_mapping.
+    have step0 l :
+      let res := foldl (fun g1 g2=> if g1.1 < g2.1 then g1 else g2) (mkRdfGraph [::],id) l in
+         res = (mkRdfGraph [::],id) \/ fst res \in map fst l.
+       (* induction on l *) admit.
+    have step1 : k_mapping_ g = ({| graph := [::] |}, id) \/
+             (k_mapping g) \in map fst [seq (relabeling mu0 g, mu0)
+                 | mu0 <- [seq build_mapping_from_seq i | i <- permutations (ak_mapping g)]].
+      (* instance of step0 *) admit.
+    case: step1=> [e | hin].
+    - have -> : g = {| graph := [::] |}.
+        case: g e => [] [|  hd tl] //=.  admit. (* prove it early as a lemma by case on g *)
+      exists id. admit.
+    - (* all elements in the sequence are of the form (relabeling mu0 g) .... Search _ all *)
+      Search _ all map.
+      Search _ (_ \in _) map. 
+      move: hin.
+      elim g=> gs; elim gs => [//| t ts IHts ]. Admitted.
 
 
            (* Definition oget_bnode (t : term I B L) : option B := *)

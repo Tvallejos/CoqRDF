@@ -123,6 +123,11 @@ Section Rdf.
     Definition bnodes g : seq (term I B L) :=
       undup (filter (@is_bnode _ _ _) (terms g)).
 
+    Lemma ground_no_bnodes g : size(bnodes g) = 0 <-> is_ground g.
+    Proof. split=> [sizeO|groundg].
+           + rewrite /is_ground.
+           Admitted.
+
     Definition get_b g : seq B.
     Proof. case g=> g'. elim g' => [| t ts ihts].
            + exact : [::].
@@ -153,11 +158,24 @@ Section Rdf.
     Definition iso g1 g2 := exists (μ : B -> B),
         is_iso g1 g2 μ.
 
+    Remark id_bij T: bijective (@id T). Proof. by exists id. Qed.
+
     Lemma iso_refl g : iso g g.
     Proof. rewrite /iso /is_iso; exists id; split.
-           exists id => //.
+           exact: id_bij.
            by rewrite relabeling_id eqb_rdf_refl.
     Qed.
+
+    Remark eqiso g1 g2 : eqb_rdf g1 g2 -> iso g1 g2.
+    Proof. exists id. rewrite /is_iso; split; first by apply id_bij.
+           + by rewrite relabeling_id.
+    Qed.
+
+    (* Remark eqiso' g1 g2 : eqb_rdf g1 g2 -> iso g1 g2. *)
+    (* Proof. move=> /eqP eq. by rewrite eq; apply iso_refl. Qed *)
+(*          Error: The LHS of eq *)
+(*     (graph g1) *)
+(* does not match any subterm of the goal *)
 
     Lemma iso_symm g1 g2 : iso g1 g2 <-> iso g2 g1.
     Proof.

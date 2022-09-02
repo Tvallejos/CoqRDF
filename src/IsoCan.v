@@ -162,7 +162,7 @@ Section IsoCan.
         ~~ is_fine P && ~~ is_coarse P.
 
     End Partition.
-
+    
     Definition init_bnode (b : B) : (hash B) :=
       mkHinput b h0.
 
@@ -445,10 +445,10 @@ Section IsoCan.
     (* need the proof that is a blank node!
        build_mapping (k_distinguish (mkRdfGraph bns)). *)
 
-    Definition isoCanonicalTemplate g (color color_refine: hgraph -> hgraph) refine : rdf_graph I B L:=
+    Definition isoCanonicalTemplate g (color color_refine: hgraph -> hgraph) p_refining : rdf_graph I B L:=
       let g' := color (init_hash g) in
       let P := mkPartition g' in
-      let g_iso := if is_fine P then g' else refine g' color_refine in
+      let g_iso := if is_fine P then g' else p_refining g' color_refine in
       label g_iso.
 
     (* first approach *)
@@ -482,9 +482,11 @@ Section IsoCan.
            (* case s. case p. case o=> /=. *)
     Abort.
 
+    (* Lemma  *)
     Lemma distinguish_preserves_isomorphism g : iso (justDistinguish g) g.
     Proof. 
       rewrite /iso/justDistinguish/isoCanonicalTemplate/is_iso.
+      case (is_fine (mkPartition (init_hash g))).
       case g=> g'. elim g'=> [|t ts ihts].
       - exists id. split.
         + by exists id.

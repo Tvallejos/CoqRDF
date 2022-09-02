@@ -30,6 +30,9 @@ Section PolyTriple.
   Variables I B L : Type.
   Implicit Type t : triple I B L.
 
+
+  (* I don't need eqType to know if triple is ground
+     but if I B L are not *)
   Definition is_ground_triple t : bool:=
     let (s,p,o,_,_) := t in
     ~~ (is_bnode s || is_bnode p || is_bnode o).
@@ -135,7 +138,123 @@ Section OperationsOnTriples.
   Canonical triple_predType := PredType (pred_of_seq \o (terms_triple)).
 
   Definition bnodes_triple (t : triple I B L) : seq (term I B L) :=
-    undup (filter (@is_bnode I B L) (terms_triple t)).
+    filter (@is_bnode I B L) (terms_triple t).
+
+  Lemma sizeO_filter T (s : seq T) p: size (filter p s) == 0 = all (negb \o p) s.
+  Proof.
+    by elim s=> //= h t <-; case (p h).
+  Qed.
+
+  Lemma all_undup (T:eqType) (s : seq T) p (allp : all p s) : all p (undup s).
+  Proof. generalize allp. elim s=> [//| h t IHts] /= /andP [pa allt].
+         case: (h \in t); first apply: (IHts allt).
+         + apply /andP; split; [ exact: pa | exact: (IHts allt)]. 
+  Qed.
+
+
+  Lemma undup_all (T:eqType) (s : seq T) p (allp : all p (undup s)) : all p s.
+  Proof.
+    generalize allp. elim s=> [//| h t IHts] /=. move=> eq. apply /andP; split. generalize eq.
+
+    case (h \in t).
+    admit.
+    (* apply IHts. generalize eq. case (h \in t); first done. *)
+    + admit.
+        
+
+
+    (* apply allp. [pa allt]. *)
+    (*      case: (h \in t); first apply: (IHts allt). *)
+    (*      + apply /andP; split; [ exact: pa | exact: (IHts allt)]. *)
+  Admitted.
+
+  Lemma all_undup' (T : eqType) (s : seq T) p : all p (undup s) <-> all p s. split. apply undup_all. apply all_undup. Qed.
+
+  Lemma all_undup'' (T : eqType) (s : seq T) p : all p (undup s) = all p s.
+  Proof.
+    Fail rewrite all_undup'. Admitted.
+
+
+  Lemma is_ground_not_bnode t : is_ground_triple t =
+                                  ~~ is_bnode (subject t) && ~~ is_bnode (predicate t) &&  ~~ is_bnode (object t).
+  Proof. by case t => s p o /= _ _; rewrite -orbA !negb_or; case: s p o.
+  Qed.
+
+
+  (* Lemma is_ground_not_bnode t : is_ground_triple t = *)
+  (*                                 (((negb \o (@is_bnode I B L) \o (@subject I B L)) t) && ((negb \o (@is_bnode I B L) \o (@predicate I B L)) t) && ((negb \o (@is_bnode I B L) \o (@object I B L )) t)). *)
+  (* Proof. by case t => s p o /= _ _; rewrite -orbA !negb_or; case: s p o. *)
+  (* Qed. *)
+
+  (* Lemma Obnodes_groundtriple_impl t : size (bnodes_triple t) == 0 <-> is_ground_triple t. *)
+  (* Proof. rewrite sizeO_filter.  *)
+  (*        rewrite /terms_triple. rewrite is_ground_not_bnode. *)
+         
+  (*        (* rewrite /is_ground_triple. *) *)
+  (*        case t=> s p o /= _ _. case: s p o. => //=. *)
+  (*        + split=> sizeO. *)
+
+
+
+  (*        split=> [sizeO|groundt]. *)
+  (*        case: s p o. *)
+
+
+
+  (*        apply all_undup in sizeO. *)
+  (*        admit. *)
+
+  Lemma Obnodes_groundtriple t : size (bnodes_triple t) == 0 = is_ground_triple t.
+  Proof. rewrite sizeO_filter. 
+         rewrite /terms_triple.
+         case t=> s p o /= _ _.
+         have -> : (if s \in [:: p; o]
+     then if p \in [:: o] then [:: o] else [:: p; o]
+                   else s :: (if p \in [:: o] then [:: o] else [:: p; o])) = undup [:: s ; p ; o].
+         by [].
+         (* rewrite is_ground_not_bnode. *)
+         (* rewrite -all_filter. *)
+         (* rewrite (all_filter (negb \o (@is_bnode I B L))). *)
+
+
+         (* rewrite filter_undup. *)
+         (* rewrite -undup_all. *)
+         rewrite all_undup''.
+         Admitted.
+
+    (*      all_undup. *)
+    (*      admit. *)
+
+    (*      case t=> s p o sib pii. *)
+    (*      rewrite filter_undup. *)
+    (*      (* rewrite /is_ground_triple. *) *)
+    (*      case t=> s p o sib pii. *)
+
+    (*      rewrite filter_undup. *)
+    (*      rewrite all_undup. *)
+    (*      admit. *)
+    (*      rewrite filter_undup. *)
+    (*      rewrite -all_filter. filter_undup. case (is_bnode s); case (is_bnode p); case (is_bnode o); rewrite //=. *)
+    (*      rewrite -big_all. rewrite big[andb/true]. *)
+    (*      case s; case p; case o; rewrite //=. *)
+    (* (* inversion t. *) *)
+    (* rewrite /=. *)
+
+    (* case t=> /= s p o sib pii. case s; case p; case o; rewrite // => x y z; rewrite sizeO_filter. *)
+    (* + by case: (Iri z \in [:: Iri y; Iri x]); case: (Iri y \in [:: Iri x]). *)
+    (*   + case: (z == y). *)
+
+
+    (*   split => [//| ground]. case ground. *)
+
+
+    (*   => [] [] []. inversion s. *)
+    (* split=> [sizeO|ground]. rewrite /is_ground_triple. inversion t. *)
+    (* case t=> s p o sib oibl. rewrite /bnodes_triple. *)
+
+    (* case t=> split; inversion t => [sizeO]. case t. *)
+    (*      + *)
+
 
   Canonical triple_predType2 := PredType (pred_of_seq \o (bnodes_triple)).
 
@@ -154,7 +273,8 @@ Section OperationsOnTriples.
 
   
   Definition all_bnodes_triple_is_bnode t : all (@is_bnode I B L) (bnodes_triple t).
-  Proof. rewrite /bnodes_triple -filter_undup; apply filter_all. Qed.
+  Proof. Admitted.
+  (* rewrite /bnodes_triple -filter_undup; apply filter_all. Qed. *)
 
   Definition get_b_triple t : seq B.
   Proof. apply bnodes_triple in t as bns.

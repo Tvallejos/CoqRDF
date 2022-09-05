@@ -430,15 +430,13 @@ Section IsoCan.
       let bns := bnodes (init_hash g) in
       mapi (app_n mark_bnode') bns.
 
-    Definition k_mapping_ (g : rdf_graph I B L) : rdf_graph I B L * (B -> B) :=
+    Definition k_mapping (g : rdf_graph I B L) : rdf_graph I B L :=
       let all_maps := permutations (ak_mapping g) in
       let mus := map build_mapping_from_seq all_maps in
-      let isocans := map (fun mu => (relabeling mu g,mu)) mus in
-      foldl (fun g1 g2=> if g1.1 < g2.1 then g1 else g2) (mkRdfGraph [::],id) isocans.
+      let isocans := map (fun mu => relabeling mu g) mus in
+      foldl Order.min (relabeling id g) isocans.
 
   
-    Definition k_mapping := fst \o k_mapping_. 
-    Definition muk_mapping := snd \o k_mapping_.
     (* let isoG := choose_graph isocans in *)
     (* let isoMu := nth id mus (find (eqb_rdf isoG) isocans) in *)
     (* isoMu. *)
@@ -512,12 +510,111 @@ Section IsoCan.
     exact: eqb_rdf_refl.
     Qed.
 
+    Lemma inweak (T: eqType) (l:seq T) t u : t \in l -> t \in (u::l).
+    Proof. rewrite -!has_pred1 /has. case (pred1 t u); first done.
+           by move=> ->.
+    Qed.
+
+    Lemma min_seq (T: porderType tt) (s: seq T) (hd:T) : exists minimum, forall t, t \in (hd::s) -> minimum <= t.
+      Proof. elim (hd::s)=> [//| a t [minimum IHts]].
+             + by exists hd=> t memt; rewrite in_nil in memt.
+                    + destruct (minimum <= a) eqn:E.
+                      (* minimum is min*)
+               * exists minimum=> a0 mema. 
+                 rewrite /in_mem /= in mema *. generalize mema. move=> /orP=> {mema}mema.
+                 case mema.
+                    - move=> /eqP x. subst. rewrite E. done.
+                    - move=> memta. apply IHts. apply memta.
+                      (* a in min*)
+               * exists a=> a0 mema.
+                 rewrite /in_mem /= in mema *. generalize mema. move=> /orP=> {mema}mema.
+                 case mema=> [/eqP x|memta].
+                    - subst. apply Order.POrderTheory.lexx.
+                    - have legt : ((minimum <= a) == false = (minimum > a)). admit.
+                      have letrans: forall t0, t0 \in t -> minimum <= t0 -> a <= t0.
+                      move => p q. apply Order.POrderTheory.le_trans.
+                      generalize E. move=> /eqP E''. rewrite legt in E''. apply Order.POrderTheory.ltW. apply E''.
+                      generalize E. move=> /eqP E''. rewrite legt in E''.
+                      apply Order.POrderTheory.ltW in E''.
+
+                      eapply (Order.POrderTheory.le_trans E''). apply IHts. apply memta.
+             Admitted.
+
+      (* Lemma fold_minimum (T: porderType tt) (s: seq T) (x0 t:T) : foldl Order.min x0 s == t = all (Order.le t) s. *)
+
+    (* Lemma fold_min_or (T: porderType tt) (s: seq T) (x0 t minimum:T) *)
+    (*       (* (gtxt: x0 > t) *) *)
+    (*   : *)
+    (*   (foldl Order.min x0 (t :: s) == minimum) <-> (minimum == x0) || (minimum == t) || (minimum \in s). *)
+    (* Proof. rewrite /=. rewrite Order.POrderTheory.minEle. *)
+    (*        induction s as [| hd ts IHts]. *)
+    (*        + case: (x0 <= t); rewrite /=. *)
+    (*        - split. move=> /eqP ->. rewrite /=. rewrite eq_refl. done. rewrite minx0. apply l. by left. *)
+    (*        - right. left. *)
+    (*        - discriminate E. *)
+    (* Admitted. *)
+    
+
+           (* (* discriminate E. *) *)
+           (* (* eqn:E'. *) *)
+           (* - case (t <= t). *)
+           (*   + by left. *)
+           (*   + by right; left. *)
+           (* - case IHts=> H; *)
+           (*   case (x0 <= t). *)
+           (*   + left.  *)
+
+
+           (*   injection E'=> heq teq. subst. *)
+           (*   case IHts. destruct (x0 <= hd) eqn:E. apply IHts. *)
+           (*   + left. done. *)
+           (*   + right. left. done. *)
+           (* - destruct (x0 <= t) eqn:E. *)
+           (*   + rewrite /=. *)
+    (*   Proof. rewrite /=. rewrite Order.POrderTheory.minEle. destruct (x0 <= t) eqn:E. *)
+
+    Lemma foldl_op (g:rdf_graph I B L) l (x0:rdf_graph I B L) : foldl Order.min x0 l = x0 \/ foldl Order.min x0 l \in l.
+    Proof. induction l as [ | t ts IHts].
+           + by left.
+           + case IHts=> [minx0|intail] /=;
+                                       rewrite Order.POrderTheory.minEle.
+             Admitted.
+
+           (*   left. apply eqx0. *)
+
+           (*   rewrite /=. destruct (t ::ts) eqn:E'. *)
+           (* - discriminate E'. *)
+
+           (*   injection E' => tseq tsl0eq. subst. *)
+           (*   injection E'. *)
+
+
+
+           (*   rewrite !Order.POrderTheory.minEle. destruct (x0 <= t) eqn:E=> /=; *)
+           (*                                                                                        inversion IHts. *)
+           (* - left. apply H. *)
+           (* - right. apply inweak. apply H. *)
+           (* - (* contradiction *) *)
+           (*     left. admit. *)
+           (* - right. apply inweak.  *)
+           (* - left. rewrite E. apply IH'. *)
+           (* - right. apply inweak. apply IH'. *)
+           (*   - left. apply IH'. *)
+           (*   case: IHts=> H. *)
+
     Lemma inv_of_k_mapping g : exists mu, eqb_rdf (relabeling mu g) (k_mapping g).
     Proof.
     rewrite /k_mapping.
     have step0 l :
-      let res := foldl (fun g1 g2=> if g1.1 < g2.1 then g1 else g2) (mkRdfGraph [::],id) l in
-         res = (mkRdfGraph [::],id) \/ fst res \in map fst l.
+      let res := foldl Order.min (relabeling id g) l in
+      res = (relabeling id g) \/ res \in l.
+    elim l=> [//| t ts /= IHts]; first by left.
+    + rewrite Order.POrderTheory.minEle. generalize IHts; case: (relabeling id g <= t)=> IHts'.
+      case IHts=> H.
+      left; apply H.
+      right. apply inweak . apply H.
+      right.
+
        (* induction on l *) admit.
     have step1 : k_mapping_ g = ({| graph := [::] |}, id) \/
              (k_mapping g) \in map fst [seq (relabeling mu0 g, mu0)

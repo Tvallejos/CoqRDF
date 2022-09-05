@@ -609,20 +609,23 @@ Section IsoCan.
       let res := foldl Order.min (relabeling id g) l in
       res = (relabeling id g) \/ res \in l.
     elim l=> [//| t ts /= IHts]; first by left.
-    + rewrite Order.POrderTheory.minEle. generalize IHts; case: (relabeling id g <= t)=> IHts'.
-      case IHts=> H.
-      left; apply H.
-      right. apply inweak . apply H.
-      right.
+    + rewrite !relabeling_id in IHts *. rewrite Order.POrderTheory.minEle; generalize IHts; destruct (g <= t) eqn:E.
+      - case IHts=> H.
+        left; apply H.
+        right. apply inweak . apply H.
+      - case IHts=> H.
+        left. (* contradiction of E with IH *) admit.
+        right. (* contradiction of E with IH *) apply inweak. 
 
        (* induction on l *) admit.
-    have step1 : k_mapping_ g = ({| graph := [::] |}, id) \/
-             (k_mapping g) \in map fst [seq (relabeling mu0 g, mu0)
+    have step1 : k_mapping g = {| graph := [::] |} \/
+             (k_mapping g) \in [seq (relabeling mu0 g)
                  | mu0 <- [seq build_mapping_from_seq i | i <- permutations (ak_mapping g)]].
       (* instance of step0 *) admit.
     case: step1=> [e | hin].
-    - have -> : g = {| graph := [::] |}.
-        case: g e => [] [|  hd tl] //=.  admit. (* prove it early as a lemma by case on g *)
+      - have -> : g = {| graph := [::] |}.
+        admit.
+        (* case: g e => [] [|  hd tl] //=.  admit. (* prove it early as a lemma by case on g *) *)
       exists id. admit.
     - (* all elements in the sequence are of the form (relabeling mu0 g) .... Search _ all *)
       Search _ all map.

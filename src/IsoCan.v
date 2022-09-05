@@ -516,7 +516,7 @@ Section IsoCan.
     Qed.
 
     Lemma min_seq (T: porderType tt) (s: seq T) (hd:T) : exists minimum, forall t, t \in (hd::s) -> minimum <= t.
-      Proof. elim (hd::s)=> [//| a t [minimum IHts]].
+      Proof. elim: (hd::s) => [//| a t [minimum IHts]].
              + by exists hd=> t memt; rewrite in_nil in memt.
                     + destruct (minimum <= a) eqn:E.
                       (* minimum is min*)
@@ -540,45 +540,16 @@ Section IsoCan.
                       eapply (Order.POrderTheory.le_trans E''). apply IHts. apply memta.
              Admitted.
 
-      (* Lemma fold_minimum (T: porderType tt) (s: seq T) (x0 t:T) : foldl Order.min x0 s == t = all (Order.le t) s. *)
-
-    (* Lemma fold_min_or (T: porderType tt) (s: seq T) (x0 t minimum:T) *)
-    (*       (* (gtxt: x0 > t) *) *)
-    (*   : *)
-    (*   (foldl Order.min x0 (t :: s) == minimum) <-> (minimum == x0) || (minimum == t) || (minimum \in s). *)
-    (* Proof. rewrite /=. rewrite Order.POrderTheory.minEle. *)
-    (*        induction s as [| hd ts IHts]. *)
-    (*        + case: (x0 <= t); rewrite /=. *)
-    (*        - split. move=> /eqP ->. rewrite /=. rewrite eq_refl. done. rewrite minx0. apply l. by left. *)
-    (*        - right. left. *)
-    (*        - discriminate E. *)
-    (* Admitted. *)
-    
-
-           (* (* discriminate E. *) *)
-           (* (* eqn:E'. *) *)
-           (* - case (t <= t). *)
-           (*   + by left. *)
-           (*   + by right; left. *)
-           (* - case IHts=> H; *)
-           (*   case (x0 <= t). *)
-           (*   + left.  *)
-
-
-           (*   injection E'=> heq teq. subst. *)
-           (*   case IHts. destruct (x0 <= hd) eqn:E. apply IHts. *)
-           (*   + left. done. *)
-           (*   + right. left. done. *)
-           (* - destruct (x0 <= t) eqn:E. *)
-           (*   + rewrite /=. *)
-    (*   Proof. rewrite /=. rewrite Order.POrderTheory.minEle. destruct (x0 <= t) eqn:E. *)
-
-    Lemma foldl_op (g:rdf_graph I B L) l (x0:rdf_graph I B L) : foldl Order.min x0 l = x0 \/ foldl Order.min x0 l \in l.
-    Proof. induction l as [ | t ts IHts].
+    Lemma foldl_op (T:porderType tt) l (x0 : T) : foldl Order.min x0 l = x0 \/ foldl Order.min x0 l \in l.
+    Proof. elim: l x0 => [ | t ts IHts] x0 /=.
            + by left.
-           + case IHts=> [minx0|intail] /=;
-                                       rewrite Order.POrderTheory.minEle.
-             Admitted.
+           + case: (IHts (Order.min x0 t))=> [->|intail] /=.
+           - rewrite Order.POrderTheory.minEle; case: ifP=> _.
+             * by left.
+             * by right; rewrite in_cons eqxx. 
+           - by right; rewrite in_cons intail orbT.
+    Qed.
+
 
            (*   left. apply eqx0. *)
 
@@ -641,7 +612,7 @@ Section IsoCan.
            (* Proof. rewrite /oget_bnode => f trm. case trm=> /= [ i | l | name] idf. *)
            (*        + exists id. rewrite idf. by []. left. by []. *)
            (*        + exists id. rewrite idf. by []. right. by []. *)
-           
+
 
            (* Hypothesis perfectHashingSchemeTriple : injective hashTriple. *)
 

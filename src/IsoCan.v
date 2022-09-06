@@ -515,94 +515,68 @@ Section IsoCan.
            by move=> ->.
     Qed.
 
-    Lemma min_seq (T: porderType tt) (s: seq T) (hd:T) : exists minimum, forall t, t \in (hd::s) -> minimum <= t.
-      Proof. elim: (hd::s) => [//| a t [minimum IHts]].
-             + by exists hd=> t memt; rewrite in_nil in memt.
-                    + destruct (minimum <= a) eqn:E.
-                      (* minimum is min*)
-               * exists minimum=> a0 mema. 
-                 rewrite /in_mem /= in mema *. generalize mema. move=> /orP=> {mema}mema.
-                 case mema.
-                    - move=> /eqP x. subst. rewrite E. done.
-                    - move=> memta. apply IHts. apply memta.
-                      (* a in min*)
-               * exists a=> a0 mema.
-                 rewrite /in_mem /= in mema *. generalize mema. move=> /orP=> {mema}mema.
-                 case mema=> [/eqP x|memta].
-                    - subst. apply Order.POrderTheory.lexx.
-                    - have legt : ((minimum <= a) == false = (minimum > a)). admit.
-                      have letrans: forall t0, t0 \in t -> minimum <= t0 -> a <= t0.
-                      move => p q. apply Order.POrderTheory.le_trans.
-                      generalize E. move=> /eqP E''. rewrite legt in E''. apply Order.POrderTheory.ltW. apply E''.
-                      generalize E. move=> /eqP E''. rewrite legt in E''.
-                      apply Order.POrderTheory.ltW in E''.
+    Lemma min_seq (disp : unit) (T: porderType disp) (s: seq T) (hd:T) : exists minimum, forall t, t \in (hd::s) -> minimum <= t.
+    Proof. elim: (hd::s) => [| a t [minimum IHts]];
+                          first by exists hd=> t; rewrite in_nil.
+                                     (* why does not apply done in the last of the second case? *)
+                                     case: (minimum <= a); [exists minimum | exists a]=> a0; rewrite in_cons; case: orP; last done.
+                                     - move=> [/eqP -> | ain] _.
+                                     (* minimum is min*)
+                                     + admit. (* goal is what I shoud be true in this case *)
+                                     + apply: IHts ain.
+                                       (* a in min*)
+                                       * done. move=> [/eqP -> | ain] _.
+                                     - exact: Order.POrderTheory.lexx.
+                                     - have legt : ((minimum <= a) == false = ((minimum > a) == true)). admit.  
+                                       eapply (Order.POrderTheory.le_trans).
+                                       (* by rewriting legt on the evidence of the case *)
+                                       admit.
+                                       apply: IHts ain.
+    Admitted.
 
-                      eapply (Order.POrderTheory.le_trans E''). apply IHts. apply memta.
-             Admitted.
-
-    Lemma foldl_op (T:porderType tt) l (x0 : T) : foldl Order.min x0 l = x0 \/ foldl Order.min x0 l \in l.
+    Lemma foldl_op (disp: unit) (T: porderType disp) (l: seq T) (x0 : T) : foldl Order.min x0 l = x0 \/ foldl Order.min x0 l \in l.
     Proof. elim: l x0 => [ | t ts IHts] x0 /=.
            + by left.
            + case: (IHts (Order.min x0 t))=> [->|intail] /=.
            - rewrite Order.POrderTheory.minEle; case: ifP=> _.
              * by left.
-             * by right; rewrite in_cons eqxx. 
+             * by right; rewrite in_cons eqxx.
            - by right; rewrite in_cons intail orbT.
     Qed.
 
-
-           (*   left. apply eqx0. *)
-
-           (*   rewrite /=. destruct (t ::ts) eqn:E'. *)
-           (* - discriminate E'. *)
-
-           (*   injection E' => tseq tsl0eq. subst. *)
-           (*   injection E'. *)
-
-
-
-           (*   rewrite !Order.POrderTheory.minEle. destruct (x0 <= t) eqn:E=> /=; *)
-           (*                                                                                        inversion IHts. *)
-           (* - left. apply H. *)
-           (* - right. apply inweak. apply H. *)
-           (* - (* contradiction *) *)
-           (*     left. admit. *)
-           (* - right. apply inweak.  *)
-           (* - left. rewrite E. apply IH'. *)
-           (* - right. apply inweak. apply IH'. *)
-           (*   - left. apply IH'. *)
-           (*   case: IHts=> H. *)
-
     Lemma inv_of_k_mapping g : exists mu, eqb_rdf (relabeling mu g) (k_mapping g).
     Proof.
-    rewrite /k_mapping.
-    have step0 l :
-      let res := foldl Order.min (relabeling id g) l in
-      res = (relabeling id g) \/ res \in l.
-    elim l=> [//| t ts /= IHts]; first by left.
-    + rewrite !relabeling_id in IHts *. rewrite Order.POrderTheory.minEle; generalize IHts; destruct (g <= t) eqn:E.
-      - case IHts=> H.
-        left; apply H.
-        right. apply inweak . apply H.
-      - case IHts=> H.
-        left. (* contradiction of E with IH *) admit.
-        right. (* contradiction of E with IH *) apply inweak. 
+      rewrite /k_mapping relabeling_id.
+      have step0 l :
+        let res := foldl Order.min g l in
+        res = g \/ res \in l.
+      apply foldl_op.
+      have step1 : k_mapping g = g \/
+                     (k_mapping g) \in [seq (relabeling mu0 g)
+                                       | mu0 <- [seq build_mapping_from_seq i | i <- permutations (ak_mapping g)]].
+      rewrite /k_mapping relabeling_id; apply: step0.
+      case: step1=> [e | hin].
+      have -> : (foldl Order.min g
+                      [seq relabeling mu0 g
+                      | mu0 <- [seq build_mapping_from_seq i | i <- permutations (ak_mapping g)]]) = k_mapping g.
+      by rewrite /k_mapping relabeling_id.
+      - rewrite e. exists id. rewrite relabeling_id; apply eqb_rdf_refl. 
+      (* case: g e => [] [|  hd tl] //=.  admit. (* prove it early as a lemma by case on g *) *)
+      - (* all elements in the sequence are of the form (relabeling mu0 g) .... Search _ all *)
+        move: hin.
+        elim g => gs. elim: gs => [//| t ts IHts ].
+        (* if I try to do elim:g I get this Error: Cannot find the elimination combinator rdf_graph_ind, the elimination of the inductive *)
+        (* definition rdf_graph on sort Prop is probably not allowed. *)
+        (* just elim works fine *)
+        + by exists id; rewrite /build_mapping_from_seq !relabeling_empty /= relabeling_id Order.POrderTheory.minEle Order.POrderTheory.lexx eqb_rdf_refl.
+               (* + move => hin. *)
+               (*   exists id. rewrite /eqb_rdf /=. apply /eqP. *)
+               (*   elim  *)
+               (*                [seq relabeling mu {| graph := t :: ts |} *)
+               (*                | mu <- [seq build_mapping_from_seq i | i <- permutations (ak_mapping {| graph := t :: ts |})]]=> gfold; elim: gfold=> [| a as' IHas]. *)
+                 admit.
 
-       (* induction on l *) admit.
-    have step1 : k_mapping g = {| graph := [::] |} \/
-             (k_mapping g) \in [seq (relabeling mu0 g)
-                 | mu0 <- [seq build_mapping_from_seq i | i <- permutations (ak_mapping g)]].
-      (* instance of step0 *) admit.
-    case: step1=> [e | hin].
-      - have -> : g = {| graph := [::] |}.
-        admit.
-        (* case: g e => [] [|  hd tl] //=.  admit. (* prove it early as a lemma by case on g *) *)
-      exists id. admit.
-    - (* all elements in the sequence are of the form (relabeling mu0 g) .... Search _ all *)
-      Search _ all map.
-      Search _ (_ \in _) map. 
-      move: hin.
-      elim g=> gs; elim gs => [//| t ts IHts ]. Admitted.
+    Admitted.
 
 
            (* Definition oget_bnode (t : term I B L) : option B := *)

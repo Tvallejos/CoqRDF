@@ -82,6 +82,9 @@ Section Rdf.
       Lemma relabeling_ext  (μ1 μ2 : B -> B') g :  μ1 =1 μ2 -> relabeling μ1 g = relabeling μ2 g.
       Proof. by move=> μpweq; rewrite /relabeling (relabeling_seq_triple_ext _ μpweq). Qed.
 
+      Lemma relabeling_empty B1 B2 (μ: B1 -> B2) : relabeling μ {| graph := [::] |} = {| graph := [::] |}.
+      Proof. by f_equal. Qed.
+
     End Relabeling_graph.
   End PolyRdf.
 
@@ -206,25 +209,46 @@ Section Rdf.
 
   End Relabeling_alt.
 
-  Section CountRdf.
-    Variables I B L : countType.
+  Section CodeRdf.
+
+    Variables (I B L : Type).
+
     Implicit Type g : rdf_graph I B L.
 
+    Definition code_rdf g : (seq (triple I B L))%type :=
+      graph g.
 
-    Definition code_rdf g := graph g.
-    Definition decode_rdf (ts : seq (triple I B L)) := mkRdfGraph ts.
+    Definition decode_rdf (s: seq (triple I B L)) : (rdf_graph I B L) :=
+      (mkRdfGraph s).
 
-    Lemma cancel_rdf_encode : cancel code_rdf decode_rdf.
+    Lemma pcancel_code_decode : cancel code_rdf decode_rdf.
     Proof. by case. Qed.
+  End CodeRdf.
 
-    Definition rdf_canChoiceMixin := CanChoiceMixin cancel_rdf_encode.
-    Definition rdf_canCountMixin := CanCountMixin cancel_rdf_encode.
 
-    Canonical rdf_choiceType := Eval hnf in ChoiceType (rdf_graph I B L) rdf_canChoiceMixin.
-    Canonical rdf_countType := Eval hnf in CountType (rdf_graph I B L) rdf_canCountMixin.
 
-    Definition rdf_canPOrderMixin := PcanPOrderMixin (@pickleK rdf_countType).
-    Canonical rdf_POrderType := Eval hnf in POrderType tt (rdf_graph I B L) rdf_canPOrderMixin.
+    (* Definition code_rdf g := graph g. *)
+    (* Definition decode_rdf (ts : seq (triple I B L)) := mkRdfGraph ts. *)
+
+    (* Lemma cancel_rdf_encode : cancel code_rdf decode_rdf. *)
+  (* Proof. by case. Qed. *)
+
+
+    Definition rdf_canChoiceMixin' (I B L : choiceType) := CanChoiceMixin (@pcancel_code_decode I B L).
+    Definition rdf_canCountMixin' (I B L : countType):= CanCountMixin (@pcancel_code_decode I B L).
+
+    (* Definition rdf_canChoiceMixin := CanChoiceMixin cancel_rdf_encode. *)
+    (* Definition rdf_canCountMixin := CanCountMixin cancel_rdf_encode. *)
+
+    Canonical rdf_choiceType (I B L: choiceType):= Eval hnf in ChoiceType (rdf_graph I B L) (@rdf_canChoiceMixin' I B L).
+    Canonical rdf_countType (I B L: countType):= Eval hnf in CountType (rdf_graph I B L) (@rdf_canCountMixin' I B L).
+
+    Definition rdf_canPOrderMixin (I B L: countType):= PcanPOrderMixin (@pickleK (rdf_countType I B L)).
+    Canonical rdf_POrderType (I B L: countType):= Eval hnf in POrderType tt (rdf_graph I B L) (@rdf_canPOrderMixin I B L).
+
+    Section CountRdf.
+    Variables I B L : countType.
+    Implicit Type g : rdf_graph I B L.
 
     (* assia : this requires rewriting relabeling function(. cf error message
 The term "g1" has type "rdf_graph I B L" while it is expected to have type

@@ -30,7 +30,6 @@ Section PolyTriple.
   Variables I B L : Type.
   Implicit Type t : triple I B L.
 
-
   (* I don't need eqType to know if triple is ground
      but if I B L are not *)
   Definition is_ground_triple t : bool:=

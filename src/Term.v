@@ -42,6 +42,20 @@ Definition is_in_ib (I B L : Type) (trm : term I B L) : bool :=
 Definition is_in_i (I B L : Type) (trm : term I B L) : bool :=
   is_iri trm.
 
+Definition iri_from_i (I B L : Type) (i:I) : term I B L:= @Iri I B L i.
+Definition bnode_from_b (I B L : Type) (b:B) : term I B L:= @Bnode I B L b.
+Definition lit_from_l (I B L : Type) (l:L) : term I B L:= @Lit I B L l.
+
+Remark i_in_ib (I B L:Type) (i : I) : is_in_ib (@iri_from_i I B L i).
+Proof. done. Defined.
+
+Remark b_in_ib (I B L:Type) (b : B) : is_in_ib (@bnode_from_b I B L b).
+Proof. done. Defined.
+
+Remark i_in_i (I B L:Type) (i : I) : is_in_i (@iri_from_i I B L i).
+Proof. done. Defined.
+
+
 (* Definition is_in_ibl (I B L : Type) (trm : term I B L) : bool := *)
 (*   is_iri trm || is_bnode trm || is_lit trm. *)
 
@@ -84,11 +98,11 @@ Section Poly.
 
   Lemma relabeling_term_preserves_is_in_ib (μ : B1 -> B2) (trm : term I B1 L) :
     is_in_ib  trm <-> is_in_ib (relabeling_term μ trm).
-  Proof. by case: trm. Qed.
+  Proof. by case: trm. Defined.
 
   Lemma relabeling_term_preserves_is_in_i (μ : B1 -> B2) (trm : term I B1 L) :
     is_in_i trm <-> is_in_i (relabeling_term μ trm).
-  Proof. by case: trm. Qed.
+  Proof. by case: trm. Defined.
 
   Lemma relabeling_term_ext (μ1 μ2 : B1 -> B2) :
     μ1 =1 μ2 -> relabeling_term μ1 =1 relabeling_term μ2.

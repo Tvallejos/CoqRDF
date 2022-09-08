@@ -24,10 +24,9 @@ Section Rdf.
       all (@is_ground_triple _ _ _) g.
 
     (* assumes shared identifier scope *)
-    Definition merge_rdf_graph g1 g2 : rdf_graph I B L.
-    Proof.
-    Admitted.
-
+    Definition merge_rdf_graph g1 g2 : rdf_graph I B L:=
+      mkRdfGraph (g1 ++ g2).
+    
     Definition merge_seq_rdf_graph (gs : seq (rdf_graph I B L)) : rdf_graph I B L :=
       foldr merge_rdf_graph empty_rdf_graph gs.
 

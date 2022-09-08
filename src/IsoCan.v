@@ -432,6 +432,8 @@ Section IsoCan.
 
     Definition k_mapping (g : rdf_graph I B L) : rdf_graph I B L :=
       let all_maps := permutations (ak_mapping g) in
+        (* map (mapi (app_n mark_bnode')) (permutations (bnodes (init_hash g))) in *)
+                        (* (ak_mapping g) in *)
       let mus := map build_mapping_from_seq all_maps in
       let isocans := map (fun mu => relabeling mu g) mus in
       foldl Order.min (relabeling id g) isocans.
@@ -534,6 +536,28 @@ Section IsoCan.
                                        apply: IHts ain.
     Admitted.
 
+
+    Lemma the_μ g :
+      exists f,
+      [seq relabeling mu0 g
+            | mu0 <- [seq build_mapping_from_seq i
+                    | i <- permutations (ak_mapping g)]] =
+
+        map f [seq build_mapping_from_seq i
+                                                                | i <- permutations (ak_mapping g)].
+    Proof. rewrite /= /ak_mapping. elim g=> gs; elim: gs=> [| a t IHts].
+           - by exists (fun g=> relabeling g (mkRdfGraph [::])).
+                  - admit.
+    Admitted.
+
+
+    Lemma syntax_f (T U: eqType) (s:seq T) (f: T -> U): forall (u:U), u \in map f s -> exists t, u = (f t).
+    Proof. elim : s => [| a t IHts] u /=; first by rewrite in_nil.
+           rewrite in_cons. case: orP=> [[/eqP -> | y]|] _; last by done.
+           - by exists a.
+                  - apply: IHts; apply y.
+    Qed.
+
     Lemma foldl_op (disp: unit) (T: porderType disp) (l: seq T) (x0 : T) : foldl Order.min x0 l = x0 \/ foldl Order.min x0 l \in l.
     Proof. elim: l x0 => [ | t ts IHts] x0 /=.
            + by left.
@@ -560,16 +584,39 @@ Section IsoCan.
                       [seq relabeling mu0 g
                       | mu0 <- [seq build_mapping_from_seq i | i <- permutations (ak_mapping g)]]) = k_mapping g.
       by rewrite /k_mapping relabeling_id.
-      - rewrite e. exists id. rewrite relabeling_id; apply eqb_rdf_refl. 
+      - rewrite e; exists id; rewrite relabeling_id; apply eqb_rdf_refl. 
       (* case: g e => [] [|  hd tl] //=.  admit. (* prove it early as a lemma by case on g *) *)
       - (* all elements in the sequence are of the form (relabeling mu0 g) .... Search _ all *)
         move: hin.
-        elim g => gs. elim: gs => [//| t ts IHts ].
+        have hinrelabel g' : g' \in [seq relabeling mu0 g
+                                    | mu0 <- [seq build_mapping_from_seq i | i <- permutations (ak_mapping g)]] -> exists g1, exists μ, g' = relabeling μ g1.
+        (* admit. *)
+        (* apply syntax_f. *)
+        elim g=> gs; elim: gs=> [| a as' IHas] /=.
+      - rewrite relabeling_empty in_cons in_nil.
+        case: orP.
+        + move=> [].
+        + move=> /eqP -> _. exists {| graph := [::] |}. exists (fun t=> b0). exact : relabeling_empty.
+        + done.
+        + done.
+        + rewrite /ak_mapping/init_hash.
+          case a=> s p o /= sib pii.
+          admit.
+
+
+        (*   ([seq relabeling mu0 g *)
+        (*        | mu0 <- [seq build_mapping_from_seq i | i <- permutations (ak_mapping g)]])=> [|a as' IHas]; first by rewrite in_nil. *)
+        (* rewrite in_cons. *)
+
+        elim g => gs; elim: gs=> [| t ts IHts ] /=.
         (* if I try to do elim:g I get this Error: Cannot find the elimination combinator rdf_graph_ind, the elimination of the inductive *)
         (* definition rdf_graph on sort Prop is probably not allowed. *)
         (* just elim works fine *)
-        + by exists id; rewrite /build_mapping_from_seq !relabeling_empty /= relabeling_id Order.POrderTheory.minEle Order.POrderTheory.lexx eqb_rdf_refl.
-               (* + move => hin. *)
+        + by exists id; rewrite /build_mapping_from_seq /= relabeling_id Order.POrderTheory.minEle Order.POrderTheory.lexx eqb_rdf_refl.
+               + move=> hin.
+               (*   apply hin in hinrelabel. *)
+           
+               (* * + move => hin. *) 
                (*   exists id. rewrite /eqb_rdf /=. apply /eqP. *)
                (*   elim  *)
                (*                [seq relabeling mu {| graph := t :: ts |} *)

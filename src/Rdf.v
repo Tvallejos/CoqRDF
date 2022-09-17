@@ -11,7 +11,6 @@ Section Rdf.
                                         graph :> seq (triple I B L) ;
                                       }.
 
-
   Section PolyRdf.
     Variables I B L : Type.
     Implicit Type g : rdf_graph I B L.
@@ -81,8 +80,12 @@ Section Rdf.
       Lemma relabeling_ext  (μ1 μ2 : B -> B') g :  μ1 =1 μ2 -> relabeling μ1 g = relabeling μ2 g.
       Proof. by move=> μpweq; rewrite /relabeling (relabeling_seq_triple_ext _ μpweq). Qed.
 
-      Lemma relabeling_empty B1 B2 (μ: B1 -> B2) : relabeling μ {| graph := [::] |} = {| graph := [::] |}.
-      Proof. by f_equal. Qed.
+      Lemma relabeling_nil B1 B2 (μ: B1 -> B2) : relabeling μ {| graph := [::] |} = {| graph := [::] |}.
+      Proof. by []. Qed.
+
+      Lemma relabeling_cons B1 B2 (μ: B1 -> B2) (trpl : triple I B1 L) (ts : seq (triple I B1 L)) :
+        relabeling μ {| graph := trpl :: ts |} = {| graph := relabeling_triple μ trpl :: (relabeling_seq_triple μ ts) |}.
+      Proof. by []. Qed.
 
     End Relabeling_graph.
   End PolyRdf.
@@ -118,12 +121,66 @@ Section Rdf.
     (* Print SetDef.finset. *)
     (* (* requieres trm to be finType *) *)
     (* Fail Check finset (trm \in g). *)
+    Lemma inweak (T: eqType) (l:seq T) t u : t \in l -> t \in (u::l).
+    Proof. by rewrite -!has_pred1 /has; case (pred1 t u)=> [//| -> ]. 
+    Qed.
+
+    Definition undup_in (T : eqType) (t : T) (s : seq T) :
+      t \in s -> t \in undup s.
+    Proof. elim: s=> [//| h hs IHts].
+           + rewrite in_cons. case orP; last by [].
+             case=> [ /eqP <- | ih] _.
+           - destruct (t \in hs) eqn:E; rewrite /undup E.
+             * by apply IHts.
+             * by rewrite mem_head.
+           - destruct (h \in hs) eqn:E;rewrite /undup E.
+             apply: IHts ih.
+             apply: inweak. apply: IHts ih.
+    Qed.
+
+    Definition undup_idem (T : eqType) (s : seq T) :
+      undup (undup s) = undup s.
+    Proof. elim: s=> [//| t ts IHts] /=.
+           destruct (t \in ts) eqn:E.
+           + apply IHts.
+           + have h: (t \in (undup ts) = false).
+             by rewrite -E; apply mem_undup.
+             by rewrite /= h IHts.
+    Qed.
+             
 
     Definition terms g : seq (term I B L) :=
       undup (flatten (map (@terms_triple I B L) g)).
 
+    Definition undup_cat (T: eqType) (s q : seq T) :
+      undup (s ++ undup q) = undup (s ++ q).
+    Proof.
+      elim: s=> [//| aq qs IHqs] /=.
+      + apply undup_idem.
+      + destruct (aq \in qs) eqn:E; rewrite !mem_cat E /=.
+      - apply IHqs.
+      - destruct (aq \in q) eqn:E2.
+        have -> : (aq \in undup q) = true. rewrite -E2; apply mem_undup.
+        apply IHqs.
+        have -> : (aq \in undup q) = false. rewrite -E2; apply mem_undup.
+        rewrite IHqs; done.
+    Qed.
+
+    Definition terms_cons (trpl : triple I B L) (ts : seq (triple I B L)) :
+      terms (mkRdfGraph (trpl :: ts)) = undup (terms_triple trpl ++ (terms (mkRdfGraph ts))).
+    Proof. by rewrite /terms; case: ts=>  [ // | ? ? ] ; rewrite undup_cat. Qed.
+
     Definition bnodes g : seq (term I B L) :=
       undup (filter (@is_bnode _ _ _) (terms g)).
+
+    Lemma bnodes_cons (trpl : triple I B L) (ts : seq (triple I B L)) :
+        bnodes {| graph := trpl :: ts |} = undup ((bnodes_triple trpl) ++ (bnodes {| graph := ts |})).
+    Proof.
+           elim: ts trpl => [| h ts' IHts]=> trpl; rewrite /bnodes/bnodes_triple.
+           + by rewrite /terms /= !cats0 filter_undup undup_idem.
+           + by rewrite terms_cons filter_undup undup_idem undup_cat filter_cat.
+    Qed.
+
 
     Lemma ground_no_bnodes g : size(bnodes g) = 0 <-> is_ground g.
     Proof. split=> [sizeO|groundg].

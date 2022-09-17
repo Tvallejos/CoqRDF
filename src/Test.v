@@ -63,9 +63,9 @@ Section test.
   Definition isocans := map (fun mu => relabeling mu (mkRdfGraph [:: trpl3 ])) mus.
   Time Compute isocans.
 
-  Compute (Order.min g g).
-  Eval lazy in (Order.min g g).
-  Eval vm_compute in (Order.min g g).
+  (* Compute (Order.min g g). *)
+  (* Eval lazy in (Order.min g g). *)
+  (* Eval vm_compute in (Order.min g g). *)
 
 
 

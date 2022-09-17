@@ -431,8 +431,9 @@ Section IsoCan.
       mapi (app_n mark_bnode') bns.
 
     Definition k_mapping (g : rdf_graph I B L) : rdf_graph I B L :=
-      let all_maps := permutations (ak_mapping g) in
-        (* map (mapi (app_n mark_bnode')) (permutations (bnodes (init_hash g))) in *)
+      let all_maps :=
+        (* permutations (ak_mapping g) in *)
+        map (mapi (app_n mark_bnode')) (permutations (bnodes (init_hash g))) in
                         (* (ak_mapping g) in *)
       let mus := map build_mapping_from_seq all_maps in
       let isocans := map (fun mu => relabeling mu g) mus in
@@ -512,11 +513,6 @@ Section IsoCan.
     exact: eqb_rdf_refl.
     Qed.
 
-    Lemma inweak (T: eqType) (l:seq T) t u : t \in l -> t \in (u::l).
-    Proof. rewrite -!has_pred1 /has. case (pred1 t u); first done.
-           by move=> ->.
-    Qed.
-
     Lemma min_seq (disp : unit) (T: porderType disp) (s: seq T) (hd:T) : exists minimum, forall t, t \in (hd::s) -> minimum <= t.
     Proof. elim: (hd::s) => [| a t [minimum IHts]];
                           first by exists hd=> t; rewrite in_nil.
@@ -551,7 +547,8 @@ Section IsoCan.
     Admitted.
 
 
-    Lemma syntax_f (T U: eqType) (s:seq T) (f: T -> U): forall (u:U), u \in map f s -> exists t, u = (f t).
+    Lemma syntax_f (T U: eqType) (s:seq T) (f: T -> U):
+      forall (u: U), u \in map f s -> exists t, u = (f t).
     Proof. elim : s => [| a t IHts] u /=; first by rewrite in_nil.
            rewrite in_cons. case: orP=> [[/eqP -> | y]|] _; last by done.
            - by exists a.
@@ -568,6 +565,9 @@ Section IsoCan.
            - by right; rewrite in_cons intail orbT.
     Qed.
 
+    (* Lemma fold_map g : g' = foldl Order.min g [seq relabeling mu0 g *)
+
+
     Lemma inv_of_k_mapping g : exists mu, eqb_rdf (relabeling mu g) (k_mapping g).
     Proof.
       rewrite /k_mapping relabeling_id.
@@ -576,31 +576,54 @@ Section IsoCan.
         res = g \/ res \in l.
       apply foldl_op.
       have step1 : k_mapping g = g \/
-                     (k_mapping g) \in [seq (relabeling mu0 g)
-                                       | mu0 <- [seq build_mapping_from_seq i | i <- permutations (ak_mapping g)]].
+                     (k_mapping g) \in [seq relabeling mu0 g
+            | mu0 <- [seq build_mapping_from_seq i
+                        | i <- [seq mapi (app_n mark_bnode') i
+                                  | i <- permutations
+                                           (bnodes (init_hash g))]]].
       rewrite /k_mapping relabeling_id; apply: step0.
       case: step1=> [e | hin].
-      have -> : (foldl Order.min g
-                      [seq relabeling mu0 g
-                      | mu0 <- [seq build_mapping_from_seq i | i <- permutations (ak_mapping g)]]) = k_mapping g.
+      have -> :
+         (foldl Order.min g
+         [seq relabeling mu0 g
+            | mu0 <- [seq build_mapping_from_seq i
+                        | i <- [seq mapi (app_n mark_bnode') i
+                                  | i <- permutations
+                                           (bnodes (init_hash g))]]]) = (k_mapping g).
       by rewrite /k_mapping relabeling_id.
       - rewrite e; exists id; rewrite relabeling_id; apply eqb_rdf_refl. 
       (* case: g e => [] [|  hd tl] //=.  admit. (* prove it early as a lemma by case on g *) *)
       - (* all elements in the sequence are of the form (relabeling mu0 g) .... Search _ all *)
         move: hin.
-        have hinrelabel g' : g' \in [seq relabeling mu0 g
-                                    | mu0 <- [seq build_mapping_from_seq i | i <- permutations (ak_mapping g)]] -> exists g1, exists μ, g' = relabeling μ g1.
+        have hinrelabel g' : g' \in  [seq relabeling mu0 g
+                 | mu0 <- [seq build_mapping_from_seq i
+                             | i <- [seq mapi (app_n mark_bnode') i
+                                       | i <- permutations
+                                               (bnodes (init_hash g))]]]
+                             -> exists g1, exists (μ : B -> B), g' = relabeling μ g1.
         (* admit. *)
-        (* apply syntax_f. *)
+        (* eapply syntax_f. *)
+        (* () *)
+          (* elim: ([seq build_mapping_from_seq i *)
+          (*                     | i <- [seq mapi (app_n mark_bnode') i *)
+          (*                               | i <- permutations (bnodes *)
+          (*                                      (init_hash g))]])=> *)
+          (*       [|m ms IHM] /=. *)
+          (* * by rewrite in_nil. *)
+        (*  *)
         elim g=> gs; elim: gs=> [| a as' IHas] /=.
-      - rewrite relabeling_empty in_cons in_nil.
+      - rewrite relabeling_nil in_cons in_nil.
         case: orP.
         + move=> [].
-        + move=> /eqP -> _. exists {| graph := [::] |}. exists (fun t=> b0). exact : relabeling_empty.
-        + done.
+          -+ move=> /eqP -> _. exists {| graph := [::] |}. exists (fun t=> b0). exact : relabeling_nil.
+          -+ done.
         + done.
         + rewrite /ak_mapping/init_hash.
-          case a=> s p o /= sib pii.
+          (* case: a=> s p o /=. case: s; case: p; case o=> sx px ox sib pii /=; *)
+          (*                                              try done. *)
+          (* -- rewrite relabeling_cons /=. move=> sib pii. *)
+
+          (* rewrite relabeling_cons /bnodes. *)
           admit.
 
 

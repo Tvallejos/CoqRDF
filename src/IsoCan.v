@@ -475,13 +475,23 @@ Section IsoCan.
     (*        rewrite /terms/terms_triple. case trpl=> s p o sib pi. case s. *)
 
     Lemma singleton_g_is_fine (g: hgraph) : size (bnodes g) = 1%N -> is_fine (mkPartition g).
-    Proof. rewrite /mkPartition/is_fine. case g=> /= g'. 
-           elim g'=> [//| hd t ih] /= => singleton.
+    Proof.
+      case g=> /= g'.
+      elim g'=> [//| hd t ih] . rewrite bnodes_cons/bnodes_triple/terms_triple /=.
+      (* case hd=>  *)
+
            (* injection singleton as tsize. *)
            (* apply size_0_nil in tsize. rewrite tsize /=. *)
-           case hd=> s p o ? ? /=. rewrite /bnodes/terms/terms_triple /=.
-           (* case (s \in [:: p;o]) => /=.  *)
-           (* case s. case p. case o=> /=. *)
+      rewrite /mkPartition/is_fine.
+      case hd=> s p o /= sib pii.
+      rewrite !in_cons !in_nil.
+      case: s sib; case: p pii; case o => x y pii z sib/=. case: (z == y); case: (z == x); case: (y == x) => /=. 
+      case: ifP.
+
+       
+           
+
+
     Abort.
 
     (* Lemma  *)
@@ -595,12 +605,8 @@ Section IsoCan.
       (* case: g e => [] [|  hd tl] //=.  admit. (* prove it early as a lemma by case on g *) *)
       - (* all elements in the sequence are of the form (relabeling mu0 g) .... Search _ all *)
         move: hin.
-        have hinrelabel g' : g' \in  [seq relabeling mu0 g
-                 | mu0 <- [seq build_mapping_from_seq i
-                             | i <- [seq mapi (app_n mark_bnode') i
-                                       | i <- permutations
-                                               (bnodes (init_hash g))]]]
-                             -> exists g1, exists (μ : B -> B), g' = relabeling μ g1.
+        have hinrelabel g' : g' \in [seq relabeling mu0 g
+                                      | mu0 <- [seq build_mapping_from_seq i | i <- permutations (ak_mapping g)]] -> exists g1, exists (μ : B -> B), g' = relabeling μ g1.
         (* admit. *)
         (* eapply syntax_f. *)
         (* () *)
@@ -612,18 +618,10 @@ Section IsoCan.
           (* * by rewrite in_nil. *)
         (*  *)
         elim g=> gs; elim: gs=> [| a as' IHas] /=.
-      - rewrite relabeling_nil in_cons in_nil.
-        case: orP.
-        + move=> [].
-          -+ move=> /eqP -> _. exists {| graph := [::] |}. exists (fun t=> b0). exact : relabeling_nil.
-          -+ done.
-        + done.
-        + rewrite /ak_mapping/init_hash.
-          (* case: a=> s p o /=. case: s; case: p; case o=> sx px ox sib pii /=; *)
-          (*                                              try done. *)
-          (* -- rewrite relabeling_cons /=. move=> sib pii. *)
-
-          (* rewrite relabeling_cons /bnodes. *)
+        rewrite /relabeling /= mem_seq1=> /eqP ->. 
+        exists (empty_rdf_graph I B L); exists id; rewrite relabeling_seq_triple_id; done.
+        + rewrite /ak_mapping/init_hash relabeling_cons bnodes_cons /mapi.
+          case a=> s p o /= sib pii.
           admit.
 
 

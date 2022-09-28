@@ -116,6 +116,10 @@ Section IsoCan.
         | _,_ => false
         end.
 
+      Lemma eq_hash_refl b : is_bnode b -> eq_hash b b.
+      Proof. rewrite /eq_hash /lookup_hash => isb. case: b isb; rewrite //.
+             Qed.
+
       (* change for finset *)
       Fixpoint partitionate (f : hterm -> bool) (s : seq hterm) : seq hterm * seq hterm :=
         match s with
@@ -474,7 +478,52 @@ Section IsoCan.
     (* Proof. rewrite /mkPartition/bnodes. case g => g'. case g' => [// | [s p o sib pi] tl] => /= singleton.  *)
     (*        rewrite /terms/terms_triple. case trpl=> s p o sib pi. case s. *)
 
-    Lemma singleton_g_is_fine (g: hgraph) : size (bnodes g) = 1%N -> is_fine (mkPartition g).
+    Remark undup_bnodes (g : hgraph) : undup (bnodes g) = bnodes g.
+    Proof. by rewrite /bnodes undup_idem. Qed.
+
+    Lemma all_bnodes (I' B' L' : eqType) (g : rdf_graph I' B' L') : all (@is_bnode I' B' L') (bnodes g).
+      case: g=> g'; elim: g' => [//| t ts IHts].
+      rewrite bnodes_cons. apply all_undup. case t=> s p o.
+      case s; case p; case o; rewrite //;
+      rewrite /bnodes_triple /terms_triple=> ? ? ? ? ?;
+                                              rewrite filter_undup /=; last by case: ifP.
+      all: try apply IHts.
+    Qed.
+
+    Lemma b_in_bnode_is_bnode (b : hterm) g : b \in bnodes g -> is_bnode b.
+      move=> binbnodes. admit. Admitted.
+
+    (* Lemma bnodes_idem g : (bnodes g) = (bnodes g). *)
+     
+
+    Lemma sing_fine (g : hgraph) (b : hterm): bnodes g = [:: b] -> is_fine (mkPartition g).
+    Proof.
+      case: g b=> g'; elim: g'=> [//| t ts IHts].
+      rewrite bnodes_cons. 
+      case t=> s p o; case s; case p; case o=> //.
+      rewrite /bnodes_triple/terms_triple=> id id0 id1.
+      have ->: [seq x <- undup [:: Iri id1; Iri id0; Iri id] | is_bnode x] = [::]. move=> ? ?. by rewrite filter_undup.
+      rewrite /= => ? ? b singl. rewrite /is_fine.
+      (* rewrite /bnodes filter_undup !undup_idem in singl. *)
+      (* rewrite /bnodes in IHts. *)
+      rewrite undup_bnodes in singl. 
+      rewrite /mkPartition bnodes_cons singl /bnodes_triple filter_undup /=.
+      have bin: b \in bnodes {| graph := ts |}.
+      rewrite singl in_cons. case: orP.
+      + done.
+      + rewrite eq_refl in_nil; case; by left.
+        have test: is_bnode b.
+        rewrite -all_seq1 -singl. apply all_bnodes.
+        rewrite eq_hash_refl.
+        rewrite /lookup_hash.
+        case: b bin singl test; done.
+        apply test.
+    Admitted.
+    (* TODO *)
+
+
+
+      Lemma singleton_g_is_fine (g: hgraph) : size (bnodes g) = 1%N -> is_fine (mkPartition g).
     Proof.
       case g=> /= g'.
       elim g'=> [//| hd t ih] . rewrite bnodes_cons/bnodes_triple/terms_triple /=.
@@ -484,9 +533,9 @@ Section IsoCan.
            (* apply size_0_nil in tsize. rewrite tsize /=. *)
       rewrite /mkPartition/is_fine.
       case hd=> s p o /= sib pii.
-      rewrite !in_cons !in_nil.
-      case: s sib; case: p pii; case o => x y pii z sib/=. case: (z == y); case: (z == x); case: (y == x) => /=. 
-      case: ifP.
+    rewrite !in_cons !in_nil.
+      case: s sib; case: p pii; case o=> // x y pii z sib. case: (z == y); case: (z == x); case: (y == x) => /=.
+      (* case: ifP. *)
 
        
            
@@ -530,7 +579,7 @@ Section IsoCan.
                                      case: (minimum <= a); [exists minimum | exists a]=> a0; rewrite in_cons; case: orP; last done.
                                      - move=> [/eqP -> | ain] _.
                                      (* minimum is min*)
-                                     + admit. (* goal is what I shoud be true in this case *)
+                                     + admit. (* goal is what shoud be true in this case *)
                                      + apply: IHts ain.
                                        (* a in min*)
                                        * done. move=> [/eqP -> | ain] _.

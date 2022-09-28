@@ -495,32 +495,37 @@ Section IsoCan.
 
     (* Lemma bnodes_idem g : (bnodes g) = (bnodes g). *)
      
+    Lemma seq1_empty_seq (A : Type) (hd:A) d s : hd :: s = [:: d] -> s = [::].
+    Proof. by case s. Qed.
 
-    Lemma sing_fine (g : hgraph) (b : hterm): bnodes g = [:: b] -> is_fine (mkPartition g).
-    Proof.
-      case: g b=> g'; elim: g'=> [//| t ts IHts].
-      rewrite bnodes_cons. 
-      case t=> s p o; case s; case p; case o=> //.
-      rewrite /bnodes_triple/terms_triple=> id id0 id1.
-      have ->: [seq x <- undup [:: Iri id1; Iri id0; Iri id] | is_bnode x] = [::]. move=> ? ?. by rewrite filter_undup.
-      rewrite /= => ? ? b singl. rewrite /is_fine.
-      (* rewrite /bnodes filter_undup !undup_idem in singl. *)
-      (* rewrite /bnodes in IHts. *)
-      rewrite undup_bnodes in singl. 
-      rewrite /mkPartition bnodes_cons singl /bnodes_triple filter_undup /=.
-      have bin: b \in bnodes {| graph := ts |}.
-      rewrite singl in_cons. case: orP.
-      + done.
-      + rewrite eq_refl in_nil; case; by left.
-        have test: is_bnode b.
-        rewrite -all_seq1 -singl. apply all_bnodes.
-        rewrite eq_hash_refl.
-        rewrite /lookup_hash.
-        case: b bin singl test; done.
-        apply test.
-    Admitted.
+    Lemma no_bnodes_same_partition t ts : bnodes_triple t = [::] -> is_fine (mkPartition {| graph := ts |}) -> is_fine (mkPartition {| graph := t :: ts |}).
+      Proof. by rewrite /mkPartition bnodes_cons /bnodes => -> /=; rewrite undup_idem. Qed.
+
+      Lemma sing_fine (g : hgraph) (b : hterm): bnodes g = [:: b] -> is_fine (mkPartition g).
+      Proof.
+        case: g b=> g'; elim: g'=> [//| t ts IHts].
+        rewrite bnodes_cons. 
+        case t=> s p o; case s; case p; case o=> //; rewrite /bnodes_triple/terms_triple => id id0 id1 ? ? b;
+                                                                                            rewrite filter_undup ?undup_idem => /= singl.
+        + apply no_bnodes_same_partition. by rewrite /bnodes_triple filter_undup. apply (IHts b singl).
+        + apply no_bnodes_same_partition. by rewrite /bnodes_triple filter_undup. apply (IHts b singl).
+          (* =============== *)
+          rewrite /undup_idem.
+          rewrite /mkPartition /bnodes_triple /=.
+          have bnodes_def : undup [seq x <- terms {| graph := ts |} | is_bnode x] = bnodes {| graph := ts |}. by [].
+          destruct (Bnode id \in bnodes {| graph := ts |}) eqn:E.
+          rewrite /mkPartition /bnodes_triple /=.
+          rewrite E undup_bnodes in singl.
+          have isbb: is_bnode b. admit.
+          rewrite bnodes_cons singl /bnodes_triple filter_undup /= -singl E singl /= (eq_hash_refl isbb) /= /lookup_hash.
+          by case: b isbb singl.
+          rewrite E in singl. 
+          have H2: bnodes {| graph := ts |} = [::]. apply seq1_empty_seq in singl. rewrite undup_bnodes in singl. exact: singl. 
+          rewrite bnodes_cons /bnodes_triple/terms_triple filter_undup /= H2 in_nil /=.
+          by rewrite eq_hash_refl.  
+
+      Admitted.
     (* TODO *)
-
 
 
       Lemma singleton_g_is_fine (g: hgraph) : size (bnodes g) = 1%N -> is_fine (mkPartition g).
@@ -537,8 +542,6 @@ Section IsoCan.
       case: s sib; case: p pii; case o=> // x y pii z sib. case: (z == y); case: (z == x); case: (y == x) => /=.
       (* case: ifP. *)
 
-       
-           
 
 
     Abort.

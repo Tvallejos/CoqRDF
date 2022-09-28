@@ -491,10 +491,10 @@ Section IsoCan.
     Qed.
 
     Lemma b_in_bnode_is_bnode (b : hterm) g : b \in bnodes g -> is_bnode b.
-      move=> binbnodes. admit. Admitted.
+    Proof. rewrite /bnodes=> H. rewrite -filter_undup mem_filter in H.
+           by case: (is_bnode b) H.
+    Qed.
 
-    (* Lemma bnodes_idem g : (bnodes g) = (bnodes g). *)
-     
     Lemma seq1_empty_seq (A : Type) (hd:A) d s : hd :: s = [:: d] -> s = [::].
     Proof. by case s. Qed.
 
@@ -509,6 +509,7 @@ Section IsoCan.
                                                                                             rewrite filter_undup ?undup_idem => /= singl.
         + apply no_bnodes_same_partition. by rewrite /bnodes_triple filter_undup. apply (IHts b singl).
         + apply no_bnodes_same_partition. by rewrite /bnodes_triple filter_undup. apply (IHts b singl).
+
           (* =============== *)
           rewrite /undup_idem.
           rewrite /mkPartition /bnodes_triple /=.
@@ -516,16 +517,80 @@ Section IsoCan.
           destruct (Bnode id \in bnodes {| graph := ts |}) eqn:E.
           rewrite /mkPartition /bnodes_triple /=.
           rewrite E undup_bnodes in singl.
-          have isbb: is_bnode b. admit.
+          have binb: b \in bnodes {| graph := ts |}.
+          by rewrite singl in_cons in_nil eq_refl.
+          have isbb: is_bnode b. apply (b_in_bnode_is_bnode binb). 
           rewrite bnodes_cons singl /bnodes_triple filter_undup /= -singl E singl /= (eq_hash_refl isbb) /= /lookup_hash.
-          by case: b isbb singl.
+          by case: b isbb singl binb.
           rewrite E in singl. 
           have H2: bnodes {| graph := ts |} = [::]. apply seq1_empty_seq in singl. rewrite undup_bnodes in singl. exact: singl. 
           rewrite bnodes_cons /bnodes_triple/terms_triple filter_undup /= H2 in_nil /=.
-          by rewrite eq_hash_refl.  
+          by rewrite eq_hash_refl.
+          (* =============== *)
 
-      Admitted.
-    (* TODO *)
+          destruct (Bnode id1 \in bnodes {| graph := ts |}) eqn:E; rewrite E in singl
+          ; rewrite /mkPartition bnodes_cons /bnodes_triple filter_undup /= E singl /=.
+          have binb: b \in bnodes {| graph := ts |}.
+          by rewrite -undup_bnodes singl in_cons in_nil eq_refl.
+          have isbb: is_bnode b. apply (b_in_bnode_is_bnode binb). 
+          have bnodes_def : undup [seq x <- terms {| graph := ts |} | is_bnode x] = bnodes {| graph := ts |}. by [].
+          rewrite eq_hash_refl /= /lookup_hash.
+          by case: b isbb singl binb.
+          exact: isbb.
+          injection singl=> _ <-.
+          by rewrite eq_hash_refl.
+
+          (* =============== *)
+
+          destruct (Bnode id1 \in bnodes {| graph := ts |}) eqn:E; rewrite E in singl
+          ; rewrite /mkPartition bnodes_cons /bnodes_triple filter_undup /= E singl /=.
+          have binb: b \in bnodes {| graph := ts |}.
+          by rewrite -undup_bnodes singl in_cons in_nil eq_refl.
+          have isbb: is_bnode b. apply (b_in_bnode_is_bnode binb). 
+          have bnodes_def : undup [seq x <- terms {| graph := ts |} | is_bnode x] = bnodes {| graph := ts |}. by [].
+          rewrite eq_hash_refl /= /lookup_hash.
+          by case: b isbb singl binb.
+          exact: isbb.
+          injection singl=> _ <-.
+          by rewrite eq_hash_refl.
+
+          (* =============== *)
+          destruct (Bnode id1 \in ([:: Bnode id]:(seq hterm))) eqn:E; rewrite E /= in singl;           destruct (Bnode id \in bnodes {| graph := ts |}) eqn:E2;  rewrite E2 in singl.
+          have binb: b \in bnodes {| graph := ts |}.
+          by rewrite -undup_bnodes singl in_cons in_nil eq_refl.
+          have isbb: is_bnode b. apply (b_in_bnode_is_bnode binb). 
+          have bnodes_def : undup [seq x <- terms {| graph := ts |} | is_bnode x] = bnodes {| graph := ts |}. by [].
+          rewrite /mkPartition bnodes_cons /bnodes_triple filter_undup /= E /= E2 /= singl /= (eq_hash_refl isbb) /= /lookup_hash. 
+          by case: b singl isbb binb.
+          rewrite /mkPartition bnodes_cons /bnodes_triple filter_undup /= E /= E2.
+          injection singl=> -> -> /=.
+          have isbb: is_bnode b. by injection singl=> _ <-. 
+          have bnodes_def : undup [seq x <- terms {| graph := ts |} | is_bnode x] = bnodes {| graph := ts |}. by [].
+          rewrite (eq_hash_refl isbb) /= /lookup_hash.
+          by case: b singl isbb.
+          rewrite /mkPartition bnodes_cons /bnodes_triple filter_undup /= E /= E2.
+          rewrite in_cons in_nil Bool.orb_false_r in E.
+          rewrite in_cons E /=.
+          rewrite in_cons E /= in singl.
+          destruct (Bnode id1 \in bnodes {| graph := ts |}) eqn:E3; rewrite E3 in singl.
+          have binb: b \in bnodes {| graph := ts |}.
+          by rewrite -undup_bnodes singl in_cons in_nil eq_refl.
+          have isbb: is_bnode b. apply (b_in_bnode_is_bnode binb).
+          rewrite E3 singl /= (eq_hash_refl isbb) /=.
+          by case: b singl isbb binb.
+          rewrite E3.
+          injection singl=> -> /= _. by rewrite eq_hash_refl.
+          rewrite in_cons in_nil Bool.orb_false_r in E.
+          rewrite in_cons E /= in singl.
+          destruct (Bnode id1 \in bnodes {| graph := ts |}) eqn:E3; rewrite E3 in singl.
+          rewrite /mkPartition bnodes_cons /= /bnodes_triple filter_undup /= in_cons E in_nil /=.
+          injection singl=> tail bid. rewrite bid in E *.
+          rewrite in_cons E /= E3 undup_bnodes. rewrite undup_bnodes in tail.
+          by rewrite tail /= -bid eq_hash_refl.
+          injection singl=> contr. discriminate contr.
+          Qed.
+
+    (* TODO refactor *)
 
 
       Lemma singleton_g_is_fine (g: hgraph) : size (bnodes g) = 1%N -> is_fine (mkPartition g).

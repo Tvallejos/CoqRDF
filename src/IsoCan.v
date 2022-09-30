@@ -597,11 +597,12 @@ Section IsoCan.
     Lemma min_seq (disp : unit) (T: porderType disp) (s: seq T) (hd:T) : exists minimum, forall t, t \in (hd::s) -> minimum <= t.
     Proof. elim: (hd::s) => [| a t [minimum IHts]];
                             first by exists hd=> t; rewrite in_nil.
-                                            case: (minimum <= a); [exists minimum | exists a]=> a0; rewrite in_cons; case/orP.
-                                            - move=> /eqP ->. (* what I cased, goal is what shoud be true in this case *) admit.
+                                            case e: (minimum <= a); [exists minimum | exists a]=> a0; rewrite in_cons; case/orP.
+                                            - move=> /eqP ->. exact: e.
                                             - move=> ain. apply: IHts ain.
                                             - move=> /eqP ->; apply Order.POrderTheory.lexx.
-                                            - have legt : ((minimum <= a) == false = ((minimum > a) == true)). admit.
+                                            - have legt : ((minimum <= a) == false = ((minimum > a) == true)).
+                                              admit.
                                               move=> ain. eapply (Order.POrderTheory.le_trans).
                                               (* by rewriting legt on the evidence of the case *)
                                                admit.

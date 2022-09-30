@@ -25,7 +25,7 @@ Section Rdf.
     (* assumes shared identifier scope *)
     Definition merge_rdf_graph g1 g2 : rdf_graph I B L:=
       mkRdfGraph (g1 ++ g2).
-    
+
     Definition merge_seq_rdf_graph (gs : seq (rdf_graph I B L)) : rdf_graph I B L :=
       foldr merge_rdf_graph empty_rdf_graph gs.
 
@@ -147,7 +147,7 @@ Section Rdf.
              by rewrite -E; apply mem_undup.
              by rewrite /= h IHts.
     Qed.
-             
+
 
     Definition terms g : seq (term I B L) :=
       undup (flatten (map (@terms_triple I B L) g)).
@@ -213,7 +213,7 @@ Section Rdf.
       (bijective μ) 
 
       /\ eqb_rdf g1 (relabeling μ g2).
-    
+
     Definition iso g1 g2 := exists (μ : B -> B),
         is_iso g1 g2 μ.
 
@@ -356,7 +356,7 @@ The term "g1" has type "rdf_graph I B L" while it is expected to have type
 
 
 
-      
+
       Check b \in (bnodes g').
       Check enum bns.
       Check partition.

@@ -39,8 +39,8 @@ Section PolyTriple.
   Definition relabeling_triple B1 B2 (μ : B1 -> B2) (t : triple I B1 L) : triple I B2 L :=
     let (s, p, o, sin, pin) := t in
     mkTriple (relabeling_term μ o)
-             ((iffLR (relabeling_term_preserves_is_in_ib μ s)) sin)
-             ((iffLR (relabeling_term_preserves_is_in_i μ p)) pin).
+      ((iffLR (relabeling_term_preserves_is_in_ib μ s)) sin)
+      ((iffLR (relabeling_term_preserves_is_in_i μ p)) pin).
 
   Lemma relabeling_triple_id t : relabeling_triple id t = t.
   Proof. by case t => * /=; apply triple_inj; apply relabeling_term_id. Qed.
@@ -53,11 +53,11 @@ Section PolyTriple.
 
     Variable B1 : Type.
     Implicit Type μ : B -> B1.
-    
+
     Lemma relabeling_triple_preserves_is_in_ib μ t :
       is_in_ib (subject t) <-> is_in_ib (subject (relabeling_triple μ t)).
     Proof. by case t => s /= *; apply: relabeling_term_preserves_is_in_ib. Qed.
-    
+
     Lemma relabeling_triple_preserves_is_in_i μ t :
       is_in_i (predicate t) <-> is_in_i (predicate (relabeling_triple μ t)).
     Proof. by case t => ? p /= *; apply: relabeling_term_preserves_is_in_i. Qed.
@@ -159,12 +159,12 @@ Section OperationsOnTriples.
     admit.
     (* apply IHts. generalize eq. case (h \in t); first done. *)
     + admit.
-        
 
 
-    (* apply allp. [pa allt]. *)
-    (*      case: (h \in t); first apply: (IHts allt). *)
-    (*      + apply /andP; split; [ exact: pa | exact: (IHts allt)]. *)
+
+      (* apply allp. [pa allt]. *)
+      (*      case: (h \in t); first apply: (IHts allt). *)
+      (*      + apply /andP; split; [ exact: pa | exact: (IHts allt)]. *)
   Admitted.
 
   Lemma all_undup' (T : eqType) (s : seq T) p : all p (undup s) <-> all p s. split. apply undup_all. apply all_undup. Qed.
@@ -188,7 +188,7 @@ Section OperationsOnTriples.
   (* Lemma Obnodes_groundtriple_impl t : size (bnodes_triple t) == 0 <-> is_ground_triple t. *)
   (* Proof. rewrite sizeO_filter.  *)
   (*        rewrite /terms_triple. rewrite is_ground_not_bnode. *)
-         
+
   (*        (* rewrite /is_ground_triple. *) *)
   (*        case t=> s p o /= _ _. case: s p o. => //=. *)
   (*        + split=> sizeO. *)
@@ -208,8 +208,8 @@ Section OperationsOnTriples.
          rewrite /terms_triple.
          case t=> s p o /= _ _.
          have -> : (if s \in [:: p; o]
-     then if p \in [:: o] then [:: o] else [:: p; o]
-                   else s :: (if p \in [:: o] then [:: o] else [:: p; o])) = undup [:: s ; p ; o].
+                    then if p \in [:: o] then [:: o] else [:: p; o]
+                    else s :: (if p \in [:: o] then [:: o] else [:: p; o])) = undup [:: s ; p ; o].
          by [].
          (* rewrite is_ground_not_bnode. *)
          (* rewrite -all_filter. *)
@@ -219,40 +219,40 @@ Section OperationsOnTriples.
          (* rewrite filter_undup. *)
          (* rewrite -undup_all. *)
          rewrite all_undup''.
-         Admitted.
+  Admitted.
 
-    (*      all_undup. *)
-    (*      admit. *)
+  (*      all_undup. *)
+  (*      admit. *)
 
-    (*      case t=> s p o sib pii. *)
-    (*      rewrite filter_undup. *)
-    (*      (* rewrite /is_ground_triple. *) *)
-    (*      case t=> s p o sib pii. *)
+  (*      case t=> s p o sib pii. *)
+  (*      rewrite filter_undup. *)
+  (*      (* rewrite /is_ground_triple. *) *)
+  (*      case t=> s p o sib pii. *)
 
-    (*      rewrite filter_undup. *)
-    (*      rewrite all_undup. *)
-    (*      admit. *)
-    (*      rewrite filter_undup. *)
-    (*      rewrite -all_filter. filter_undup. case (is_bnode s); case (is_bnode p); case (is_bnode o); rewrite //=. *)
-    (*      rewrite -big_all. rewrite big[andb/true]. *)
-    (*      case s; case p; case o; rewrite //=. *)
-    (* (* inversion t. *) *)
-    (* rewrite /=. *)
+  (*      rewrite filter_undup. *)
+  (*      rewrite all_undup. *)
+  (*      admit. *)
+  (*      rewrite filter_undup. *)
+  (*      rewrite -all_filter. filter_undup. case (is_bnode s); case (is_bnode p); case (is_bnode o); rewrite //=. *)
+  (*      rewrite -big_all. rewrite big[andb/true]. *)
+  (*      case s; case p; case o; rewrite //=. *)
+  (* (* inversion t. *) *)
+  (* rewrite /=. *)
 
-    (* case t=> /= s p o sib pii. case s; case p; case o; rewrite // => x y z; rewrite sizeO_filter. *)
-    (* + by case: (Iri z \in [:: Iri y; Iri x]); case: (Iri y \in [:: Iri x]). *)
-    (*   + case: (z == y). *)
-
-
-    (*   split => [//| ground]. case ground. *)
+  (* case t=> /= s p o sib pii. case s; case p; case o; rewrite // => x y z; rewrite sizeO_filter. *)
+  (* + by case: (Iri z \in [:: Iri y; Iri x]); case: (Iri y \in [:: Iri x]). *)
+  (*   + case: (z == y). *)
 
 
-    (*   => [] [] []. inversion s. *)
-    (* split=> [sizeO|ground]. rewrite /is_ground_triple. inversion t. *)
-    (* case t=> s p o sib oibl. rewrite /bnodes_triple. *)
+  (*   split => [//| ground]. case ground. *)
 
-    (* case t=> split; inversion t => [sizeO]. case t. *)
-    (*      + *)
+
+  (*   => [] [] []. inversion s. *)
+  (* split=> [sizeO|ground]. rewrite /is_ground_triple. inversion t. *)
+  (* case t=> s p o sib oibl. rewrite /bnodes_triple. *)
+
+  (* case t=> split; inversion t => [sizeO]. case t. *)
+  (*      + *)
 
 
   Canonical triple_predType2 := PredType (pred_of_seq \o (bnodes_triple)).
@@ -270,9 +270,9 @@ Section OperationsOnTriples.
   (* Definition bnodes_triple t :[seq x <- terms_triple t | x is_bnode] := *)
   (*   undup (filter (@is_bnode _ _ _) (terms_triple t)). *)
 
-  
+
   Definition all_bnodes_triple_is_bnode t : all (@is_bnode I B L) (bnodes_triple t).
-  Proof. case t=> s p o; rewrite /bnodes_triple/terms_triple=> _ _. 
+  Proof. case t=> s p o; rewrite /bnodes_triple/terms_triple=> _ _.
          rewrite filter_undup all_undup. done.
          exact: filter_all.
   Qed.

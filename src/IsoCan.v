@@ -597,19 +597,14 @@ Section IsoCan.
     Lemma min_seq (disp : unit) (T: porderType disp) (s: seq T) (hd:T) : exists minimum, forall t, t \in (hd::s) -> minimum <= t.
     Proof. elim: (hd::s) => [| a t [minimum IHts]];
                             first by exists hd=> t; rewrite in_nil.
-                                            (* why does not apply done in the last of the second case? *)
-                                            case: (minimum <= a); [exists minimum | exists a]=> a0; rewrite in_cons; case: orP; last done.
-                                            - move=> [/eqP -> | ain] _.
-                                              (* minimum is min*)
-                                              + admit. (* goal is what shoud be true in this case *)
-                                              + apply: IHts ain.
-                                                (* a in min*)
-                                                * done. move=> [/eqP -> | ain] _.
-                                            - exact: Order.POrderTheory.lexx.
-                                            - have legt : ((minimum <= a) == false = ((minimum > a) == true)). admit.  
-                                              eapply (Order.POrderTheory.le_trans).
+                                            case: (minimum <= a); [exists minimum | exists a]=> a0; rewrite in_cons; case/orP.
+                                            - move=> /eqP ->. (* what I cased, goal is what shoud be true in this case *) admit.
+                                            - move=> ain. apply: IHts ain.
+                                            - move=> /eqP ->; apply Order.POrderTheory.lexx.
+                                            - have legt : ((minimum <= a) == false = ((minimum > a) == true)). admit.
+                                              move=> ain. eapply (Order.POrderTheory.le_trans).
                                               (* by rewriting legt on the evidence of the case *)
-                                              admit.
+                                               admit.
                                               apply: IHts ain.
     Admitted.
 

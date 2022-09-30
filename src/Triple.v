@@ -272,7 +272,16 @@ Section OperationsOnTriples.
 
   
   Definition all_bnodes_triple_is_bnode t : all (@is_bnode I B L) (bnodes_triple t).
-  Proof. Admitted.
+  Proof. case t=> s p o; rewrite /bnodes_triple/terms_triple=> _ _. 
+         rewrite filter_undup all_undup. done.
+         exact: filter_all.
+  Qed.
+
+  Definition all_bnodes_triple_is_bnode' t : all (@is_bnode I B L) (bnodes_triple t).
+  Proof. destruct t. unfold bnodes_triple. unfold terms_triple.
+         rewrite filter_undup. rewrite all_undup. reflexivity.
+         exact: filter_all.
+  Qed.
   (* rewrite /bnodes_triple -filter_undup; apply filter_all. Qed. *)
 
   Definition get_b_triple t : seq B.

@@ -539,19 +539,12 @@ Section IsoCan.
                             subject_in_IB := sib ;
                             predicate_in_I := pii
                           |}) = (if Bnode id1 \in [:: Bnode id] then [:: Bnode id] else [:: Bnode id1; Bnode id]). move=> ? ?. by rewrite /bnodes_triple /terms_triple filter_undup /=.
-
-
-          rewrite bnodes_cons
-            /bnodes_triple
-            filter_undup -b_def -bnodes_cons => singl.
+          rewrite bnodes_cons /bnodes_triple filter_undup -b_def -bnodes_cons => singl.
           rewrite /= -b_def -bnodes_cons singl.
-          have isbb: is_bnode b.
-          apply (b_in_bnode_is_bnode singl). rewrite /= (eq_hash_refl isbb). by case: b isbb singl.
+          have isbb: is_bnode b. by apply (b_in_bnode_is_bnode singl).
+          rewrite /= (eq_hash_refl isbb). by case: b isbb singl.
     Qed.
 
-    (* TODO refactor *)
-
-    (* Lemma  *)
     Lemma distinguish_preserves_isomorphism g : iso (justDistinguish g) g.
     Proof. 
       rewrite /iso/justDistinguish/isoCanonicalTemplate/is_iso.
@@ -563,9 +556,11 @@ Section IsoCan.
                     - 
                       (* need to build μ. and μ bij. *)
     Admitted.
-    
+
     Lemma empty_permutations (T:eqType) : @permutations T [::] = [:: [::]]. Proof. by []. Qed. 
+
     Lemma empty_ak_mapping : ak_mapping (mkRdfGraph [::]) = [::]. Proof. by []. Qed.
+
     Lemma inv_of_ak_mapping g : exists mu, eqb_rdf (relabeling mu g) (relabeling (build_mapping_from_seq (ak_mapping g)) g).
     Proof. by exists (build_mapping_from_seq (ak_mapping g)); apply eqb_rdf_refl. Qed.
 
@@ -609,93 +604,69 @@ Section IsoCan.
     Admitted.
 
 
-    Lemma syntax_f (T U: eqType) (s:seq T) (f: T -> U):
+    Lemma map_inv (T U: eqType) (s:seq T) (f: T -> U):
       forall (u: U), u \in map f s -> exists t, u = (f t).
     Proof. elim : s => [| a t IHts] u /=; first by rewrite in_nil.
-           rewrite in_cons. case: orP=> [[/eqP -> | y]|] _; last by done.
+           rewrite in_cons; case/orP => [/eqP -> | y].
            - by exists a.
-                       - apply: IHts; apply y.
+                  - by apply: IHts; apply y.
     Qed.
 
     Lemma foldl_op (disp: unit) (T: porderType disp) (l: seq T) (x0 : T) : foldl Order.min x0 l = x0 \/ foldl Order.min x0 l \in l.
     Proof. elim: l x0 => [ | t ts IHts] x0 /=.
            + by left.
-           + case: (IHts (Order.min x0 t))=> [->|intail] /=.
+           + rewrite in_cons; case: (IHts (Order.min x0 t))=> [ -> |intail] /=.
            - rewrite Order.POrderTheory.minEle; case: ifP=> _.
              * by left.
-             * by right; rewrite in_cons eqxx.
-           - by right; rewrite in_cons intail orbT.
+             * by right; rewrite eqxx.
+           - by right; rewrite intail orbT.
     Qed.
 
-    (* Lemma fold_map g : g' = foldl Order.min g [seq relabeling mu0 g *)
+    Lemma init_hash_nil : init_hash {| graph := [::] |} = {| graph := [::] |}. by []. Qed.
 
+    (* Lemma k_mapping  *)
+    Lemma k_mapping_cons_const x y z sib pii as' :
+      (k_mapping {| graph :=
+                     {|
+                       subject := Iri x;
+                       predicate := Iri y;
+                       object := Iri z;
+                       subject_in_IB := sib;
+                       predicate_in_I := pii
+                     |} :: as'
+                 |})
+      =
+       mkRdfGraph 
+           ({|
+             subject := Iri x;
+             predicate := Iri y;
+             object := Iri z;
+             subject_in_IB := sib;
+             predicate_in_I := pii
+             |} :: (k_mapping {| graph:= as' |})).
+      Proof. rewrite /k_mapping /init_hash relabeling_cons relabeling_id relabeling_triple_id. Admitted.
 
     Lemma inv_of_k_mapping g : exists mu, eqb_rdf (relabeling mu g) (k_mapping g).
     Proof.
-      rewrite /k_mapping relabeling_id.
-      have step0 l :
-        let res := foldl Order.min g l in
-        res = g \/ res \in l.
-      apply foldl_op.
       have step1 : k_mapping g = g \/
                      (k_mapping g) \in [seq relabeling mu0 g
                                        | mu0 <- [seq build_mapping_from_seq i
                                                 | i <- [seq mapi (app_n mark_bnode') i
                                                        | i <- permutations
                                                                 (bnodes (init_hash g))]]].
-      rewrite /k_mapping relabeling_id; apply: step0.
-      case: step1=> [e | hin].
-      have -> :
-        (foldl Order.min g
-           [seq relabeling mu0 g
-           | mu0 <- [seq build_mapping_from_seq i
-                    | i <- [seq mapi (app_n mark_bnode') i
-                           | i <- permutations
-                                    (bnodes (init_hash g))]]]) = (k_mapping g).
-      by rewrite /k_mapping relabeling_id.
-      - rewrite e; exists id; rewrite relabeling_id; apply eqb_rdf_refl. 
+      rewrite /k_mapping relabeling_id; apply: foldl_op.
+      case: step1=> [ -> | in_tail ].
+      - exists id; rewrite relabeling_id; apply eqb_rdf_refl.
       (* case: g e => [] [|  hd tl] //=.  admit. (* prove it early as a lemma by case on g *) *)
       - (* all elements in the sequence are of the form (relabeling mu0 g) .... Search _ all *)
-        move: hin.
-        have hinrelabel g' : g' \in [seq relabeling mu0 g
-                                    | mu0 <- [seq build_mapping_from_seq i | i <- permutations (ak_mapping g)]] -> exists g1, exists (μ : B -> B), g' = relabeling μ g1.
-        (* admit. *)
-        (* eapply syntax_f. *)
-        (* () *)
-        (* elim: ([seq build_mapping_from_seq i *)
-        (*                     | i <- [seq mapi (app_n mark_bnode') i *)
-        (*                               | i <- permutations (bnodes *)
-        (*                                      (init_hash g))]])=> *)
-        (*       [|m ms IHM] /=. *)
-        (* * by rewrite in_nil. *)
-        (*  *)
         elim g=> gs; elim: gs=> [| a as' IHas] /=.
-        rewrite /relabeling /= mem_seq1=> /eqP ->. 
-        exists (empty_rdf_graph I B L); exists id; rewrite relabeling_seq_triple_id; done.
-        + rewrite /ak_mapping/init_hash relabeling_cons bnodes_cons /mapi.
-          case a=> s p o /= sib pii.
-          admit.
-
-
-          (*   ([seq relabeling mu0 g *)
-          (*        | mu0 <- [seq build_mapping_from_seq i | i <- permutations (ak_mapping g)]])=> [|a as' IHas]; first by rewrite in_nil. *)
-          (* rewrite in_cons. *)
-
-          elim g => gs; elim: gs=> [| t ts IHts ] /=.
-        (* if I try to do elim:g I get this Error: Cannot find the elimination combinator rdf_graph_ind, the elimination of the inductive *)
-        (* definition rdf_graph on sort Prop is probably not allowed. *)
-        (* just elim works fine *)
-        + by exists id; rewrite /build_mapping_from_seq /= relabeling_id Order.POrderTheory.minEle Order.POrderTheory.lexx eqb_rdf_refl.
-                    + move=> hin.
-                      (*   apply hin in hinrelabel. *)
-                      
-                      (* * + move => hin. *) 
-                      (*   exists id. rewrite /eqb_rdf /=. apply /eqP. *)
-                      (*   elim  *)
-                      (*                [seq relabeling mu {| graph := t :: ts |} *)
-                      (*                | mu <- [seq build_mapping_from_seq i | i <- permutations (ak_mapping {| graph := t :: ts |})]]=> gfold; elim: gfold=> [| a as' IHas]. *)
-                      admit.
-
+        + by exists id; rewrite /k_mapping /build_mapping_from_seq /=
+                   Order.POrderTheory.minEle Order.POrderTheory.lexx eqb_rdf_refl.
+        +     admit.
+             (* WIP *)
+             (* + case: a=> s p o; case: s; case: p; case: o=> // x y z sib pii. *)
+             (*   - case: IHas=> [mu eqb]. *)
+             (*     exists mu. rewrite relabeling_cons /=. *)
     Admitted.
 
 

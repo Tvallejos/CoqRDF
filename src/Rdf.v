@@ -152,7 +152,7 @@ Section Rdf.
     Definition terms g : seq (term I B L) :=
       undup (flatten (map (@terms_triple I B L) g)).
 
-    Definition undup_cat (T: eqType) (s q : seq T) :
+    Definition undup_cat_r (T: eqType) (s q : seq T) :
       undup (s ++ undup q) = undup (s ++ q).
     Proof.
       elim: s=> [//| aq qs IHqs] /=.
@@ -166,9 +166,18 @@ Section Rdf.
         rewrite IHqs; done.
     Qed.
 
+    Definition undup_cat_l (T: eqType) (s q : seq T) :
+      undup (undup s ++ q) = undup (s ++ q).
+    Proof.
+      elim: s=> [//| aq qs IHqs]; rewrite (undup_cat (aq :: qs)) /=.
+      case e: (aq \in qs).
+      + by rewrite IHqs undup_cat.
+        by rewrite undup_cat -cat1s undup_cat_r !cat1s {1}/undup e.
+    Qed.
+
     Definition terms_cons (trpl : triple I B L) (ts : seq (triple I B L)) :
       terms (mkRdfGraph (trpl :: ts)) = undup (terms_triple trpl ++ (terms (mkRdfGraph ts))).
-    Proof. by rewrite /terms; case: ts=>  [ // | ? ? ] ; rewrite undup_cat. Qed.
+    Proof. by rewrite /terms; case: ts=>  [ // | ? ? ] ; rewrite undup_cat_r. Qed.
 
     Definition bnodes g : seq (term I B L) :=
       undup (filter (@is_bnode _ _ _) (terms g)).
@@ -178,14 +187,32 @@ Section Rdf.
     Proof.
            elim: ts trpl => [| h ts' IHts]=> trpl; rewrite /bnodes/bnodes_triple.
            + by rewrite /terms /= !cats0 filter_undup undup_idem.
-           + by rewrite terms_cons filter_undup undup_idem undup_cat filter_cat.
+           + by rewrite terms_cons filter_undup undup_idem undup_cat_r filter_cat.
     Qed.
 
-
-    Lemma ground_no_bnodes g : size(bnodes g) = 0 <-> is_ground g.
-    Proof. split=> [sizeO|groundg].
-           + rewrite /is_ground.
-           Admitted.
+    Lemma ground_no_bnodes g : bnodes g = [::] <-> is_ground g.
+    Proof. split=> [|].
+           + rewrite /is_ground /bnodes. elim g=> g'; elim: g' => [| a t IHts]; first by rewrite all_nil.
+             rewrite -filter_undup. case a=> s p o; case: s; case: p; case o=> // x y z sib pii;
+                                                                             rewrite terms_cons undup_cat_l undup_idem  filter_undup /=.
+           - exact: IHts.
+           - exact: IHts.
+           - case e: (Bnode x \in [seq x <- terms {| graph := t |} | is_bnode x]) => contr; last by done.
+             by apply undup_nil in contr; rewrite contr in_nil in e.
+           -
+             case e: (Bnode z \in [seq x <- terms {| graph := t |} | is_bnode x]) => contr; last by done.
+             apply undup_nil in contr. rewrite contr in_nil in e. done. 
+           - case e: (Bnode z \in [seq x <- terms {| graph := t |} | is_bnode x]) => contr; last by done.
+             apply undup_nil in contr. rewrite contr in_nil in e. done.
+           - case e: (Bnode x \in [seq x <- terms {| graph := t |} | is_bnode x]);
+               case e2: (Bnode z \in Bnode x :: [seq x <- terms {| graph := t |} | is_bnode x])=> contr; try done; first by apply undup_nil in contr; rewrite contr in_nil in e.
+             + rewrite /is_ground /bnodes /terms. elim g=> g'; elim g'=> [//| h t IHts].
+               move=> /= /andP [groundT allT]. apply IHts in allT. apply undup_nil in allT.
+               rewrite undup_cat filter_cat allT cats0.
+               rewrite -!filter_undup undup_idem !filter_undup -filter_predI.
+               case: h groundT=> s p o; case: s; case: p; case: o=> // ? ? ? ? ?;
+                     by rewrite /terms_triple filter_undup.
+    Qed.
 
     Definition get_b g : seq B.
     Proof. case g=> g'. elim g' => [| t ts ihts].

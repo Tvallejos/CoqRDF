@@ -2,7 +2,7 @@ From mathcomp Require Import all_ssreflect fingraph.
 Set Implicit Arguments.
 Unset Strict Implicit.
 Unset Printing Implicit Defensive.
-From RDF Require Export Rdf Triple Term.
+From RDF Require Export Rdf Triple Term Util.
 
 Section HashedData.
 
@@ -557,8 +557,6 @@ Section IsoCan.
                       (* need to build μ. and μ bij. *)
     Admitted.
 
-    Lemma empty_permutations (T:eqType) : @permutations T [::] = [:: [::]]. Proof. by []. Qed. 
-
     Lemma empty_ak_mapping : ak_mapping (mkRdfGraph [::]) = [::]. Proof. by []. Qed.
 
     Lemma inv_of_ak_mapping g : exists mu, eqb_rdf (relabeling mu g) (relabeling (build_mapping_from_seq (ak_mapping g)) g).
@@ -603,50 +601,32 @@ Section IsoCan.
                        - admit.
     Admitted.
 
-
-    Lemma map_inv (T U: eqType) (s:seq T) (f: T -> U):
-      forall (u: U), u \in map f s -> exists t, u = (f t).
-    Proof. elim : s => [| a t IHts] u /=; first by rewrite in_nil.
-           rewrite in_cons; case/orP => [/eqP -> | y].
-           - by exists a.
-                  - by apply: IHts; apply y.
-    Qed.
-
-    Lemma foldl_op (disp: unit) (T: porderType disp) (l: seq T) (x0 : T) : foldl Order.min x0 l = x0 \/ foldl Order.min x0 l \in l.
-    Proof. elim: l x0 => [ | t ts IHts] x0 /=.
-           + by left.
-           + rewrite in_cons; case: (IHts (Order.min x0 t))=> [ -> |intail] /=.
-           - rewrite Order.POrderTheory.minEle; case: ifP=> _.
-             * by left.
-             * by right; rewrite eqxx.
-           - by right; rewrite intail orbT.
-    Qed.
-
     Lemma init_hash_nil : init_hash {| graph := [::] |} = {| graph := [::] |}. by []. Qed.
 
     (* Lemma k_mapping  *)
     Lemma k_mapping_cons_const x y z sib pii as' :
+      is_ground_term x -> is_ground_term y -> is_ground_term z ->
       (k_mapping {| graph :=
                      {|
-                       subject := Iri x;
-                       predicate := Iri y;
-                       object := Iri z;
+                       subject := x;
+                       predicate := y;
+                       object := z;
                        subject_in_IB := sib;
                        predicate_in_I := pii
                      |} :: as'
                  |})
       =
-       mkRdfGraph 
-           ({|
-             subject := Iri x;
-             predicate := Iri y;
-             object := Iri z;
-             subject_in_IB := sib;
-             predicate_in_I := pii
-             |} :: (k_mapping {| graph:= as' |})).
-      Proof. rewrite /k_mapping /init_hash relabeling_cons relabeling_id relabeling_triple_id. Admitted.
+        mkRdfGraph 
+          ({|
+              subject := x;
+              predicate :=  y;
+              object := z;
+              subject_in_IB := sib;
+              predicate_in_I := pii
+            |} :: (k_mapping {| graph:= as' |})).
+    Proof. rewrite /k_mapping /init_hash relabeling_cons relabeling_id relabeling_triple_id. Admitted.
 
-    Lemma inv_of_k_mapping g : exists mu, eqb_rdf (relabeling mu g) (k_mapping g).
+    Lemma inv_of_k_mapping g : exists mu, (relabeling mu g) == (k_mapping g).
     Proof.
       have step1 : k_mapping g = g \/
                      (k_mapping g) \in [seq relabeling mu0 g
@@ -659,25 +639,21 @@ Section IsoCan.
       - exists id; rewrite relabeling_id; apply eqb_rdf_refl.
       (* case: g e => [] [|  hd tl] //=.  admit. (* prove it early as a lemma by case on g *) *)
       - (* all elements in the sequence are of the form (relabeling mu0 g) .... Search _ all *)
-        elim g=> gs; elim: gs=> [| a as' IHas] /=.
+        elim g=> gs; elim: gs=> [| a as' [mu eqb]] /=.
         + by exists id; rewrite /k_mapping /build_mapping_from_seq /=
-                   Order.POrderTheory.minEle Order.POrderTheory.lexx eqb_rdf_refl.
-        +     admit.
-             (* WIP *)
-             (* + case: a=> s p o; case: s; case: p; case: o=> // x y z sib pii. *)
-             (*   - case: IHas=> [mu eqb]. *)
-             (*     exists mu. rewrite relabeling_cons /=. *)
+                          Order.POrderTheory.minEle Order.POrderTheory.lexx eq_refl.
+                    + case: a=> s p o; case: s; case: p; case: o=> // x y z sib pii.
+                      -- exists mu. rewrite k_mapping_cons_const=> //; rewrite relabeling_cons /=.
+                         apply /eqP; f_equal; f_equal.
+                      * by apply triple_inj.
+                      * by rewrite -(eqP eqb).
+                        -- exists mu. rewrite k_mapping_cons_const=> //; rewrite relabeling_cons /=.
+                           apply /eqP; f_equal; f_equal.
+                      * by apply triple_inj.
+                      * by rewrite -(eqP eqb).
+                        --
+
     Admitted.
-
-
-    (* Definition oget_bnode (t : term I B L) : option B := *)
-    (*   if t is Bnode b then Some b else None. *)
-    (* Lemma foo_term : forall f trm, *)
-    (*     ((is_iri trm \/ is_lit trm) -> f trm = trm) -> exists mu, oget_bnode (f trm) = omap mu (oget_bnode trm). *)
-    (* Proof. rewrite /oget_bnode => f trm. case trm=> /= [ i | l | name] idf. *)
-    (*        + exists id. rewrite idf. by []. left. by []. *)
-    (*        + exists id. rewrite idf. by []. right. by []. *)
-
 
     (* Hypothesis perfectHashingSchemeTriple : injective hashTriple. *)
 

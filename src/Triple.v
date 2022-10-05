@@ -2,8 +2,7 @@ From mathcomp Require Import all_ssreflect.
 Set Implicit Arguments.
 Unset Strict Implicit.
 Unset Printing Implicit Defensive.
-From RDF Require Import Term.
-
+From RDF Require Import Term Util.
 
 Record triple (I B L : Type) :=
   mkTriple
@@ -144,36 +143,6 @@ Section OperationsOnTriples.
     by elim s=> //= h t <-; case (p h).
   Qed.
 
-  Lemma all_undup (T:eqType) (s : seq T) p (allp : all p s) : all p (undup s).
-  Proof. generalize allp. elim s=> [//| h t IHts] /= /andP [pa allt].
-         case: (h \in t); first apply: (IHts allt).
-         + apply /andP; split; [ exact: pa | exact: (IHts allt)]. 
-  Qed.
-
-
-  Lemma undup_all (T:eqType) (s : seq T) p (allp : all p (undup s)) : all p s.
-  Proof.
-    generalize allp. elim s=> [//| h t IHts] /=. move=> eq. apply /andP; split. generalize eq.
-
-    case (h \in t).
-    admit.
-    (* apply IHts. generalize eq. case (h \in t); first done. *)
-    + admit.
-
-
-
-      (* apply allp. [pa allt]. *)
-      (*      case: (h \in t); first apply: (IHts allt). *)
-      (*      + apply /andP; split; [ exact: pa | exact: (IHts allt)]. *)
-  Admitted.
-
-  Lemma all_undup' (T : eqType) (s : seq T) p : all p (undup s) <-> all p s. split. apply undup_all. apply all_undup. Qed.
-
-  Lemma all_undup'' (T : eqType) (s : seq T) p : all p (undup s) = all p s.
-  Proof.
-    Fail rewrite all_undup'. Admitted.
-
-
   Lemma is_ground_not_bnode t : is_ground_triple t =
                                   ~~ is_bnode (subject t) && ~~ is_bnode (predicate t) &&  ~~ is_bnode (object t).
   Proof. by case t => s p o /= _ _; rewrite -orbA !negb_or; case: s p o.
@@ -204,56 +173,10 @@ Section OperationsOnTriples.
   (*        admit. *)
 
   Lemma Obnodes_groundtriple t : size (bnodes_triple t) == 0 = is_ground_triple t.
-  Proof. rewrite sizeO_filter. 
-         rewrite /terms_triple.
-         case t=> s p o /= _ _.
-         have -> : (if s \in [:: p; o]
-                    then if p \in [:: o] then [:: o] else [:: p; o]
-                    else s :: (if p \in [:: o] then [:: o] else [:: p; o])) = undup [:: s ; p ; o].
-         by [].
-         (* rewrite is_ground_not_bnode. *)
-         (* rewrite -all_filter. *)
-         (* rewrite (all_filter (negb \o (@is_bnode I B L))). *)
-
-
-         (* rewrite filter_undup. *)
-         (* rewrite -undup_all. *)
-         rewrite all_undup''.
-  Admitted.
-
-  (*      all_undup. *)
-  (*      admit. *)
-
-  (*      case t=> s p o sib pii. *)
-  (*      rewrite filter_undup. *)
-  (*      (* rewrite /is_ground_triple. *) *)
-  (*      case t=> s p o sib pii. *)
-
-  (*      rewrite filter_undup. *)
-  (*      rewrite all_undup. *)
-  (*      admit. *)
-  (*      rewrite filter_undup. *)
-  (*      rewrite -all_filter. filter_undup. case (is_bnode s); case (is_bnode p); case (is_bnode o); rewrite //=. *)
-  (*      rewrite -big_all. rewrite big[andb/true]. *)
-  (*      case s; case p; case o; rewrite //=. *)
-  (* (* inversion t. *) *)
-  (* rewrite /=. *)
-
-  (* case t=> /= s p o sib pii. case s; case p; case o; rewrite // => x y z; rewrite sizeO_filter. *)
-  (* + by case: (Iri z \in [:: Iri y; Iri x]); case: (Iri y \in [:: Iri x]). *)
-  (*   + case: (z == y). *)
-
-
-  (*   split => [//| ground]. case ground. *)
-
-
-  (*   => [] [] []. inversion s. *)
-  (* split=> [sizeO|ground]. rewrite /is_ground_triple. inversion t. *)
-  (* case t=> s p o sib oibl. rewrite /bnodes_triple. *)
-
-  (* case t=> split; inversion t => [sizeO]. case t. *)
-  (*      + *)
-
+  Proof. rewrite sizeO_filter /terms_triple; case t=> s p o.
+         rewrite -all_filter filter_undup.
+         by case: s; case: p; case: o=> x y z // ? ? /= ; case:( Bnode z \in [:: Bnode x] ).
+  Qed.
 
   Canonical triple_predType2 := PredType (pred_of_seq \o (bnodes_triple)).
 
@@ -276,13 +199,6 @@ Section OperationsOnTriples.
          rewrite filter_undup all_undup. done.
          exact: filter_all.
   Qed.
-
-  Definition all_bnodes_triple_is_bnode' t : all (@is_bnode I B L) (bnodes_triple t).
-  Proof. destruct t. unfold bnodes_triple. unfold terms_triple.
-         rewrite filter_undup. rewrite all_undup. reflexivity.
-         exact: filter_all.
-  Qed.
-  (* rewrite /bnodes_triple -filter_undup; apply filter_all. Qed. *)
 
   Definition get_b_triple t : seq B.
   Proof. apply bnodes_triple in t as bns.

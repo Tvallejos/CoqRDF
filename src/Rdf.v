@@ -2,8 +2,7 @@ From mathcomp Require Import all_ssreflect.
 Set Implicit Arguments.
 Unset Strict Implicit.
 Unset Printing Implicit Defensive.
-From RDF Require Import Term.
-From RDF Require Import Triple.
+From RDF Require Import Triple Term Util.
 
 Section Rdf.
 
@@ -25,6 +24,9 @@ Section Rdf.
     (* assumes shared identifier scope *)
     Definition merge_rdf_graph g1 g2 : rdf_graph I B L:=
       mkRdfGraph (g1 ++ g2).
+
+    Lemma merge_cons t ts : {| graph := t::ts |} = merge_rdf_graph (mkRdfGraph [:: t]) (mkRdfGraph ts).
+    Proof. by []. Qed.
 
     Definition merge_seq_rdf_graph (gs : seq (rdf_graph I B L)) : rdf_graph I B L :=
       foldr merge_rdf_graph empty_rdf_graph gs.
@@ -121,59 +123,9 @@ Section Rdf.
     (* Print SetDef.finset. *)
     (* (* requieres trm to be finType *) *)
     (* Fail Check finset (trm \in g). *)
-    Lemma inweak (T: eqType) (l:seq T) t u : t \in l -> t \in (u::l).
-    Proof. by rewrite -!has_pred1 /has; case (pred1 t u)=> [//| -> ]. 
-    Qed.
-
-    Definition undup_in (T : eqType) (t : T) (s : seq T) :
-      t \in s -> t \in undup s.
-    Proof. elim: s=> [//| h hs IHts].
-           + rewrite in_cons. case orP; last by [].
-             case=> [ /eqP <- | ih] _.
-           - destruct (t \in hs) eqn:E; rewrite /undup E.
-             * by apply IHts.
-             * by rewrite mem_head.
-           - destruct (h \in hs) eqn:E;rewrite /undup E.
-             apply: IHts ih.
-             apply: inweak. apply: IHts ih.
-    Qed.
-
-    Definition undup_idem (T : eqType) (s : seq T) :
-      undup (undup s) = undup s.
-    Proof. elim: s=> [//| t ts IHts] /=.
-           destruct (t \in ts) eqn:E.
-           + apply IHts.
-           + have h: (t \in (undup ts) = false).
-             by rewrite -E; apply mem_undup.
-             by rewrite /= h IHts.
-    Qed.
-
 
     Definition terms g : seq (term I B L) :=
       undup (flatten (map (@terms_triple I B L) g)).
-
-    Definition undup_cat_r (T: eqType) (s q : seq T) :
-      undup (s ++ undup q) = undup (s ++ q).
-    Proof.
-      elim: s=> [//| aq qs IHqs] /=.
-      + apply undup_idem.
-      + destruct (aq \in qs) eqn:E; rewrite !mem_cat E /=.
-      - apply IHqs.
-      - destruct (aq \in q) eqn:E2.
-        have -> : (aq \in undup q) = true. rewrite -E2; apply mem_undup.
-        apply IHqs.
-        have -> : (aq \in undup q) = false. rewrite -E2; apply mem_undup.
-        rewrite IHqs; done.
-    Qed.
-
-    Definition undup_cat_l (T: eqType) (s q : seq T) :
-      undup (undup s ++ q) = undup (s ++ q).
-    Proof.
-      elim: s=> [//| aq qs IHqs]; rewrite (undup_cat (aq :: qs)) /=.
-      case e: (aq \in qs).
-      + by rewrite IHqs undup_cat.
-        by rewrite undup_cat -cat1s undup_cat_r !cat1s {1}/undup e.
-    Qed.
 
     Definition terms_cons (trpl : triple I B L) (ts : seq (triple I B L)) :
       terms (mkRdfGraph (trpl :: ts)) = undup (terms_triple trpl ++ (terms (mkRdfGraph ts))).

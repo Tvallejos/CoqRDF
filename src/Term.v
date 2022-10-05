@@ -55,6 +55,9 @@ Proof. done. Defined.
 Remark i_in_i (I B L:Type) (i : I) : is_in_i (@iri_from_i I B L i).
 Proof. done. Defined.
 
+Definition is_ground_term (I B L : Type) (trm : term I B L) : bool :=
+  is_iri trm || is_lit trm.
+
 
 (* Definition is_in_ibl (I B L : Type) (trm : term I B L) : bool := *)
 (*   is_iri trm || is_bnode trm || is_lit trm. *)

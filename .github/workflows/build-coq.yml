@@ -7,6 +7,7 @@ on:
             - 'model/**'
             - 'ci/**'
             - 'impl/**'
+            - 'proof/**'
         pull_request:
             branches:
                 - '**'

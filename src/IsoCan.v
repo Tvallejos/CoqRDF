@@ -603,6 +603,15 @@ Section IsoCan.
 
     Lemma init_hash_nil : init_hash {| graph := [::] |} = {| graph := [::] |}. by []. Qed.
 
+    Lemma relabeling_mu_inv (g : rdf_graph I B L) (fs : seq (B -> B)) (mapping : rdf_graph I B L -> rdf_graph I B L) :
+      (mapping g) \in (map (fun mu => relabeling mu g) fs) ->
+            exists (mu : B->B), relabeling mu g == mapping g.
+    Proof. elim : fs => [| f fs' IHfs]; first by rewrite in_nil.
+           rewrite in_cons; case/orP.
+           + by rewrite eq_sym; exists f.
+           + by move=> H; apply IHfs in H; apply H.
+    Qed.
+
     (* Lemma k_mapping  *)
     Lemma k_mapping_cons_const x y z sib pii as' :
       is_ground_term x -> is_ground_term y -> is_ground_term z ->
@@ -636,24 +645,9 @@ Section IsoCan.
                                                                 (bnodes (init_hash g))]]].
       rewrite /k_mapping relabeling_id; apply: foldl_op.
       case: step1=> [ -> | in_tail ].
-      - exists id; rewrite relabeling_id; apply eqb_rdf_refl.
-      (* case: g e => [] [|  hd tl] //=.  admit. (* prove it early as a lemma by case on g *) *)
-      - (* all elements in the sequence are of the form (relabeling mu0 g) .... Search _ all *)
-        elim g=> gs; elim: gs=> [| a as' [mu eqb]] /=.
-        + by exists id; rewrite /k_mapping /build_mapping_from_seq /=
-                          Order.POrderTheory.minEle Order.POrderTheory.lexx eq_refl.
-                    + case: a=> s p o; case: s; case: p; case: o=> // x y z sib pii.
-                      -- exists mu. rewrite k_mapping_cons_const=> //; rewrite relabeling_cons /=.
-                         apply /eqP; f_equal; f_equal.
-                      * by apply triple_inj.
-                      * by rewrite -(eqP eqb).
-                        -- exists mu. rewrite k_mapping_cons_const=> //; rewrite relabeling_cons /=.
-                           apply /eqP; f_equal; f_equal.
-                      * by apply triple_inj.
-                      * by rewrite -(eqP eqb).
-                        --
-
-    Admitted.
+      + by exists id; rewrite relabeling_id; apply eqb_rdf_refl.
+                  exact: relabeling_mu_inv in_tail.
+    Qed.
 
     (* Hypothesis perfectHashingSchemeTriple : injective hashTriple. *)
 

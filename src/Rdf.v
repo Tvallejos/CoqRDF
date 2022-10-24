@@ -191,7 +191,7 @@ Section Rdf.
       (* ({in bnodes g2, bijective μ}) *)
       (bijective μ) 
 
-      /\ eqb_rdf g1 (relabeling μ g2).
+      /\ g1 == (relabeling μ g2).
 
     Definition iso g1 g2 := exists (μ : B -> B),
         is_iso g1 g2 μ.
@@ -201,7 +201,7 @@ Section Rdf.
     Lemma iso_refl g : iso g g.
     Proof. rewrite /iso /is_iso; exists id; split.
            exact: id_bij.
-           by rewrite relabeling_id eqb_rdf_refl.
+           by rewrite relabeling_id.
     Qed.
 
     Remark eqiso g1 g2 : eqb_rdf g1 g2 -> iso g1 g2.
@@ -233,7 +233,7 @@ Section Rdf.
 
     Definition isocanonical_mapping (M : rdf_graph I B L -> rdf_graph I B L) :=
       forall g, iso (M g) g /\
-        (forall g1 g2, eqb_rdf (M g1) (M g2) <-> iso g1 g2).
+        (forall g1 g2, (M g1) == (M g2) <-> iso g1 g2).
 
 
   End EqRdf.

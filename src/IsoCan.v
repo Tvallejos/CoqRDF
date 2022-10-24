@@ -612,6 +612,7 @@ Section IsoCan.
            + by move=> H; apply IHfs in H; apply H.
     Qed.
 
+
     (* Lemma k_mapping  *)
     Lemma k_mapping_cons_const x y z sib pii as' :
       is_ground_term x -> is_ground_term y -> is_ground_term z ->
@@ -635,7 +636,14 @@ Section IsoCan.
             |} :: (k_mapping {| graph:= as' |})).
     Proof. rewrite /k_mapping /init_hash relabeling_cons relabeling_id relabeling_triple_id. Admitted.
 
-    Lemma inv_of_k_mapping g : exists mu, (relabeling mu g) == (k_mapping g).
+    Lemma all_kmaps_bijective g : List.Forall (fun mu => bijective mu) [seq build_mapping_from_seq i
+                                                     | i <- [seq mapi (app_n mark_bnode') i
+                                                            | i <- permutations (bnodes (init_hash g))]].
+    Proof.
+      Admitted.
+
+
+    Lemma inv_of_k_mapping g : exists mu, (relabeling mu g) == (k_mapping g) /\ bijective mu.
     Proof.
       have step1 : k_mapping g = g \/
                      (k_mapping g) \in [seq relabeling mu0 g
@@ -645,9 +653,31 @@ Section IsoCan.
                                                                 (bnodes (init_hash g))]]].
       rewrite /k_mapping relabeling_id; apply: foldl_op.
       case: step1=> [ -> | in_tail ].
-      + by exists id; rewrite relabeling_id; apply eqb_rdf_refl.
-                  exact: relabeling_mu_inv in_tail.
-    Qed.
+      + exists id; split.
+      - by rewrite relabeling_id.
+        - exact: id_bij.
+        - have [mu eq_mu_map] : exists mu : B -> B, relabeling mu g == k_mapping g. exact: relabeling_mu_inv in_tail.
+          exists mu. split; first exact eq_mu_map.
+          admit.
+
+    Admitted.
+
+    (* Lemma relabeling_mu_inv_bij (g : rdf_graph I B L) (fs : seq (B -> B)) : *)
+    (*   List.Forall (fun mu => bijective mu) fs -> *)
+    (*         exists (mu : B->B), relabeling mu g == k_mapping g /\ bijective mu. *)
+    (* Proof. move => all_bij.  *)
+    (*        have H: exists mu, (relabeling mu g) == (k_mapping g). apply inv_of_k_mapping. *)
+    (*        case: H=> mu /eqP eqmu. *)
+    (*        exists mu. rewrite eqmu. split; first by []. *)
+    (* Qed. *)
+
+    (* Lemma k_mapping_iso g : iso (k_mapping g) g. *)
+    (* Proof. rewrite /iso/is_iso. *)
+    (*        have H: exists mu, (relabeling mu g) == (k_mapping g). apply inv_of_k_mapping. *)
+    (*        case: H=> mu /eqP eqmu. *)
+    (*        exists mu. rewrite eqmu. split; last by []. *)
+    (*        admit. *)
+    (* Admitted. *)
 
     (* Hypothesis perfectHashingSchemeTriple : injective hashTriple. *)
 

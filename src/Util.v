@@ -3,35 +3,41 @@ Set Implicit Arguments.
 Unset Strict Implicit.
 Unset Printing Implicit Defensive.
 
-  Lemma all_undup (T:eqType) (s : seq T) p (allp : all p s) : all p (undup s).
-  Proof. generalize allp. elim s=> [//| h t IHts] /= /andP [pa allt].
-         case: (h \in t); first apply: (IHts allt).
-         + apply /andP; split; [ exact: pa | exact: (IHts allt)]. 
-  Qed.
+(* Several problems here:
+- why naming a hypothesis if you generalize it right away)
+- think about the statement of the lemma (here equality/equivalence holds, not only implication)
+- use lemmas in the library (no need for induction here)
+*)
+
+Lemma all_undup (T : eqType) (s : seq T) p : all p (undup s) = all p s.
+Proof.
+suffices /eq_all_r -> : (undup s) =i s by [].
+exact: mem_undup.
+Qed.
 
 
-  Lemma undup_all (T:eqType) (s : seq T) p (allp : all p (undup s)) : all p s.
-  Proof.
-    generalize allp. elim s=> [//| h t IHts] /=. move=> eq. apply /andP; split. generalize eq.
+  (* Lemma undup_all (T:eqType) (s : seq T) p (allp : all p (undup s)) : all p s. *)
+  (* Proof. *)
+  (*   generalize allp. elim s=> [//| h t IHts] /=. move=> eq. apply /andP; split. generalize eq. *)
 
-    case (h \in t).
-    admit.
-    (* apply IHts. generalize eq. case (h \in t); first done. *)
-    + admit.
+  (*   case (h \in t). *)
+  (*   admit. *)
+  (*   (* apply IHts. generalize eq. case (h \in t); first done. *) *)
+  (*   + admit. *)
 
 
 
-      (* apply allp. [pa allt]. *)
-      (*      case: (h \in t); first apply: (IHts allt). *)
-      (*      + apply /andP; split; [ exact: pa | exact: (IHts allt)]. *)
-  Admitted.
+  (*     (* apply allp. [pa allt]. *) *)
+  (*     (*      case: (h \in t); first apply: (IHts allt). *) *)
+  (*     (*      + apply /andP; split; [ exact: pa | exact: (IHts allt)]. *) *)
+  (* Admitted. *)
 
-  Lemma all_undup' (T : eqType) (s : seq T) p : all p (undup s) <-> all p s. split. apply undup_all. apply all_undup. Qed.
+  (* Lemma all_undup' (T : eqType) (s : seq T) p : all p (undup s) <-> all p s. split. apply undup_all. apply all_undup. Qed. *)
 
-  Lemma all_undup'' (T : eqType) (s : seq T) p : all p (undup s) = all p s.
-  Proof.
-    Fail rewrite all_undup'.
-  Admitted.
+  (* Lemma all_undup'' (T : eqType) (s : seq T) p : all p (undup s) = all p s. *)
+  (* Proof. *)
+  (*   Fail rewrite all_undup'. *)
+  (* Admitted. *)
 
     Lemma inweak (T: eqType) (l:seq T) t u : t \in l -> t \in (u::l).
     Proof. by rewrite -!has_pred1 /has; case (pred1 t u)=> [//| -> ]. 

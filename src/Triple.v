@@ -195,9 +195,9 @@ Section OperationsOnTriples.
 
 
   Definition all_bnodes_triple_is_bnode t : all (@is_bnode I B L) (bnodes_triple t).
-  Proof. case t=> s p o; rewrite /bnodes_triple/terms_triple=> _ _.
-         rewrite filter_undup all_undup. done.
-         exact: filter_all.
+  Proof.
+  case t=> s p o; rewrite /bnodes_triple/terms_triple=> _ _.
+  rewrite filter_undup all_undup; exact: filter_all.
   Qed.
 
   Definition get_b_triple t : seq B.

@@ -118,7 +118,7 @@ Section IsoCan.
 
       Lemma eq_hash_refl b : is_bnode b -> eq_hash b b.
       Proof. rewrite /eq_hash /lookup_hash => isb. case: b isb; rewrite //.
-      Qed. 
+      Qed.
 
       (* change for finset *)
       Fixpoint partitionate (f : hterm -> bool) (s : seq hterm) : seq hterm * seq hterm :=

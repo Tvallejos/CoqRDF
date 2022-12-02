@@ -207,7 +207,7 @@ Section Rdf.
            by rewrite relabeling_id.
     Qed.
 
-    Remark eqiso g1 g2 : eqb_rdf g1 g2 -> iso g1 g2.
+    Remark eqiso g1 g2 : g1 == g2 -> iso g1 g2.
     Proof. exists id. rewrite /is_iso; split; first by apply id_bij.
            + by rewrite relabeling_id.
     Qed.
@@ -236,8 +236,18 @@ Section Rdf.
 
     Definition isocanonical_mapping (M : rdf_graph I B L -> rdf_graph I B L) :=
       forall g, iso (M g) g /\
-        (forall g1 g2, (M g1) == (M g2) <-> iso g1 g2).
+                  (forall g1 g2, (M g1) == (M g2) <-> iso g1 g2).
 
+    Definition dont_manipulate_names_mapping (M : rdf_graph I B L -> rdf_graph I B L) := forall g μ, (bijective μ) -> M g == M (relabeling μ g).
+
+    (* Definition dont_manipulate_names_mapping_idem (M : rdf_graph I B L -> rdf_graph I B L) (dnmn : dont_manipulate_names_mapping M) : forall g (μ : B -> B), (bijective μ) -> M (M g) = M g. *)
+
+    Definition iso_leads_canonical M (nmn : dont_manipulate_names_mapping M) g1 g2 (iso_g1_g2: iso g1 g2) : M g1 == M g2.
+    Proof. case iso_g1_g2=> μ [bijmu /eqP ->].
+           (* eq_rel_g1g2]. *)
+           suffices ->: M g2 = M (relabeling μ g2). by [].
+           by apply /eqP; apply (nmn g2 μ bijmu).
+    Qed. 
 
   End EqRdf.
   Section Relabeling_alt.
@@ -292,13 +302,13 @@ Section Rdf.
 The term "g1" has type "rdf_graph I B L" while it is expected to have type
  "rdf_graph I (seq_sub_finType (bnodes g1)) ?L" *)
     Definition is_iso_alt g1 g2  (μ :  {ffun (seq_sub (bnodes g1)) -> B}) :=
-      bijective μ /\ eqb_rdf g2 (relabeling_alt μ g1).
+      bijective μ /\ g2 == (relabeling_alt μ g1).
 
     Definition iso_alt g1 g2:= exists mu, @is_iso_alt g1 g2 mu.
 
     Definition isocanonical_mapping_alt (M : rdf_graph I B L -> rdf_graph I B L) :=
       forall g, iso_alt (M g) g /\
-        (forall g1 g2, eqb_rdf (M g1) (M g2) <-> iso g1 g2).
+        (forall g1 g2, (M g1) == (M g2) <-> iso g1 g2).
 
 
     Section FinTypeRdf.

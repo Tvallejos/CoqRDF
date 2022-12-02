@@ -248,7 +248,7 @@ Section IsoCan.
       | hb :: _ => Some hb
       end.
 
-      Definition lookup_bnode_in_graph_default (g : hgraph) (b : B) : h :=
+    Definition lookup_bnode_in_graph_default (g : hgraph) (b : B) : h :=
       if lookup_bnode_in_graph g b is Some trm then term_hash trm else herror.
 
     Definition new_hash (s p o : hterm) gacc hldr : option ((hash B) * (hash B)) :=
@@ -434,7 +434,7 @@ Section IsoCan.
     (*        - by case=> ->.  *)
     (*        - Abort. *)
 
-   
+    
 
     (* Definition bf_from_graph_inj g : injective (build_finfun_from_graph g). *)
 
@@ -638,12 +638,12 @@ Section IsoCan.
 
     Lemma relabeling_mu_inv (g : rdf_graph I B L) (fs : seq (B -> B)) (mapping : rdf_graph I B L -> rdf_graph I B L) :
       (mapping g) \in (map (fun mu => relabeling mu g) fs) ->
-            exists (mu : B -> B), relabeling mu g == mapping g.
+                      exists (mu : B -> B), relabeling mu g == mapping g.
     Proof.
       elim : fs => [| f fs' IHfs]; first by rewrite in_nil.
-           rewrite in_cons; case/orP.
-           + by rewrite eq_sym; exists f.
-           + by move=> H; apply IHfs in H; apply H.
+      rewrite in_cons; case/orP.
+      + by rewrite eq_sym; exists f.
+      + by move=> H; apply IHfs in H; apply H.
     Qed.
 
 
@@ -671,14 +671,14 @@ Section IsoCan.
     Proof. rewrite /k_mapping /init_hash relabeling_cons relabeling_id relabeling_triple_id. Admitted.
 
     Lemma all_kmaps_bijective g : List.Forall (fun mu => bijective mu) [seq build_mapping_from_seq i
-                                                     | i <- [seq mapi (app_n mark_bnode) i
-                                                            | i <- permutations (bnodes (init_hash g))]].
+                                                                       | i <- [seq mapi (app_n mark_bnode) i
+                                                                              | i <- permutations (bnodes (init_hash g))]].
     Proof.
-    have map2Listmap U V (f : U -> V) (s : seq U) : map f s = List.map f s. admit.
-    have nth2Listnth U (d : U) (s : seq U) n : nth d s n = List.nth n s d. admit.
-    have size2Listlength U (s : seq U) : List.length s = size s. admit.
-    rewrite !map2Listmap !List.Forall_map.
-    suffices step s : perm_eq s (bnodes (init_hash g)) -> bijective (build_mapping_from_seq (mapi (app_n mark_bnode) s)).
+      have map2Listmap U V (f : U -> V) (s : seq U) : map f s = List.map f s. admit.
+      have nth2Listnth U (d : U) (s : seq U) n : nth d s n = List.nth n s d. admit.
+      have size2Listlength U (s : seq U) : List.length s = size s. admit.
+      rewrite !map2Listmap !List.Forall_map.
+      suffices step s : perm_eq s (bnodes (init_hash g)) -> bijective (build_mapping_from_seq (mapi (app_n mark_bnode) s)).
       apply/List.Forall_nth=> i d lti. apply: step. rewrite -mem_permutations -nth2Listnth. apply: mem_nth.
       by rewrite -size2Listlength; apply/ltP.
       (* pose μ := build_mapping_from_seq (mapi (app_n mark_bnode') s). *)
@@ -691,10 +691,11 @@ Section IsoCan.
 
 
       elim: s =>[| hd t IHs].
-    - by rewrite /mapi /build_mapping_from_seq !has_nil.
+      - by rewrite /mapi /build_mapping_from_seq !has_nil.
       - rewrite /mapi /=.
     Admitted.
-    
+
+    (* TODO *)
     Lemma inv_of_k_mapping g : exists mu, (relabeling mu g) == (k_mapping g) /\ bijective mu.
     Proof.
       have step1 : k_mapping g = g \/
@@ -703,16 +704,48 @@ Section IsoCan.
                                                 | i <- [seq mapi (app_n mark_bnode) i
                                                        | i <- permutations
                                                                 (bnodes (init_hash g))]]].
-        by rewrite /k_mapping relabeling_id; apply: foldl_op.
+      by rewrite /k_mapping relabeling_id; apply: foldl_op.
       case: step1=> [ -> | in_tail ].
       + exists id; split.
-        - by rewrite relabeling_id.
-        - exact: id_bij. About relabeling_mu_inv.
-      + have [mu eq_mu_map] : exists mu : B -> B, relabeling mu g == k_mapping g.
-            exact: relabeling_mu_inv in_tail.
+      - by rewrite relabeling_id.
+      - exact: id_bij. About relabeling_mu_inv.
+        + have [mu eq_mu_map] : exists mu : B -> B, relabeling mu g == k_mapping g.
+          exact: relabeling_mu_inv in_tail.
           exists mu. split; first exact eq_mu_map.
           admit.
 
+    Admitted.
+
+    Lemma k_mapping_iso_output g : iso (k_mapping g) g.
+    Proof. case (inv_of_k_mapping g)=> μ [rel_eq_kmap bijmu].
+           exists μ. split. exact: bijmu. by rewrite eq_sym.
+    Qed.
+
+    (* TODO *)
+    Lemma k_mapping_dont_manipulate_names : (dont_manipulate_names_mapping k_mapping).
+    Proof.
+      rewrite /dont_manipulate_names_mapping=> g μ bijmu.
+      - have step1 : k_mapping g = g \/
+                       (k_mapping g) \in [seq relabeling mu0 g
+                                         | mu0 <- [seq build_mapping_from_seq i
+                                                  | i <- [seq mapi (app_n mark_bnode) i
+                                                         | i <- permutations
+                                                                  (bnodes (init_hash g))]]].
+        by rewrite /k_mapping relabeling_id; apply: foldl_op.
+        (* case: step1=> [ -> | in_tail ]. *)
+        (* elim g=> g'; elim: g'=> [//| a tl IHa]. *)
+        rewrite /k_mapping.
+    Admitted.
+
+
+    Lemma k_mapping_isocan : isocanonical_mapping k_mapping.
+    Proof. split; first by apply k_mapping_iso_output.
+           split.
+           + have isog1k1 : iso g1 (k_mapping g1). by rewrite iso_symm; apply k_mapping_iso_output.
+             have isog2k2 : iso (k_mapping g2) g2. by apply k_mapping_iso_output.
+             move=> /eqP k1_eq_k2. rewrite k1_eq_k2 in isog1k1. apply (iso_trans isog1k1 isog2k2).
+           + have dmnm : (dont_manipulate_names_mapping k_mapping). admit.
+             by apply iso_leads_canonical.
     Admitted.
 
     (* Lemma relabeling_mu_inv_bij (g : rdf_graph I B L) (fs : seq (B -> B)) : *)

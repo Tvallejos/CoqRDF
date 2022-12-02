@@ -53,7 +53,7 @@ Section Rdf.
         relabeling_seq_triple μ1 (relabeling_seq_triple μ2 ts) = relabeling_seq_triple (μ1 \o μ2) ts.
       Proof.
         rewrite /relabeling_seq_triple -map_comp -/relabeling_seq_triple; apply: eq_map=> x.
-        by rewrite relabeling_triple_comp. 
+        by rewrite relabeling_triple_comp.
       Qed.
 
     End Relabeling_seq_triple.
@@ -105,7 +105,10 @@ Section Rdf.
     Lemma eqb_rdf_symm g1 g2 : eqb_rdf g1 g2 = eqb_rdf g2 g1.
     Proof. by rewrite /eqb_rdf. Qed.
 
-    Definition rdf_eqP : Equality.axiom eqb_rdf.
+    Lemma eqb_rdf_trans g1 g2 g3: eqb_rdf g1 g2 -> eqb_rdf g2 g3 -> eqb_rdf g1 g3.
+    Proof. by rewrite /eqb_rdf=> /eqP -> /eqP ->. Qed.
+
+      Definition rdf_eqP : Equality.axiom eqb_rdf.
     Proof. rewrite /Equality.axiom => x y.
            apply: (iffP idP) => //= [| ->]; case: x y=> [g1] [g2].
            by rewrite /eqb_rdf => /eqP /= ->.

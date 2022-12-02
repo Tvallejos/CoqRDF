@@ -176,9 +176,12 @@ Section IsoCan.
       relabeling init_bnode g.
 
     Hypothesis to_string : h -> B.
+    Hypothesis inj_to_string : injective to_string.
 
     Definition label_bnode (hb : (hash B)) : B :=
       to_string (current_hash hb).
+
+    (* Definition inj_label_bnode : injective label_bnode. move=> x y. rewrite /label_bnode. apply inj_to_string. case. by inj_to_string. *)
 
     Definition label_term (htrm : hterm) : term I B L :=
       relabeling_term label_bnode htrm.
@@ -239,7 +242,13 @@ Section IsoCan.
       let otrms := map (lookup_bnode_in_triple b) g in
       head None (filter is_some otrms).
 
-    Definition lookup_bnode_in_graph_default (g : hgraph) (b : B) : h :=
+    Definition lookup_bnode_in_graph' (g : hgraph) (b : B) : option hterm :=
+      match (filter (cmp_bnode b) (bnodes g)) with
+      | nil => None
+      | hb :: _ => Some hb
+      end.
+
+      Definition lookup_bnode_in_graph_default (g : hgraph) (b : B) : h :=
       if lookup_bnode_in_graph g b is Some trm then term_hash trm else herror.
 
     Definition new_hash (s p o : hterm) gacc hldr : option ((hash B) * (hash B)) :=
@@ -337,13 +346,13 @@ Section IsoCan.
 
     (* Algorithm 3, line 13
        hashes b incorporating an arbitrary hash hmark *)
-    Definition mark_bnode (b : hash B) : hash B :=
+    Definition mark_hash (b : hash B) : hash B :=
       mkHinput (input b) (hashTuple [:: (current_hash b) ; hmark]).
 
-    Definition mark_bnode' (b : hterm) : hterm :=
+    Definition mark_bnode (b : hterm) : hterm :=
       match b with
       | Iri i| Lit i => Bnode (mkHinput b0 herror)
-      | Bnode hb=> Bnode (mark_bnode hb)
+      | Bnode hb=> Bnode (mark_hash hb)
       end.
 
     (* algorithm 3, lines 9-10
@@ -357,7 +366,7 @@ Section IsoCan.
     (* Algorithm 3, lines 13-14 when color refine is hashBnodes_initialized.
        b is_bnode *)
     Definition distinguishBnode g (color_refine : hgraph -> hgraph ) (b : hash B) : hgraph :=
-      let b' := mark_bnode b in
+      let b' := mark_hash b in
       let g' := replace_bnode b b' g in
       color_refine g'.
 
@@ -405,6 +414,30 @@ Section IsoCan.
                     else mapping b) in
       foldr f id (get_b g).
 
+    Definition map_fintype (T U: eqType) (s : seq T) (f : T -> U)
+      (* (injF : injective f) *)
+      : seq_sub s -> seq_sub (map f s).
+    Proof. move=> arg.
+           have ssval_arg: f (ssval arg) \in (map f s). apply (map_f f). apply (ssvalP arg). 
+           exact (SeqSub ssval_arg).
+    Qed.
+
+    Definition build_finfun_from_graph (g : hgraph) : (seq_sub (bnodes g)) -> (seq_sub (map label_term (bnodes g))).
+    Proof. apply map_fintype. Qed.
+
+    (* label_term is injective only on terms when the hash partition *)
+    (* returned the discrete partition.  *)
+    (* Definition inj_label_term : injective label_term. *)
+    (* Proof. move=> t1 t2. rewrite /label_term. *)
+    (*        case t1; case t2=> x y //; rewrite /relabeling_term. *)
+    (*        - by case=> ->.  *)
+    (*        - by case=> ->.  *)
+    (*        - Abort. *)
+
+   
+
+    (* Definition bf_from_graph_inj g : injective (build_finfun_from_graph g). *)
+
     Definition build_mapping_from_seq (trms : seq hterm) : B -> B :=
       fun b =>
         if has (eqb_b_hterm b) trms then
@@ -423,7 +456,7 @@ Section IsoCan.
       let fix help bns n :=
         match bns with
         | nil => nil
-        | trm :: trms => app_n mark_bnode' trm n :: help trms (S n)
+        | trm :: trms => app_n mark_bnode trm n :: help trms (S n)
         end in
       help bns 0.
 
@@ -432,18 +465,18 @@ Section IsoCan.
 
     Definition ak_mapping (g : rdf_graph I B L) : seq hterm :=
       let bns := bnodes (init_hash g) in
-      mapi (app_n mark_bnode') bns.
+      mapi (app_n mark_bnode) bns.
 
     Definition k_mapping (g : rdf_graph I B L) : rdf_graph I B L :=
       let all_maps :=
         (* permutations (ak_mapping g) in *)
-        map (mapi (app_n mark_bnode')) (permutations (bnodes (init_hash g))) in
+        map (mapi (app_n mark_bnode)) (permutations (bnodes (init_hash g))) in
       (* (ak_mapping g) in *)
       let mus := map build_mapping_from_seq all_maps in
       let isocans := map (fun mu => relabeling mu g) mus in
       foldl Order.min (relabeling id g) isocans.
 
-    
+
     (* let isoG := choose_graph isocans in *)
     (* let isoMu := nth id mus (find (eqb_rdf isoG) isocans) in *)
     (* isoMu. *)
@@ -635,19 +668,31 @@ Section IsoCan.
               subject_in_IB := sib;
               predicate_in_I := pii
             |} :: (k_mapping {| graph:= as' |})).
-    Proof. rewrite /k_mapping /init_hash relabeling_cons relabeling_id relabeling_triple_id. Admitted. 
+    Proof. rewrite /k_mapping /init_hash relabeling_cons relabeling_id relabeling_triple_id. Admitted.
 
     Lemma all_kmaps_bijective g : List.Forall (fun mu => bijective mu) [seq build_mapping_from_seq i
-                                                     | i <- [seq mapi (app_n mark_bnode') i
+                                                     | i <- [seq mapi (app_n mark_bnode) i
                                                             | i <- permutations (bnodes (init_hash g))]].
     Proof.
     have map2Listmap U V (f : U -> V) (s : seq U) : map f s = List.map f s. admit.
     have nth2Listnth U (d : U) (s : seq U) n : nth d s n = List.nth n s d. admit.
     have size2Listlength U (s : seq U) : List.length s = size s. admit.
     rewrite !map2Listmap !List.Forall_map.
-    suffices step s : perm_eq s (bnodes (init_hash g)) -> bijective (build_mapping_from_seq (mapi (app_n mark_bnode') s)).
+    suffices step s : perm_eq s (bnodes (init_hash g)) -> bijective (build_mapping_from_seq (mapi (app_n mark_bnode) s)).
       apply/List.Forall_nth=> i d lti. apply: step. rewrite -mem_permutations -nth2Listnth. apply: mem_nth.
-    by rewrite -size2Listlength; apply/ltP.
+      by rewrite -size2Listlength; apply/ltP.
+      (* pose μ := build_mapping_from_seq (mapi (app_n mark_bnode') s). *)
+      have: injective (build_mapping_from_seq (mapi (app_n mark_bnode) s)).
+      move=> b1 b2. rewrite /build_mapping_from_seq.
+
+
+
+
+
+
+      elim: s =>[| hd t IHs].
+    - by rewrite /mapi /build_mapping_from_seq !has_nil.
+      - rewrite /mapi /=.
     Admitted.
     
     Lemma inv_of_k_mapping g : exists mu, (relabeling mu g) == (k_mapping g) /\ bijective mu.
@@ -655,7 +700,7 @@ Section IsoCan.
       have step1 : k_mapping g = g \/
                      (k_mapping g) \in [seq relabeling mu0 g
                                        | mu0 <- [seq build_mapping_from_seq i
-                                                | i <- [seq mapi (app_n mark_bnode') i
+                                                | i <- [seq mapi (app_n mark_bnode) i
                                                        | i <- permutations
                                                                 (bnodes (init_hash g))]]].
         by rewrite /k_mapping relabeling_id; apply: foldl_op.

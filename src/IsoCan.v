@@ -682,17 +682,10 @@ Section IsoCan.
       apply/List.Forall_nth=> i d lti. apply: step. rewrite -mem_permutations -nth2Listnth. apply: mem_nth.
       by rewrite -size2Listlength; apply/ltP.
       (* pose μ := build_mapping_from_seq (mapi (app_n mark_bnode') s). *)
-      have: injective (build_mapping_from_seq (mapi (app_n mark_bnode) s)).
-      move=> b1 b2. rewrite /build_mapping_from_seq.
-
-
-
-
-
-
-      elim: s =>[| hd t IHs].
-      - by rewrite /mapi /build_mapping_from_seq !has_nil.
-      - rewrite /mapi /=.
+      have inj_mu: injective (build_mapping_from_seq (mapi (app_n mark_bnode) s)).
+      admit.
+      move=> s_pm.
+      Check build_mapping_from_seq.
     Admitted.
 
     (* TODO *)
@@ -712,10 +705,15 @@ Section IsoCan.
         + have [mu eq_mu_map] : exists mu : B -> B, relabeling mu g == k_mapping g.
           exact: relabeling_mu_inv in_tail.
           exists mu. split; first exact eq_mu_map.
+          (* needs mu to have eqType, could be a finfun *)
+          have fin_mu : (seq_sub (bnodes g)) -> B.
+          Fail move: (finfun (fun b => b)).
           admit.
-
+          (* Fail fin_mu \in in_tail. *)
     Admitted.
 
+    (* TODO *)
+    (* USES inv_of_k_mapping *)
     Lemma k_mapping_iso_output g : iso (k_mapping g) g.
     Proof. case (inv_of_k_mapping g)=> μ [rel_eq_kmap bijmu].
            exists μ. split. exact: bijmu. by rewrite eq_sym.
@@ -738,13 +736,15 @@ Section IsoCan.
     Admitted.
 
 
+    (* TODO *)
+    (* USES inv_of_k_mapping *)
     Lemma k_mapping_isocan : isocanonical_mapping k_mapping.
     Proof. split; first by apply k_mapping_iso_output.
            split.
            + have isog1k1 : iso g1 (k_mapping g1). by rewrite iso_symm; apply k_mapping_iso_output.
              have isog2k2 : iso (k_mapping g2) g2. by apply k_mapping_iso_output.
              move=> /eqP k1_eq_k2. rewrite k1_eq_k2 in isog1k1. apply (iso_trans isog1k1 isog2k2).
-           + have dmnm : (dont_manipulate_names_mapping k_mapping). admit.
+           + have dmnm : (dont_manipulate_names_mapping k_mapping). apply k_mapping_dont_manipulate_names.
              by apply iso_leads_canonical.
     Admitted.
 

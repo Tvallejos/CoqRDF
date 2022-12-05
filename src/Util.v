@@ -85,3 +85,8 @@ Proof. elim: l x0 => [ | t ts IHts] x0 /=.
          * by right; rewrite eqxx.
        - by right; rewrite intail orbT.
 Qed.
+
+Definition build_finfun (T : choiceType) (f : T -> T) (s : seq T) : (seq_sub s) -> T :=
+  fun ssub => f (ssval ssub).
+
+

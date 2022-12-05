@@ -244,10 +244,10 @@ Section Rdf.
 
     Definition iso_leads_canonical M (nmn : dont_manipulate_names_mapping M) g1 g2 (iso_g1_g2: iso g1 g2) : M g1 == M g2.
     Proof. case iso_g1_g2=> μ [bijmu /eqP ->].
-           (* eq_rel_g1g2]. *)
            suffices ->: M g2 = M (relabeling μ g2). by [].
            by apply /eqP; apply (nmn g2 μ bijmu).
-    Qed. 
+    Qed.
+
 
   End EqRdf.
   Section Relabeling_alt.

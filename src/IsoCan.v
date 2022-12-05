@@ -670,6 +670,15 @@ Section IsoCan.
             |} :: (k_mapping {| graph:= as' |})).
     Proof. rewrite /k_mapping /init_hash relabeling_cons relabeling_id relabeling_triple_id. Admitted.
 
+    Lemma injection_hterm b (ht : hterm) : eqb_b_hterm b ht -> is_bnode ht. Proof. by case ht. Qed.
+    Lemma eqb_b_hterm_trans b b' ht : eqb_b_hterm b ht -> eqb_b_hterm b' ht -> b = b'.
+    Proof. by case: ht=> // name; move=> /eqP -> /eqP ->. Qed.
+
+    Lemma injection_kmap b b' ht s : eqb_b_hterm b ht -> eqb_b_hterm b' ht ->
+                                     (build_mapping_from_seq (mapi (app_n mark_bnode) s) b) = (build_mapping_from_seq (mapi (app_n mark_bnode) s) b').
+    Proof. move=> eb eb'. suffices : b = b'. by move=> ->.
+           by apply (eqb_b_hterm_trans eb eb'). Qed. 
+
     Lemma all_kmaps_bijective g : List.Forall (fun mu => bijective mu) [seq build_mapping_from_seq i
                                                                        | i <- [seq mapi (app_n mark_bnode) i
                                                                               | i <- permutations (bnodes (init_hash g))]].
@@ -682,9 +691,22 @@ Section IsoCan.
       apply/List.Forall_nth=> i d lti. apply: step. rewrite -mem_permutations -nth2Listnth. apply: mem_nth.
       by rewrite -size2Listlength; apply/ltP.
       (* pose μ := build_mapping_from_seq (mapi (app_n mark_bnode') s). *)
-      have inj_mu: injective (build_mapping_from_seq (mapi (app_n mark_bnode) s)).
+      have inj_lookup: injective lookup_hash_default.
       admit.
-      move=> s_pm.
+      have inj_mu: injective (build_mapping_from_seq (mapi (app_n mark_bnode) (undup s))).
+      move=> x y. rewrite /build_mapping_from_seq. case e: (has (eqb_b_hterm x) (mapi (app_n mark_bnode) (undup s))); case e2:  (has (eqb_b_hterm y) (mapi (app_n mark_bnode) (undup s))); last done.
+      move=> /inj_to_string /inj_lookup eq_hash.
+      elim: (undup s) eq_hash => [| hd tl IHtl].
+      + by rewrite /= /mkHinput=> eqhash; injection eqhash.
+      + case eb: (eqb_b_hterm x hd); case eb2: (eqb_b_hterm y hd).
+      - move=> _; apply (eqb_b_hterm_trans eb eb2).
+      - Fail apply nth_find.
+      -
+      -
+      +
+
+      admit.
+      move=> s_pm. 
       Check build_mapping_from_seq.
     Admitted.
 

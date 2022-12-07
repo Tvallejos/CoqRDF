@@ -491,71 +491,48 @@ Section IsoCan.
 
 
     Lemma in_zip (S T : eqType) (ss : seq S) (ts : seq T) s t:
-      (s,t) \in zip ss ts -> s \in ss /\ t \in ts.
-    Proof. rewrite -!has_pred1 /pred1=> /hasP [[s0 t0] x_in_zip].
-           rewrite /=.
-           case x.
-
-           in_zip. /pred1. move=> in_zip. apply /hasP.
-
-
-
-    Lemma notin_zip (S T: eqType) (ss: seq S)  :
-      forall s, s \notin ss -> forall (ts : seq T) t, (s,t) \notin zip ss ts.
+      (s,t) \in zip ss ts -> (s \in ss) /\ (t \in ts).
     Proof.
-      move=> s sninss. rewrite /negb.
-      have :
+      move: t s. elim : ts ss. rewrite /==> ss; by case ss.
+      + move=> t' ts' IHts ss t s.
+        case: ss; first done.
+        move=> s' ss' in_zip; rewrite !in_cons.
+        rewrite /= in_cons in in_zip; split;
+          move: in_zip; case/orP;
+          last by move=> in_zip; apply/orP; right; apply (IHts _ _ _ in_zip).
+          by rewrite xpair_eqE=> /andP [seq teq]; apply /orP; left; exact: seq.
+          (* room for improve *)
+          by move=> in_zip; apply/orP; right; apply (IHts _ _ _ in_zip).
+          (* room for improve *)
+          by rewrite xpair_eqE=> /andP [seq teq]; apply /orP; left; exact: teq.
+    Qed.
 
-      case/ifP.
+    Lemma notin_zip (S T: eqType) (ss: seq S) (ts : seq T) s t :
+      s \notin ss -> (s,t) \notin zip ss ts.
+    Proof.
+      rewrite /negb. case e: (s \in ss); first done.
+      case e2: ((s, t) \in zip ss ts); last done.
+      by apply in_zip in e2; move: e2=> [/eqP/eqP  contr _]; rewrite contr in e; done.
+    Qed.
 
+    Lemma zip_uniq (S T : eqType) (ss : seq S) (ts : seq T) : uniq ss -> uniq ts -> uniq (zip ss ts).
+    Proof.
+      elim: ts ss=> [| hd2 tl2 IHtl2] ss uniq_ss uniq_ts; first by case ss.
+      + case: ss uniq_ss => [| s ss']; first by rewrite zip0s.
+        move=> uniq_ss; rewrite /=; apply /andP; split.
+        move: uniq_ss=> /==> /andP [nin_ss' _]; apply (notin_zip _ _ nin_ss').
+        apply: IHtl2;
+          move: uniq_ss => /==> /andP [_ uniq_ss]. exact: uniq_ss. (* why I can not connect using ;?*)
+        move: uniq_ts => /==> /andP [_ uniq_ts]. exact: uniq_ts.
+    Qed.
 
-
-
-      ts.
-      elim: ts=> [| hd tl IHtl]; first by rewrite zips0.
-      (* === *)
-      move=> t. rewrite /negb.
-      (* === *)
-      case: ss IHtl=> [| hds tls]; first by [].
-      move=> IHtl s sninss t  /=. rewrite in_cons in sninss *. rewrite Bool.negb_orb in sninss.
-      move: sninss=> /andP [s_neq_hd s_nin_tl].
-      rewrite in_cons. apply /negP. case/orP.
-      + rewrite xpair_eqE=> /andP [/eqP hd_eq /eqP  t_eq].
-        rewrite hd_eq in s_neq_hd. apply /negP. apply s_neq_hd. done.
-        have not_in_weak a a' l: a' \notin a :: l -> a' \notin l.
-        rewrite in_cons Bool.negb_orb=>
-                  /andP [neqa anil]. exact: anil.
-        have not_in_zip_weak  a a' b a_s bs : (a,b) \notin zip (a'::a_s) bs -> (a,b) \notin zip a_s bs.
-        case bs=> [| b' bs']; first by case a_s. 
-        rewrite /= in_cons Bool.negb_orb. case a_s=> [| a'' a_s'] /andP [neq_a neq_tl]; first by [].
-        rewrite in_cons Bool.negb_orb.
-        move=> 
-        rewrite in_cons xpair_eqE.
-        admit.
-      Admitted.
-
+    (* TODO uses app_n mark_node injective *)
     Lemma k_mapping_seq_uniq g: uniq (mapi (app_n mark_bnode) (bnodes (init_hash g))).
     Proof.
-      (* have : uniq (bnodes (init_hash g)). . *)
       rewrite /mapi.
-      (* eapply map_inj_uniq. *)
       have injF : injective (fun an=> app_n mark_bnode an.1 an.2). admit.
       rewrite map_inj_uniq.
       have uniq_iota : uniq (iota 0 (size (bnodes (init_hash g)))). by apply iota_uniq.
-      have zip_uniq s1 s2: uniq s1 -> uniq s2 -> uniq (zip s1 s2).
-      (* === *)
-      elim: s2=> [| hd2 tl2 IHtl2] uniq_s1 uniq_s2; first by case s1.
-      + case: s1 uniq_s1 IHtl2 => [| hd1 tl1]; first by rewrite zip0s.
-        move=> uniq_s1 IHtl2. rewrite /=. apply /andP; split.
-      (* === *)
-      elim: s1=> [//| hd1 tl1 IHtl] uniq_s1 uniq_s2. by rewrite zip0s. elim: s2 IHtl uniq_s2; first by [].
-      + move=> hd2 tl2 IHtl1 IHtl2.
-        rewrite /=. case/andP=> hd2_nin uniq_tl2.
-        apply /andP; split.
-      rewrite /=.
-
-      elim s2=> [| hd1 tl1 IHtl1] [| hd2 tl2].
-      move=> s1_uniq s2_uniq. rewrite /zip.
       apply zip_uniq. apply uniq_bnodes. apply uniq_iota.
       apply injF.
     Admitted.
@@ -794,26 +771,21 @@ Section IsoCan.
       have ansy : ((eqb_b_hterm y) (nth (Bnode (mkHinput x herror)) (mapi (app_n mark_bnode) (undup s))
                                  (find (eqb_b_hterm y) (mapi (app_n mark_bnode) (undup s))))).
       apply nth_find; apply e2. 
+      (* elim : s=> [|hd tl IHtl]; rewrite //. *)
+      (* rewrite /=. case: (hd \in tl); first by apply IHtl. *)
+      (* + rewrite /=. case: orP; case: orP=> [in_hd_x | in_tail_x]=> [in_hd_y | in_tail_y] _ _. *)
+      (*   case in_hd_x; case in_hd_y=> e1 e2. rewrite e1 e2 /==> _. apply (eqb_b_hterm_trans e1 e2). *)
+      (*   rewrite /=. *)
 
-                                                                                                                im : s=> [|hd tl IHtl]; rewrite //.
-      rewrite /=. case: (hd \in tl); first by apply IHtl.
-      + rewrite /=. case: orP; case: orP=> [in_hd_x | in_tail_x]=> [in_hd_y | in_tail_y] _ _.
-        case in_hd_x; case in_hd_y=> e1 e2. rewrite e1 e2 /==> _. apply (eqb_b_hterm_trans e1 e2).
-        rewrite /=.
 
-
-      elim: (undup s) eq_hash => [| hd tl IHtl].
-      + by rewrite /= /mkHinput=> eqhash; injection eqhash.
-      + case eb: (eqb_b_hterm x hd); case eb2: (eqb_b_hterm y hd).
-      - move=> _; apply (eqb_b_hterm_trans eb eb2).
-      - Fail apply nth_find.
-      -
-      -
-      +
-
-      admit.
-      move=> s_pm. 
-      Check build_mapping_from_seq.
+      (* elim: (undup s) eq_hash => [| hd tl IHtl]. *)
+      (* + by rewrite /= /mkHinput=> eqhash; injection eqhash. *)
+      (* + case eb: (eqb_b_hterm x hd); case eb2: (eqb_b_hterm y hd). *)
+      (* - move=> _; apply (eqb_b_hterm_trans eb eb2). *)
+      (* - Fail apply nth_find. *)
+      (* - *)
+      (* - *)
+      (* + *)
     Admitted.
 
     (* TODO *)

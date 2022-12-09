@@ -85,8 +85,7 @@ Section IsoCan.
 
     Definition htriple := triple I (hash B) L.
 
-    (* misnommer ? *)
-    Definition get_triple trm (trpl : htriple) : option hterm :=
+    Definition has_term_triple trm (trpl : htriple) : option hterm :=
       let (s,p,o,_,_) := trpl in
       if eqb_trm_hi trm s then Some s
       else if eqb_trm_hi trm p then Some p
@@ -99,7 +98,7 @@ Section IsoCan.
     Definition hgraph := rdf_graph I (hash B) L.
 
     Definition get t (g : hgraph) : option hterm :=
-      let otrs := (map (get_triple t) (graph g)) in
+      let otrs := (map (has_term_triple t) (graph g)) in
       head None (filter is_some otrs).
 
     Definition lookup_hash (hb : hterm) : option (hash B) :=
@@ -486,45 +485,6 @@ Section IsoCan.
 
     (* Lemma mapi_marks_injective : injective (mapi (app_n mark_bnode)). *)
     (*   Proof. move=> x y. *)
-    Remark zip0s (S T : Type) (s:seq T) : zip (@nil S) s = [::]. by case s. Qed.
-    Remark zips0 (S T : Type) (s:seq S) : zip s (@nil T) = [::]. by case s. Qed.
-
-
-    Lemma in_zip (S T : eqType) (ss : seq S) (ts : seq T) s t:
-      (s,t) \in zip ss ts -> (s \in ss) /\ (t \in ts).
-    Proof.
-      move: t s. elim : ts ss. rewrite /==> ss; by case ss.
-      + move=> t' ts' IHts ss t s.
-        case: ss; first done.
-        move=> s' ss' in_zip; rewrite !in_cons.
-        rewrite /= in_cons in in_zip; split;
-          move: in_zip; case/orP;
-          last by move=> in_zip; apply/orP; right; apply (IHts _ _ _ in_zip).
-          by rewrite xpair_eqE=> /andP [seq teq]; apply /orP; left; exact: seq.
-          (* room for improve *)
-          by move=> in_zip; apply/orP; right; apply (IHts _ _ _ in_zip).
-          (* room for improve *)
-          by rewrite xpair_eqE=> /andP [seq teq]; apply /orP; left; exact: teq.
-    Qed.
-
-    Lemma notin_zip (S T: eqType) (ss: seq S) (ts : seq T) s t :
-      s \notin ss -> (s,t) \notin zip ss ts.
-    Proof.
-      rewrite /negb. case e: (s \in ss); first done.
-      case e2: ((s, t) \in zip ss ts); last done.
-      by apply in_zip in e2; move: e2=> [/eqP/eqP  contr _]; rewrite contr in e; done.
-    Qed.
-
-    Lemma zip_uniq (S T : eqType) (ss : seq S) (ts : seq T) : uniq ss -> uniq ts -> uniq (zip ss ts).
-    Proof.
-      elim: ts ss=> [| hd2 tl2 IHtl2] ss uniq_ss uniq_ts; first by case ss.
-      + case: ss uniq_ss => [| s ss']; first by rewrite zip0s.
-        move=> uniq_ss; rewrite /=; apply /andP; split.
-        move: uniq_ss=> /==> /andP [nin_ss' _]; apply (notin_zip _ _ nin_ss').
-        apply: IHtl2;
-          move: uniq_ss => /==> /andP [_ uniq_ss]. exact: uniq_ss. (* why I can not connect using ;?*)
-        move: uniq_ts => /==> /andP [_ uniq_ts]. exact: uniq_ts.
-    Qed.
 
     (* TODO uses app_n mark_node injective *)
     Lemma k_mapping_seq_uniq g: uniq (mapi (app_n mark_bnode) (bnodes (init_hash g))).
@@ -750,6 +710,48 @@ Section IsoCan.
     Proof. move=> eb eb'. suffices : b = b'. by move=> ->.
            by apply (eqb_b_hterm_trans eb eb'). Qed.
 
+    Lemma has_not_default T (s : seq T) p : has p s -> forall x0 x1,  nth x0 s (find p s) = nth x1 s (find p s).
+    Proof. elim: s=> [//| hd tl IHtl] hps x1.
+           rewrite /= in hps. case/orP: hps=> [| hptl]; first by move=> /= ->.
+           + rewrite /=. case: (p hd); first by [].
+             by apply (IHtl hptl).
+    Qed.
+
+    (* Lemma nth_uniq (T: eqType) (s : seq T) x0 : uniq s -> forall n, nth x0 s n \in s -> forall m, nth x0 s n = nth x0 s m <-> n = m. *)
+    (* Proof. elim: s => [//| hd tl IHtl]. split; last by move=> ->. *)
+    (*        + case: n H0 => [//| n']. *)
+    (*          rewrite /=. *)
+    (*          case: m=> [//| m']. *)
+    (*          rewrite /= in H *. *)
+              
+
+    (* Lemma find_eq (T: eqType) (s : seq T) x y x0 : (x \in (undup s)) -> *)
+    (*                                                (* forall t, t \in (undup s) -> *) *)
+    (*                                                (nth x0 (undup s) (index x (undup s))) = nth x0 (undup s) (index y (undup s)) -> x = y. *)
+    (* Proof. *)
+    (*   have: uniq (undup s). by apply undup_uniq. *)
+    (*   elim: (undup s)=> [//| a l IHl] uniq_s x_in_s. *)
+    (*   (* rewrite has_pred1 in has_x. *) *)
+    (*   (* + rewrite /=. *) *)
+
+
+
+    (*   rewrite (nth_index _ x_in_s)=> eq. *)
+    (*   rewrite eq /= in IHl x_in_s. *)
+    (*   case: (a ==y) IHl x_in_s=> /=. *)
+    (*   move=> uniq_l contr. rewrite /= in uniq_s. move: uniq_s=> /andP [a_nil_l _]. *)
+    (*   rewrite in_cons in contr. case/orP: contr. *)
+
+
+
+    (*   subst. rewrite /= in uniq_s *. rewrite in_cons in x_in_s. case/orP: x_in_s=> [| has_l]. rewrite eq_sym=> ->. *)
+    (*     rewrite /=. *)
+
+    Lemma eq_to_fin (T: eqType) (ft ft' : finType) (f : T -> T) (injF: injective f) (funt : ft -> T) (injFt: injective funt) (funt' : T -> ft') (injFt' : injective funt')
+      (eq_card : #|ft| = #|ft'|) : exists (f'' : ft -> ft'), injective f''.
+    Proof. exists (fun argT => (funt' (f (funt argT)))).
+           by apply: (inj_comp injFt') (inj_comp injF injFt). Qed.
+
     Lemma all_kmaps_bijective g : List.Forall (fun mu => bijective mu) [seq build_mapping_from_seq i
                                                                        | i <- [seq mapi (app_n mark_bnode) i
                                                                               | i <- permutations (bnodes (init_hash g))]].
@@ -766,26 +768,17 @@ Section IsoCan.
       move=> x y. rewrite /build_mapping_from_seq. case e: (has (eqb_b_hterm x) (mapi (app_n mark_bnode) (undup s))); case e2:  (has (eqb_b_hterm y) (mapi (app_n mark_bnode) (undup s))); last done.
       move=> /inj_to_string /inj_lookup eq_hash.
       have ansx : ((eqb_b_hterm x) (nth (Bnode (mkHinput x herror)) (mapi (app_n mark_bnode) (undup s))
-                                 (find (eqb_b_hterm x) (mapi (app_n mark_bnode) (undup s))))).
+                                      (find (eqb_b_hterm x) (mapi (app_n mark_bnode) (undup s))))).
       apply nth_find; apply e.
       have ansy : ((eqb_b_hterm y) (nth (Bnode (mkHinput x herror)) (mapi (app_n mark_bnode) (undup s))
-                                 (find (eqb_b_hterm y) (mapi (app_n mark_bnode) (undup s))))).
-      apply nth_find; apply e2. 
-      (* elim : s=> [|hd tl IHtl]; rewrite //. *)
-      (* rewrite /=. case: (hd \in tl); first by apply IHtl. *)
-      (* + rewrite /=. case: orP; case: orP=> [in_hd_x | in_tail_x]=> [in_hd_y | in_tail_y] _ _. *)
-      (*   case in_hd_x; case in_hd_y=> e1 e2. rewrite e1 e2 /==> _. apply (eqb_b_hterm_trans e1 e2). *)
-      (*   rewrite /=. *)
-
-
-      (* elim: (undup s) eq_hash => [| hd tl IHtl]. *)
-      (* + by rewrite /= /mkHinput=> eqhash; injection eqhash. *)
-      (* + case eb: (eqb_b_hterm x hd); case eb2: (eqb_b_hterm y hd). *)
-      (* - move=> _; apply (eqb_b_hterm_trans eb eb2). *)
-      (* - Fail apply nth_find. *)
-      (* - *)
-      (* - *)
-      (* + *)
+                                      (find (eqb_b_hterm y) (mapi (app_n mark_bnode) (undup s))))).
+      apply nth_find; apply e2.
+      rewrite eq_hash in ansx.
+      rewrite (has_not_default e (Bnode (mkHinput x herror)) (Bnode (mkHinput y herror))) in eq_hash ansy.
+      admit.
+      admit.
+      admit.
+      (* modify bijective on (bnodes g) -> (mapi (app_n mark_bnode) (bnodes g))*)
     Admitted.
 
     (* TODO *)
@@ -801,7 +794,7 @@ Section IsoCan.
       case: step1=> [ -> | in_tail ].
       + exists id; split.
       - by rewrite relabeling_id.
-      - exact: id_bij. About relabeling_mu_inv.
+      - exact: id_bij. 
         + have [mu eq_mu_map] : exists mu : B -> B, relabeling mu g == k_mapping g.
           exact: relabeling_mu_inv in_tail.
           exists mu. split; first exact eq_mu_map.
@@ -903,5 +896,3 @@ Section IsoCan.
 
 
 End IsoCan.
-
-

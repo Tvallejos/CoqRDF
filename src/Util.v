@@ -94,37 +94,57 @@ Remark zip0s (S T : Type) (s:seq T) : zip (@nil S) s = [::]. by case s. Qed.
 Remark zips0 (S T : Type) (s:seq S) : zip s (@nil T) = [::]. by case s. Qed.
 
 Lemma in_zip (S T : eqType) (ss : seq S) (ts : seq T) s t:
-  (s,t) \in zip ss ts -> (s \in ss) /\ (t \in ts).
+  (s,t) \in zip ss ts -> (s \in ss) && (t \in ts).
 Proof.
-  move: t s. elim : ts ss. rewrite /==> ss; by case ss.
-  + move=> t' ts' IHts ss t s.
-    case: ss; first done.
-    move=> s' ss' in_zip; rewrite !in_cons.
-    rewrite /= in_cons in in_zip; split;
-      move: in_zip; case/orP;
-      last by move=> in_zip; apply/orP; right; apply (IHts _ _ _ in_zip).
-    by rewrite xpair_eqE=> /andP [seq teq]; apply /orP; left; exact: seq.
-    (* room for improve *)
-    by move=> in_zip; apply/orP; right; apply (IHts _ _ _ in_zip).
-    (* room for improve *)
-    by rewrite xpair_eqE=> /andP [seq teq]; apply /orP; left; exact: teq.
+  elim : ts ss t s=> [|t' ts' IHts] /= ss t s; first by case: ss; rewrite in_nil.
+  + case: ss=> [|s' ss']; first done.
+    rewrite in_cons; case/orP; first by rewrite !in_cons xpair_eqE=> /andP [-> ->].
+    by rewrite in_cons=> /IHts/andP [-> ->]; rewrite !Bool.orb_true_r.
 Qed.
 
-Lemma notin_zip (S T: eqType) (ss: seq S) (ts : seq T) s t :
+Lemma in_zip_sym (S T : eqType) (ss : seq S) (ts : seq T) s t:
+  (s,t) \in zip ss ts = ((t, s) \in zip ts ss).
+Proof. 
+  elim: ts ss=> [| t' ts' IHts] ss; first by case ss.
+  + case: ss=> [| s' ss']; first by rewrite zip0s.
+  - rewrite /= !in_cons. f_equal; first by rewrite !xpair_eqE Bool.andb_comm.
+    by rewrite IHts.
+Qed.
+
+Lemma notin_zip_l (S T: eqType) (ss: seq S) (ts : seq T) s t :
   s \notin ss -> (s,t) \notin zip ss ts.
 Proof.
   rewrite /negb. case e: (s \in ss); first done.
   case e2: ((s, t) \in zip ss ts); last done.
-  by apply in_zip in e2; move: e2=> [/eqP/eqP  contr _]; rewrite contr in e; done.
+  by move: e2=> /in_zip; rewrite e.
 Qed.
 
-Lemma zip_uniq (S T : eqType) (ss : seq S) (ts : seq T) : uniq ss -> uniq ts -> uniq (zip ss ts).
+Lemma notin_zip_r (S T: eqType) (ss: seq S) (ts : seq T) s t :
+  t \notin ts -> (s,t) \notin zip ss ts.
 Proof.
-  elim: ts ss=> [| hd2 tl2 IHtl2] ss uniq_ss uniq_ts; first by case ss.
+  by rewrite in_zip_sym; apply notin_zip_l.
+Qed.
+
+Lemma zip_uniq_sym (S T : eqType) (ss : seq S) (ts : seq T) : uniq (zip ss ts) = uniq (zip ts ss).
+Proof.
+  elim: ts ss=> [| t ts' IHts] ss; first by case ss.
+  + case: ss => [| s ss' /=]; first by rewrite zip0s.
+  - f_equal; last by apply IHts.
+    by rewrite in_zip_sym.
+Qed.
+
+Lemma zip_uniq_l (S T : eqType) (ss : seq S) (ts : seq T) : uniq ss -> uniq (zip ss ts).
+Proof.
+  elim: ts ss=> [| hd2 tl2 IHtl2] ss uniq_ss; first by case ss.
   + case: ss uniq_ss => [| s ss']; first by rewrite zip0s.
     move=> uniq_ss; rewrite /=; apply /andP; split.
-    move: uniq_ss=> /==> /andP [nin_ss' _]; apply (notin_zip _ _ nin_ss').
+    move: uniq_ss=> /==> /andP [nin_ss' _]; apply (notin_zip_l _ _ nin_ss').
     apply: IHtl2;
-      move: uniq_ss => /==> /andP [_ uniq_ss]. exact: uniq_ss. (* why I can not connect using ;?*)
-    move: uniq_ts => /==> /andP [_ uniq_ts]. exact: uniq_ts.
+      move: uniq_ss => /==> /andP [_ uniq_ss]. exact: uniq_ss.
 Qed.
+
+Lemma zip_uniq_r (S T : eqType) (ss : seq S) (ts : seq T) : uniq ts -> uniq (zip ss ts).
+Proof.
+  by rewrite zip_uniq_sym; apply zip_uniq_l.
+Qed.
+

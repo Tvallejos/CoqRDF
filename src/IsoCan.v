@@ -487,22 +487,33 @@ Section IsoCan.
     (*   Proof. move=> x y. *)
 
     (* TODO uses app_n mark_node injective *)
+
+    (* Lemma k_mapping_injectiveb g : dinjectiveb (fun an=> app_n mark_bnode an.1 an.2) (seq_sub (bnodes (init_hash g))). *)
+
+    Definition fun_to_fin (T : eqType) (s : seq T) (f : T -> T) : seq_sub s -> T:=
+      fun s0=> let (ssval,_) := s0 in (f ssval).
+
     Lemma k_mapping_seq_uniq g: uniq (mapi (app_n mark_bnode) (bnodes (init_hash g))).
     Proof.
-      rewrite /mapi.
-      have injF : injective (fun an=> app_n mark_bnode an.1 an.2). admit.
+      rewrite /mapi; pose g' := init_hash g.
       rewrite map_inj_uniq.
-      have uniq_iota : uniq (iota 0 (size (bnodes (init_hash g)))). by apply iota_uniq.
-      apply zip_uniq. apply uniq_bnodes. apply uniq_iota.
-      apply injF.
+      apply (zip_uniq_l _ (uniq_bnodes g')).
+      admit.
     Admitted.
 
+    (* Lemma k_mapping_seq_uniq' g: uniq (mapi (app_n mark_bnode) {set (seq_sub (bnodes (init_hash g)))}). *)
+    (* Proof. *)
+    (*   rewrite /mapi. *)
+    (*   have injF : injective (fun an=> app_n mark_bnode an.1 an.2). admit. *)
+    (*   rewrite map_inj_uniq. *)
+    (*   have uniq_iota : uniq (iota 0 (size (bnodes (init_hash g)))). by apply iota_uniq. *)
+    (*   apply zip_uniq. apply uniq_bnodes. apply uniq_iota. *)
+    (*   apply injF. *)
+    (* Admitted. *)
 
     Definition k_mapping (g : rdf_graph I B L) : rdf_graph I B L :=
       let all_maps :=
-        (* permutations (ak_mapping g) in *)
         map (mapi (app_n mark_bnode)) (permutations (bnodes (init_hash g))) in
-      (* (ak_mapping g) in *)
       let mus := map build_mapping_from_seq all_maps in
       let isocans := map (fun mu => relabeling mu g) mus in
       foldl Order.min (relabeling id g) isocans.

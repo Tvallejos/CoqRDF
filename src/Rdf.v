@@ -7,8 +7,8 @@ From RDF Require Import Triple Term Util.
 Section Rdf.
 
   Record rdf_graph (I B L : Type) := mkRdfGraph {
-                                        graph :> seq (triple I B L) ;
-                                      }.
+                                         graph :> seq (triple I B L) ;
+                                       }.
 
   Section PolyRdf.
     Variables I B L : Type.
@@ -38,8 +38,8 @@ Section Rdf.
       end.
 
     Definition relabeling_seq_triple
-               (B' B'': Type) (μ : B' -> B'')
-               (ts : seq (triple I B' L)) : seq (triple _ B'' _) :=
+      (B' B'': Type) (μ : B' -> B'')
+      (ts : seq (triple I B' L)) : seq (triple _ B'' _) :=
       map (relabeling_triple μ) ts.
 
     Section Relabeling_seq_triple.
@@ -63,8 +63,8 @@ Section Rdf.
     Qed.
 
     Definition relabeling
-               (B' B'' : Type) (μ : B' -> B'')
-               (g : rdf_graph I B' L) : rdf_graph I B'' L:=
+      (B' B'' : Type) (μ : B' -> B'')
+      (g : rdf_graph I B' L) : rdf_graph I B'' L:=
       mkRdfGraph (relabeling_seq_triple μ (graph g)).
 
     Lemma relabeling_comp (B' B'': Type) g (μ1 : B -> B') (μ2: B' -> B'') :
@@ -108,7 +108,7 @@ Section Rdf.
     Lemma eqb_rdf_trans g1 g2 g3: eqb_rdf g1 g2 -> eqb_rdf g2 g3 -> eqb_rdf g1 g3.
     Proof. by rewrite /eqb_rdf=> /eqP -> /eqP ->. Qed.
 
-      Definition rdf_eqP : Equality.axiom eqb_rdf.
+    Definition rdf_eqP : Equality.axiom eqb_rdf.
     Proof. rewrite /Equality.axiom => x y.
            apply: (iffP idP) => //= [| ->]; case: x y=> [g1] [g2].
            by rewrite /eqb_rdf => /eqP /= ->.
@@ -138,18 +138,47 @@ Section Rdf.
       undup (filter (@is_bnode _ _ _) (terms g)).
 
     Lemma bnodes_cons (trpl : triple I B L) (ts : seq (triple I B L)) :
-        bnodes {| graph := trpl :: ts |} = undup ((bnodes_triple trpl) ++ (bnodes {| graph := ts |})).
+      bnodes {| graph := trpl :: ts |} = undup ((bnodes_triple trpl) ++ (bnodes {| graph := ts |})).
     Proof.
-           elim: ts trpl => [| h ts' IHts]=> trpl; rewrite /bnodes/bnodes_triple.
-           + by rewrite /terms /= !cats0 filter_undup undup_idem.
-           + by rewrite terms_cons filter_undup undup_idem undup_cat_r filter_cat.
+      elim: ts trpl => [| h ts' IHts]=> trpl; rewrite /bnodes/bnodes_triple.
+      + by rewrite /terms /= !cats0 filter_undup undup_idem.
+      + by rewrite terms_cons filter_undup undup_idem undup_cat_r filter_cat.
     Qed.
+
+    Remark undup_bnodes g : undup (bnodes g) = bnodes g.
+    Proof. by rewrite /bnodes undup_idem. Qed.
+
+    Lemma all_bnodes g : all (@is_bnode I B L) (bnodes g).
+      case: g=> g'; elim: g' => [//| t ts IHts].
+      rewrite bnodes_cons all_undup all_cat IHts Bool.andb_true_r.
+      exact: all_bnodes_triple_is_bnode.
+    Qed.
+
+    Lemma b_in_bnode_is_bnode b g : bnodes g = [:: b] -> is_bnode b.
+    Proof.
+      move=> H; have binb : b \in bnodes g. by rewrite H in_cons in_nil eq_refl. 
+      rewrite /bnodes -filter_undup mem_filter in binb. 
+      by case: (is_bnode b) binb.
+    Qed.
+
+    Lemma uniq_bnodes g : uniq (bnodes g).
+    Proof. exact: undup_uniq. Qed.
+
+    Lemma in_bnodes b g: b \in bnodes g -> is_bnode b.
+    Proof. apply /allP. apply all_bnodes. Qed.
+
+
+    Lemma i_in_bnodes id g: Iri id \in bnodes g = false.
+    Proof. by rewrite /bnodes -filter_undup mem_filter. Qed.
+
+    Lemma l_in_bnodes l g: Lit l \in bnodes g = false.
+    Proof. by rewrite /bnodes -filter_undup mem_filter. Qed.
 
     Lemma ground_no_bnodes g : bnodes g = [::] <-> is_ground g.
     Proof. split=> [|].
            + rewrite /is_ground /bnodes. elim g=> g'; elim: g' => [| a t IHts]; first by rewrite all_nil.
              rewrite -filter_undup. case a=> s p o; case: s; case: p; case o=> // x y z sib pii;
-                                                                             rewrite terms_cons undup_cat_l undup_idem  filter_undup /=.
+                                                                               rewrite terms_cons undup_cat_l undup_idem  filter_undup /=.
            - exact: IHts.
            - exact: IHts.
            - case e: (Bnode x \in [seq x <- terms {| graph := t |} | is_bnode x]) => contr; last by done.
@@ -177,9 +206,6 @@ Section Rdf.
 
 
     (* Definition all_b_in_g g : all (\in g) (get_b g). *)
-
-    Lemma uniq_bnodes g : uniq (bnodes g).
-    Proof. exact: undup_uniq. Qed.
 
     Lemma bijective_eqb_rdf mu nu g1 g2 :
       cancel mu nu -> eqb_rdf g1 (relabeling mu g2) ->  eqb_rdf g2 (relabeling nu g1).
@@ -214,15 +240,15 @@ Section Rdf.
 
     (* Remark eqiso' g1 g2 : eqb_rdf g1 g2 -> iso g1 g2. *)
     (* Proof. move=> /eqP eq. by rewrite eq; apply iso_refl. Qed *)
-(*          Error: The LHS of eq *)
-(*     (graph g1) *)
-(* does not match any subterm of the goal *)
+    (*          Error: The LHS of eq *)
+    (*     (graph g1) *)
+    (* does not match any subterm of the goal *)
 
     Lemma iso_symm g1 g2 : iso g1 g2 <-> iso g2 g1.
     Proof.
       rewrite /iso /is_iso.
       split; case=> mu [mu_bij heqb_rdf]; case: (mu_bij)=> [nu h1 h2];
-                                                         (exists nu; split; [exact: bij_can_bij h1 | exact: bijective_eqb_rdf heqb_rdf]).
+                                                           (exists nu; split; [exact: bij_can_bij h1 | exact: bijective_eqb_rdf heqb_rdf]).
     Qed.
 
     Lemma iso_trans g1 g2 g3 : iso g1 g2 -> iso g2 g3 -> iso g1 g3.
@@ -275,26 +301,26 @@ Section Rdf.
 
 
 
-    (* Definition code_rdf g := graph g. *)
-    (* Definition decode_rdf (ts : seq (triple I B L)) := mkRdfGraph ts. *)
+  (* Definition code_rdf g := graph g. *)
+  (* Definition decode_rdf (ts : seq (triple I B L)) := mkRdfGraph ts. *)
 
-    (* Lemma cancel_rdf_encode : cancel code_rdf decode_rdf. *)
+  (* Lemma cancel_rdf_encode : cancel code_rdf decode_rdf. *)
   (* Proof. by case. Qed. *)
 
 
-    Definition rdf_canChoiceMixin' (I B L : choiceType) := CanChoiceMixin (@pcancel_code_decode I B L).
-    Definition rdf_canCountMixin' (I B L : countType):= CanCountMixin (@pcancel_code_decode I B L).
+  Definition rdf_canChoiceMixin' (I B L : choiceType) := CanChoiceMixin (@pcancel_code_decode I B L).
+  Definition rdf_canCountMixin' (I B L : countType):= CanCountMixin (@pcancel_code_decode I B L).
 
-    (* Definition rdf_canChoiceMixin := CanChoiceMixin cancel_rdf_encode. *)
-    (* Definition rdf_canCountMixin := CanCountMixin cancel_rdf_encode. *)
+  (* Definition rdf_canChoiceMixin := CanChoiceMixin cancel_rdf_encode. *)
+  (* Definition rdf_canCountMixin := CanCountMixin cancel_rdf_encode. *)
 
-    Canonical rdf_choiceType (I B L: choiceType):= Eval hnf in ChoiceType (rdf_graph I B L) (@rdf_canChoiceMixin' I B L).
-    Canonical rdf_countType (I B L: countType):= Eval hnf in CountType (rdf_graph I B L) (@rdf_canCountMixin' I B L).
+  Canonical rdf_choiceType (I B L: choiceType):= Eval hnf in ChoiceType (rdf_graph I B L) (@rdf_canChoiceMixin' I B L).
+  Canonical rdf_countType (I B L: countType):= Eval hnf in CountType (rdf_graph I B L) (@rdf_canCountMixin' I B L).
 
-    Definition rdf_canPOrderMixin (I B L: countType):= PcanPOrderMixin (@pickleK (rdf_countType I B L)).
-    Canonical rdf_POrderType (I B L: countType):= Eval hnf in POrderType tt (rdf_graph I B L) (@rdf_canPOrderMixin I B L).
+  Definition rdf_canPOrderMixin (I B L: countType):= PcanPOrderMixin (@pickleK (rdf_countType I B L)).
+  Canonical rdf_POrderType (I B L: countType):= Eval hnf in POrderType tt (rdf_graph I B L) (@rdf_canPOrderMixin I B L).
 
-    Section CountRdf.
+  Section CountRdf.
     Variables I B L : countType.
     Implicit Type g : rdf_graph I B L.
 
@@ -308,7 +334,7 @@ The term "g1" has type "rdf_graph I B L" while it is expected to have type
 
     Definition isocanonical_mapping_alt (M : rdf_graph I B L -> rdf_graph I B L) :=
       forall g, iso_alt (M g) g /\
-        (forall g1 g2, (M g1) == (M g2) <-> iso g1 g2).
+                  (forall g1 g2, (M g1) == (M g2) <-> iso g1 g2).
 
 
     Section FinTypeRdf.

@@ -493,14 +493,24 @@ Section IsoCan.
     Definition fun_to_fin (T : eqType) (s : seq T) (f : T -> T) : seq_sub s -> T:=
       fun s0=> let (ssval,_) := s0 in (f ssval).
 
-    Lemma k_mapping_seq_uniq g: uniq (mapi (app_n mark_bnode) (bnodes (init_hash g))).
+    Lemma k_mapping_seq_uniq_graph g: uniq (mapi (app_n mark_bnode) (bnodes (init_hash g))).
     Proof.
       rewrite /mapi; pose g' := init_hash g.
-      rewrite map_inj_uniq.
+      rewrite map_inj_in_uniq.
       apply (zip_uniq_l _ (uniq_bnodes g')).
+      move=> [t n] [u m] /in_zip/andP [tin_bns n_iota] /in_zip/andP [uin_bns m_iota] /= eq_app_n.
+      case: t tin_bns eq_app_n=> [//|//|name].
       admit.
     Admitted.
 
+    Lemma k_mapping_seq_uniq_seq s (s_uniq: uniq s): uniq (mapi (app_n mark_bnode) s).
+    Proof.
+      rewrite /mapi map_inj_in_uniq.
+      apply: zip_uniq_l s_uniq.
+      move=> [t n] [u m] x_in_zip y_in_zip /= eq_app_n.
+
+      admit.
+    Admitted.
     (* Lemma k_mapping_seq_uniq' g: uniq (mapi (app_n mark_bnode) {set (seq_sub (bnodes (init_hash g)))}). *)
     (* Proof. *)
     (*   rewrite /mapi. *)
@@ -553,24 +563,6 @@ Section IsoCan.
     (* Proof. rewrite /mkPartition/bnodes. case g => g'. case g' => [// | [s p o sib pi] tl] => /= singleton.  *)
     (*        rewrite /terms/terms_triple. case trpl=> s p o sib pi. case s. *)
 
-    Remark undup_bnodes (g : hgraph) : undup (bnodes g) = bnodes g.
-    Proof. by rewrite /bnodes undup_idem. Qed.
-
-    Lemma all_bnodes (I' B' L' : eqType) (g : rdf_graph I' B' L') : all (@is_bnode I' B' L') (bnodes g).
-      case: g=> g'; elim: g' => [//| t ts IHts].
-      rewrite bnodes_cons all_undup. case t=> s p o.
-      case s; case p; case o; rewrite //;
-                                rewrite /bnodes_triple /terms_triple=> ? ? ? ? ?;
-                                                                         rewrite filter_undup /=; last by case: ifP.
-      all: try apply IHts.
-    Qed.
-
-    Lemma b_in_bnode_is_bnode (b : hterm) g : bnodes g = [:: b] -> is_bnode b.
-    Proof.
-      move=> H; have binb : b \in bnodes g. by rewrite H in_cons in_nil eq_refl. 
-      rewrite /bnodes -filter_undup mem_filter in binb. 
-      by case: (is_bnode b) binb.
-    Qed.
 
     Lemma seq1_empty_seq (A : Type) (hd:A) d s : hd :: s = [:: d] -> s = [::].
     Proof. by case s. Qed.
@@ -734,11 +726,11 @@ Section IsoCan.
     (*          rewrite /=. *)
     (*          case: m=> [//| m']. *)
     (*          rewrite /= in H *. *)
-              
+    
 
-    (* Lemma find_eq (T: eqType) (s : seq T) x y x0 : (x \in (undup s)) -> *)
-    (*                                                (* forall t, t \in (undup s) -> *) *)
-    (*                                                (nth x0 (undup s) (index x (undup s))) = nth x0 (undup s) (index y (undup s)) -> x = y. *)
+    (* Lemma find_eq (T: eqType) (s : seq T) x y x0 : (x \in s) -> *)
+    (*                                                uniq s -> *)
+    (*                                                (nth x0 s (index x s)) = nth x0 s (index y s) -> x = y. *)
     (* Proof. *)
     (*   have: uniq (undup s). by apply undup_uniq. *)
     (*   elim: (undup s)=> [//| a l IHl] uniq_s x_in_s. *)
@@ -775,17 +767,27 @@ Section IsoCan.
       apply/List.Forall_nth=> i d lti. apply: step. rewrite -mem_permutations -nth2Listnth. apply: mem_nth.
       by rewrite -size2Listlength; apply/ltP.
       have inj_lookup: injective lookup_hash_default. admit.
+      pose the_list := (mapi (app_n mark_bnode) (undup s)).
       have inj_mu: injective (build_mapping_from_seq (mapi (app_n mark_bnode) (undup s))).
-      move=> x y. rewrite /build_mapping_from_seq. case e: (has (eqb_b_hterm x) (mapi (app_n mark_bnode) (undup s))); case e2:  (has (eqb_b_hterm y) (mapi (app_n mark_bnode) (undup s))); last done.
-      move=> /inj_to_string /inj_lookup eq_hash.
+      move=> x y. rewrite -/the_list /build_mapping_from_seq. case e: (has (eqb_b_hterm x) (mapi (app_n mark_bnode) (undup s))); case e2:  (has (eqb_b_hterm y) (mapi (app_n mark_bnode) (undup s))); last done.
+      move=> /inj_to_string /inj_lookup/eqP eq_hash.
       have ansx : ((eqb_b_hterm x) (nth (Bnode (mkHinput x herror)) (mapi (app_n mark_bnode) (undup s))
                                       (find (eqb_b_hterm x) (mapi (app_n mark_bnode) (undup s))))).
       apply nth_find; apply e.
       have ansy : ((eqb_b_hterm y) (nth (Bnode (mkHinput x herror)) (mapi (app_n mark_bnode) (undup s))
                                       (find (eqb_b_hterm y) (mapi (app_n mark_bnode) (undup s))))).
       apply nth_find; apply e2.
+      rewrite -/the_list in
+        e e2
+          eq_hash ansx ansy.
+      rewrite (has_not_default e (Bnode (mkHinput x herror)) (Bnode (mkHinput y herror))) nth_uniq in eq_hash.
+      move: eq_hash=> /eqP eq_hash. 
       rewrite eq_hash in ansx.
-      rewrite (has_not_default e (Bnode (mkHinput x herror)) (Bnode (mkHinput y herror))) in eq_hash ansy.
+      apply: eqb_b_hterm_trans ansx ansy.
+      rewrite -has_find. apply e.
+      rewrite -has_find. apply e2.
+      rewrite /the_list.
+      apply k_mapping_seq_uniq_seq. apply undup_uniq.
       admit.
       admit.
       admit.

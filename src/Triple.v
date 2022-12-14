@@ -196,9 +196,18 @@ Section OperationsOnTriples.
 
   Definition all_bnodes_triple_is_bnode t : all (@is_bnode I B L) (bnodes_triple t).
   Proof.
-  case t=> s p o; rewrite /bnodes_triple/terms_triple=> _ _.
-  rewrite filter_undup all_undup; exact: filter_all.
+    case t=> s p o; rewrite /bnodes_triple/terms_triple=> _ _.
+    rewrite filter_undup all_undup; exact: filter_all.
   Qed.
+
+  Remark undup_bnodes_triple (t: triple I B L) : undup (bnodes_triple t) = bnodes_triple t.
+  Proof. by case t=> ? ? ? ? ?; rewrite /bnodes_triple/terms_triple filter_undup undup_idem. Qed.
+
+  Lemma i_in_bnodes_triple id t: Iri id \in bnodes_triple t = false.
+  Proof. by rewrite /bnodes_triple mem_filter. Qed.
+
+  Lemma l_in_bnodes_triple l t: Lit l \in bnodes_triple t = false.
+  Proof. by rewrite /bnodes_triple mem_filter. Qed.
 
   Definition get_b_triple t : seq B.
   Proof. apply bnodes_triple in t as bns.

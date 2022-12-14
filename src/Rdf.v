@@ -127,12 +127,27 @@ Section Rdf.
     (* (* requieres trm to be finType *) *)
     (* Fail Check finset (trm \in g). *)
 
-    Definition terms g : seq (term I B L) :=
-      undup (flatten (map (@terms_triple I B L) g)).
+    Definition terms (I' B' L': eqType) (g : rdf_graph I' B' L') : seq (term I' B' L') :=
+      undup (flatten (map (@terms_triple I' B' L') g)).
 
-    Definition terms_cons (trpl : triple I B L) (ts : seq (triple I B L)) :
+    Lemma undup_terms g : undup (terms g) = (terms g).
+    Proof. by rewrite /terms undup_idem. Qed. 
+
+    Definition terms_cons (I' B' L': eqType) (trpl : triple I' B' L') (ts : seq (triple I' B' L')) :
       terms (mkRdfGraph (trpl :: ts)) = undup (terms_triple trpl ++ (terms (mkRdfGraph ts))).
     Proof. by rewrite /terms; case: ts=>  [ // | ? ? ] ; rewrite undup_cat_r. Qed.
+
+
+    Section TermRelabeling.
+      Variable B1 B2: eqType.
+
+    Lemma terms_relabeled (g : rdf_graph I B1 L) (mu: B1 -> B2) (inj_mu : injective mu):
+      (@terms I B2 L (relabeling mu g)) = map (relabeling_term mu) (terms g).
+    Proof. elim g=> g'; elim g'=> [//|t ts IHts].
+           + rewrite relabeling_cons !terms_cons -undup_map_inj; last exact: relabeling_term_inj.
+             by rewrite IHts map_cat terms_relabeled_triple //; apply inj_mu.
+    Qed.
+    End TermRelabeling. 
 
     Definition bnodes g : seq (term I B L) :=
       undup (filter (@is_bnode _ _ _) (terms g)).

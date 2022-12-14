@@ -130,10 +130,20 @@ Section OperationsOnTriples.
   Variables I B L : eqType.
   Implicit Type t : triple I B L.
 
-  Definition terms_triple (t : triple I B L) : seq (term I B L) :=
+  Definition terms_triple (I' B' L': eqType) (t : triple I' B' L') : seq (term I' B' L') :=
     let (s,p,o,_,_) := t in undup [:: s ; p ; o].
 
-  Canonical triple_predType := PredType (pred_of_seq \o (terms_triple)).
+  Lemma terms_relabeled_triple (B1 B2: eqType) (t : triple I B1 L) (mu: B1 -> B2) (inj_mu: injective mu) : terms_triple (relabeling_triple mu t) = map (relabeling_term mu) (terms_triple t).
+  Proof. case t=> s p o ? ?.
+         rewrite /relabeling_triple /terms_triple -undup_map_inj //; exact: relabeling_term_inj. 
+  Qed.
+
+  (* Lemma terms_triple_relabeled t mu (inj_mu: injective mu) : terms_triple (relabeling_triple mu t) = map (relabeling_term mu) (terms_triple t). *)
+  (* Proof. case t=> s p o ? ?. *)
+  (*        rewrite /relabeling_triple /terms_triple -undup_map_inj //; exact: relabeling_term_inj.  *)
+  (* Qed. *)
+
+  Canonical triple_predType (I' B' L': eqType):= PredType (pred_of_seq \o (@terms_triple I' B' L')).
 
   Definition bnodes_triple (t : triple I B L) : seq (term I B L) :=
     filter (@is_bnode I B L) (terms_triple t).

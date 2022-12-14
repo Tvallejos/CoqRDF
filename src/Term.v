@@ -111,6 +111,13 @@ Section Poly.
     μ1 =1 μ2 -> relabeling_term μ1 =1 relabeling_term μ2.
   Proof. by move=> μpweq [//| // | b] /=; rewrite μpweq. Qed.
 
+  Lemma relabeling_term_inj (mu: B1 -> B2) (inj_mu : injective mu) : injective (relabeling_term mu).
+  Proof. move=> x y. case x; case y=> // x' y';
+                                      rewrite /==> eq_xy; injection eq_xy; last by move=> /inj_mu ->. 
+         by move=> ->.
+         by move=> ->.
+  Qed.
+
 End Poly.
 
 Section CodeTerm.

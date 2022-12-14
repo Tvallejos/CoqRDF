@@ -493,13 +493,28 @@ Section IsoCan.
     Definition fun_to_fin (T : eqType) (s : seq T) (f : T -> T) : seq_sub s -> T:=
       fun s0=> let (ssval,_) := s0 in (f ssval).
 
+    Lemma inj_init_bnode : injective init_bnode.
+    Proof. by move=> x y; rewrite /init_bnode=> ht; injection ht=> ->. Qed.
+
+    Lemma mark_hash_init b g : Bnode b \in bnodes (init_hash g) -> current_hash b = h0.
+    Proof. rewrite /bnodes/init_hash -filter_undup mem_filter /=.
+           rewrite undup_terms.
+           rewrite (terms_relabeled g inj_init_bnode).
+           by move=> /map_inv [[] // x]=> beq; injection beq=> ->.
+    Qed.
+
+
     Lemma k_mapping_seq_uniq_graph g: uniq (mapi (app_n mark_bnode) (bnodes (init_hash g))).
     Proof.
       rewrite /mapi; pose g' := init_hash g.
-      rewrite map_inj_in_uniq.
-      apply (zip_uniq_l _ (uniq_bnodes g')).
+      rewrite map_inj_in_uniq; first by apply (zip_uniq_l _ (uniq_bnodes g')).
       move=> [t n] [u m] /in_zip/andP [tin_bns n_iota] /in_zip/andP [uin_bns m_iota] /= eq_app_n.
-      case: t tin_bns eq_app_n=> [//|//|name].
+      case: t tin_bns uin_bns eq_app_n; case: u => nt nu; rewrite ?i_in_bnodes ?l_in_bnodes // => nu_bns nt_bns.
+      (* case n; case m=> /=. rewrite /=. *)
+      (* + by move=> ->. *)
+      (* + move=> n' /=. *)
+      (* eq_app_n. *)
+      (* move: *)
       admit.
     Admitted.
 
@@ -508,7 +523,6 @@ Section IsoCan.
       rewrite /mapi map_inj_in_uniq.
       apply: zip_uniq_l s_uniq.
       move=> [t n] [u m] x_in_zip y_in_zip /= eq_app_n.
-
       admit.
     Admitted.
     (* Lemma k_mapping_seq_uniq' g: uniq (mapi (app_n mark_bnode) {set (seq_sub (bnodes (init_hash g)))}). *)

@@ -29,6 +29,9 @@ End HashedData.
 Definition hash_eqMixin (H T : eqType) := Eval hnf in [eqMixin of hash H T by <:].
 Canonical hash_eqType (H T : eqType) :=
   Eval hnf in EqType (hash H T) (hash_eqMixin H T).
+Lemma eq_i_ch (H T : eqType) (h1 h2: hash H T) : h1 == h2 = ((input h1) == (input h2)) && ((current_hash h1) == (current_hash h2)).
+Proof. by case h1; case h2. Qed.
+
 Definition hash_choiceMixin (H T : choiceType) := [choiceMixin of hash H T by <:].
 Canonical hash_choiceType (H T : choiceType) :=
   Eval hnf in ChoiceType (hash H T) (hash_choiceMixin H T).
@@ -210,6 +213,9 @@ Section IsoCan.
         hashBag (l1 ++ l2) = hashBag (l2 ++ l1).
 
     Variable hashTuple : seq h -> h.
+    Hypothesis hashTuple_neq_init : forall s, hashTuple s == h0 = false.
+    Hypothesis hashTuple_neq_error : forall s, hashTuple s == herror = false.
+    Hypothesis inj_hashTuple : injective hashTuple.
 
 
     (* Definition update_bnode_triple (b : )(t : triple I (hash B) L) : *)
@@ -460,10 +466,10 @@ Section IsoCan.
     (*                            (find (eqb_b_hterm x) (mapi (app_n mark_bnode) (undup s))) = *)
 
 
-    Fixpoint app_n (f : hterm -> hterm) (x : hterm) (n:nat) :=
+    Fixpoint app_n (T: Type)(f : T -> T) (x : T) (n:nat) :=
       match n with
       | O => x
-      | S n' => app_n f (f x) n'
+      | S n' => f (app_n f x n')
       end.
 
     (* Lemma nth_iota_mark : forall (b : B) g [n i : nat], (i < n)%N -> nth p (init_bnodes ) i = app_n mark_bnode () m + i *)
@@ -498,11 +504,106 @@ Section IsoCan.
 
     Lemma mark_hash_init b g : Bnode b \in bnodes (init_hash g) -> current_hash b = h0.
     Proof. rewrite /bnodes/init_hash -filter_undup mem_filter /=.
-           rewrite undup_terms.
-           rewrite (terms_relabeled g inj_init_bnode).
-           by move=> /map_inv [[] // x]=> beq; injection beq=> ->.
+           rewrite undup_terms (terms_relabeled g inj_init_bnode).
+           by move=> /map_inv [[] // ?]=> beq; injection beq=> ->.
     Qed.
 
+    (* Lemma app_n_Sn (A : Type) (f: A -> A) x n: app_n f x n.+1 = f (app_n f x n). *)
+    (* Proof. rewrite /=. elim n=> [//| n' IHn]. *)
+    (*        rewrite /=.  /app_n. *)
+    (*        rewrite -IHn. *)
+
+
+    Lemma app_n_mark_bnode g b n:
+      Bnode b \in bnodes (init_hash g) ->
+                  app_n mark_bnode (Bnode b) n = Bnode (app_n mark_hash (mkHinput (input b) h0) n).
+    Proof. move=> /mark_hash_init b_hash. elim n=> [| n' IHn]; last by rewrite /= IHn.
+           by rewrite /=; f_equal; case: b b_hash=> /= [[]] ? ? /= ->.
+    Qed.
+
+    Lemma mark_hash_idem_inj b1 b2: mark_hash (mark_hash b1) = mark_hash (mark_hash b2) -> mark_hash b1 = mark_hash b2.
+    Proof. case b1; case b2=> [[a b] [a' b']] /=.
+           rewrite /mark_hash /==> /eqP. rewrite eq_i_ch /==> /andP [/eqP -> /eqP/inj_hashTuple Q].
+           by injection Q=> ->.
+    Qed.
+
+    Lemma appn_mark_hash (b1 b2: hash B) n:
+      mark_hash (app_n mark_hash (mkHinput (input b1) h0) n) = mark_hash (app_n mark_hash (mkHinput (input b2) h0) n) ->
+      ((input b1) == (input b2)) && (app_n mark_hash (mkHinput (input b1) h0) n == app_n mark_hash (mkHinput (input b2) h0) n).
+    Proof. elim: n=> [/=| n' IHn].
+           case b1; case b2=> [[a b] [a' b']] /==> /eqP.
+           by rewrite eq_i_ch /= => /andP [/eqP -> _]; rewrite !eqxx.
+           by move=> /= /mark_hash_idem_inj /IHn => /andP [-> /eqP ->]; rewrite eqxx.
+    Qed.
+
+    (* Lemma appn_mark_hash' (b1 b2: hash B) n m: *)
+    (*   mark_hash (app_n mark_hash (mkHinput (input b1) h0) n) = mark_hash (app_n mark_hash (mkHinput (input b2) h0) m) -> *)
+    (*   ((input b1) == (input b2)) && (app_n mark_hash (mkHinput (input b1) h0) n == app_n mark_hash (mkHinput (input b2) h0) m). *)
+    (* Proof. elim: n; elim: m=> [/=| n' IHn]. *)
+    (*        case b1; case b2=> [[a b] [a' b']] /==> /eqP. *)
+    (*        rewrite eq_i_ch /= => /andP [/eqP -> _]. rewrite !eqxx. *)
+    (*        by move=> /= /mark_hash_idem_inj /IHn => /andP [-> /eqP ->]; rewrite eqxx. *)
+    (* Qed. *)
+
+    Lemma inj_mark_bnode g: {in (bnodes g), injective mark_bnode}.
+    Proof. move=> x in_bns y.
+           case: x in_bns; case y=> x' y'; rewrite ?i_in_bnodes ?l_in_bnodes // => in_bns /=
+               => mbns_eq; injection mbns_eq=> /eqP; rewrite ?hashTuple_neq_error //.
+           move=> /eqP/inj_hashTuple eq_seq; injection eq_seq=> ch_eq i_eq.
+           by f_equal; apply /eqP; rewrite eq_i_ch i_eq ch_eq !eqxx.
+    Qed.
+
+    Lemma eq_appn_init_num b1 b2 g :
+      Bnode b1 \in bnodes (init_hash g) ->
+                   Bnode b2 \in bnodes (init_hash g) ->
+                                forall n m,
+                                  (app_n mark_bnode (Bnode b1) n) = (app_n mark_bnode (Bnode b2) m) -> n = m.
+      move=> b1in_bns b2in_bns.
+      have b1_hash:  current_hash b1 = h0. by apply: mark_hash_init b1in_bns.
+      have b2_hash:  current_hash b2 = h0. by apply: mark_hash_init b2in_bns.
+      move=> n m. rewrite (app_n_mark_bnode n b1in_bns) (app_n_mark_bnode m b2in_bns).
+      move=> eq; injection eq=> appn_eq.
+      elim: n m eq appn_eq=> [// m | n' IHn m].
+      + case: m=> [//| n' IHn]. injection IHn=> /eqP. rewrite eq_sym hashTuple_neq_init. done.
+      + case: m IHn=> [//| m'] IHn eq /=. injection eq=> /eqP. rewrite hashTuple_neq_init. done.
+      - injection eq=> /inj_hashTuple=> eq_seq. injection eq_seq. f_equal=> eq_ch eq_i.
+        have eq_appn: app_n mark_hash (mkHinput (input b1) h0) n' = app_n mark_hash (mkHinput (input b2) h0) m'.
+        by apply /eqP; rewrite eq_i_ch eq_i eq_ch !eqxx.
+        by rewrite eq_appn in IHn; rewrite (IHn m').
+    Qed.
+
+    (* Lemma inj_mark_bnode' b1 b2: is_bnode b1 -> is_bnode b2 -> *)
+    (*  mark_bnode b1 = mark_bnode b2 -> b1 = b2.  *)
+    (* Proof. move=> x y. *)
+    (*        case: x; case y=> x' y'. rewrite ?i_in_bnodes ?l_in_bnodes // => in_bns /= *)
+    (*            => mbns_eq; injection mbns_eq=> /eqP; rewrite ?hashTuple_neq_error //. *)
+    (*        move=> /eqP/inj_hashTuple eq_seq; injection eq_seq=> ch_eq i_eq. *)
+    (*        by f_equal; apply /eqP; rewrite eq_i_ch i_eq ch_eq !eqxx. *)
+    (* Qed. *)
+
+    Lemma app_n_mark_eq_bns (b1 b2: hash B) g :
+      Bnode b1 \in bnodes (init_hash g) ->
+                   Bnode b2 \in bnodes (init_hash g) ->
+                                forall n,
+                                  (app_n mark_bnode (Bnode b1) n) = (app_n mark_bnode (Bnode b2) n) -> (@Bnode I (hash B) L b1) = (Bnode b2).
+      move=> b1in_bns b2in_bns n eq_appn.
+      have b1_hash:  current_hash b1 = h0. by apply: mark_hash_init b1in_bns.
+      have b2_hash:  current_hash b2 = h0. by apply: mark_hash_init b2in_bns.
+      elim: n eq_appn=> [//| n' IHn] /=.
+      (* suffices inj_mark_bnode: injective mark_bnode. *)
+      have inj_mark_bnode : injective mark_bnode. admit.
+      move=> /inj_mark_bnode Q.
+      rewrite IHn. done.
+      exact: Q.
+      (* f_equal; apply /eqP; rewrite eq_i_ch b1_hash b2_hash eqxx Bool.andb_true_r. *)
+      (* f_equal. *)
+      (* rewrite IHn. done. *)
+      (* (* apply / *) *)
+      (* (* rewrite IHn. *) *)
+      (* move=> /inj_mark_bnode eq_appn. rewrite IHn. done. *)
+      (* apply (eq_appn (init_hash g)). *)
+      (* apply inj_mark_bnode. *)
+      Admitted.
 
     Lemma k_mapping_seq_uniq_graph g: uniq (mapi (app_n mark_bnode) (bnodes (init_hash g))).
     Proof.
@@ -510,13 +611,11 @@ Section IsoCan.
       rewrite map_inj_in_uniq; first by apply (zip_uniq_l _ (uniq_bnodes g')).
       move=> [t n] [u m] /in_zip/andP [tin_bns n_iota] /in_zip/andP [uin_bns m_iota] /= eq_app_n.
       case: t tin_bns uin_bns eq_app_n; case: u => nt nu; rewrite ?i_in_bnodes ?l_in_bnodes // => nu_bns nt_bns.
-      (* case n; case m=> /=. rewrite /=. *)
-      (* + by move=> ->. *)
-      (* + move=> n' /=. *)
-      (* eq_app_n. *)
-      (* move: *)
-      admit.
-    Admitted.
+      move=> injH.
+      have eqnm: n = m. apply (eq_appn_init_num nu_bns nt_bns injH).
+      f_equal; last by apply eqnm.
+      + rewrite eqnm in injH. apply (app_n_mark_eq_bns nu_bns nt_bns injH).
+    Qed.
 
     Lemma k_mapping_seq_uniq_seq s (s_uniq: uniq s): uniq (mapi (app_n mark_bnode) s).
     Proof.

@@ -25,7 +25,8 @@ Section Rdf.
     Definition merge_rdf_graph g1 g2 : rdf_graph I B L:=
       mkRdfGraph (g1 ++ g2).
 
-    Lemma merge_cons t ts : {| graph := t::ts |} = merge_rdf_graph (mkRdfGraph [:: t]) (mkRdfGraph ts).
+    Lemma merge_cons t ts :
+      {| graph := t::ts |} = merge_rdf_graph (mkRdfGraph [:: t]) (mkRdfGraph ts).
     Proof. by []. Qed.
 
     Definition merge_seq_rdf_graph (gs : seq (rdf_graph I B L)) : rdf_graph I B L :=
@@ -50,7 +51,8 @@ Section Rdf.
       Proof. move=> mu_eq; apply: eq_map; exact: relabeling_triple_ext. Qed.
 
       Lemma relabeling_seq_triple_comp (B'' : Type) (μ2 : B -> B') (μ1 : B' -> B'') ts :
-        relabeling_seq_triple μ1 (relabeling_seq_triple μ2 ts) = relabeling_seq_triple (μ1 \o μ2) ts.
+        relabeling_seq_triple μ1 (relabeling_seq_triple μ2 ts) =
+          relabeling_seq_triple (μ1 \o μ2) ts.
       Proof.
         rewrite /relabeling_seq_triple -map_comp -/relabeling_seq_triple; apply: eq_map=> x.
         by rewrite relabeling_triple_comp.
@@ -82,11 +84,13 @@ Section Rdf.
       Lemma relabeling_ext  (μ1 μ2 : B -> B') g :  μ1 =1 μ2 -> relabeling μ1 g = relabeling μ2 g.
       Proof. by move=> μpweq; rewrite /relabeling (relabeling_seq_triple_ext _ μpweq). Qed.
 
-      Lemma relabeling_nil B1 B2 (μ: B1 -> B2) : relabeling μ {| graph := [::] |} = {| graph := [::] |}.
+      Lemma relabeling_nil B1 B2 (μ: B1 -> B2) :
+        relabeling μ {| graph := [::] |} = {| graph := [::] |}.
       Proof. by []. Qed.
 
       Lemma relabeling_cons B1 B2 (μ: B1 -> B2) (trpl : triple I B1 L) (ts : seq (triple I B1 L)) :
-        relabeling μ {| graph := trpl :: ts |} = {| graph := relabeling_triple μ trpl :: (relabeling_seq_triple μ ts) |}.
+        relabeling μ {| graph := trpl :: ts |} =
+          {| graph := relabeling_triple μ trpl :: (relabeling_seq_triple μ ts) |}.
       Proof. by []. Qed.
 
     End Relabeling_graph.
@@ -141,12 +145,12 @@ Section Rdf.
     Section TermRelabeling.
       Variable B1 B2: eqType.
 
-    Lemma terms_relabeled (g : rdf_graph I B1 L) (mu: B1 -> B2) (inj_mu : injective mu):
-      (@terms I B2 L (relabeling mu g)) = map (relabeling_term mu) (terms g).
-    Proof. elim g=> g'; elim g'=> [//|t ts IHts].
-           + rewrite relabeling_cons !terms_cons -undup_map_inj; last exact: relabeling_term_inj.
-             by rewrite IHts map_cat terms_relabeled_triple //; apply inj_mu.
-    Qed.
+      Lemma terms_relabeled (g : rdf_graph I B1 L) (mu: B1 -> B2) (inj_mu : injective mu):
+        (@terms I B2 L (relabeling mu g)) = map (relabeling_term mu) (terms g).
+      Proof. elim g=> g'; elim g'=> [//|t ts IHts].
+             + rewrite relabeling_cons !terms_cons -undup_map_inj; last exact: relabeling_term_inj.
+               by rewrite IHts map_cat terms_relabeled_triple //; apply inj_mu.
+      Qed.
     End TermRelabeling. 
 
     Definition bnodes g : seq (term I B L) :=
@@ -171,8 +175,8 @@ Section Rdf.
 
     Lemma b_in_bnode_is_bnode b g : bnodes g = [:: b] -> is_bnode b.
     Proof.
-      move=> H; have binb : b \in bnodes g. by rewrite H in_cons in_nil eq_refl. 
-      rewrite /bnodes -filter_undup mem_filter in binb. 
+      move=> H; have binb : b \in bnodes g. by rewrite H in_cons in_nil eq_refl.
+      rewrite /bnodes -filter_undup mem_filter in binb.
       by case: (is_bnode b) binb.
     Qed.
 
@@ -193,14 +197,14 @@ Section Rdf.
     Proof. split=> [|].
            + rewrite /is_ground /bnodes. elim g=> g'; elim: g' => [| a t IHts]; first by rewrite all_nil.
              rewrite -filter_undup. case a=> s p o; case: s; case: p; case o=> // x y z sib pii;
-                                                                               rewrite terms_cons undup_cat_l undup_idem  filter_undup /=.
+                                                                             rewrite terms_cons undup_cat_l undup_idem  filter_undup /=.
            - exact: IHts.
            - exact: IHts.
            - case e: (Bnode x \in [seq x <- terms {| graph := t |} | is_bnode x]) => contr; last by done.
              by apply undup_nil in contr; rewrite contr in_nil in e.
            -
              case e: (Bnode z \in [seq x <- terms {| graph := t |} | is_bnode x]) => contr; last by done.
-             apply undup_nil in contr. rewrite contr in_nil in e. done. 
+             apply undup_nil in contr. rewrite contr in_nil in e. done.
            - case e: (Bnode z \in [seq x <- terms {| graph := t |} | is_bnode x]) => contr; last by done.
              apply undup_nil in contr. rewrite contr in_nil in e. done.
            - case e: (Bnode x \in [seq x <- terms {| graph := t |} | is_bnode x]);
@@ -219,9 +223,6 @@ Section Rdf.
            + apply get_b_triple in t. exact (undup (t ++ ihts)).
     Defined.
 
-
-    (* Definition all_b_in_g g : all (\in g) (get_b g). *)
-
     Lemma bijective_eqb_rdf mu nu g1 g2 :
       cancel mu nu -> eqb_rdf g1 (relabeling mu g2) ->  eqb_rdf g2 (relabeling nu g1).
     Proof.
@@ -233,7 +234,7 @@ Section Rdf.
 
     Definition is_iso g1 g2 (μ : B -> B) :=
       (* ({in bnodes g2, bijective μ}) *)
-      (bijective μ) 
+      (bijective μ)
 
       /\ g1 == (relabeling μ g2).
 
@@ -253,23 +254,16 @@ Section Rdf.
            + by rewrite relabeling_id.
     Qed.
 
-    (* Remark eqiso' g1 g2 : eqb_rdf g1 g2 -> iso g1 g2. *)
-    (* Proof. move=> /eqP eq. by rewrite eq; apply iso_refl. Qed *)
-    (*          Error: The LHS of eq *)
-    (*     (graph g1) *)
-    (* does not match any subterm of the goal *)
-
     Lemma iso_symm g1 g2 : iso g1 g2 <-> iso g2 g1.
     Proof.
       rewrite /iso /is_iso.
-      split; case=> mu [mu_bij heqb_rdf]; case: (mu_bij)=> [nu h1 h2];
-                                                           (exists nu; split; [exact: bij_can_bij h1 | exact: bijective_eqb_rdf heqb_rdf]).
+      split; case=> mu [mu_bij heqb_rdf]; case: (mu_bij)
+           => [nu h1 h2]; (exists nu; split; [exact: bij_can_bij h1 | exact: bijective_eqb_rdf heqb_rdf]).
     Qed.
 
     Lemma iso_trans g1 g2 g3 : iso g1 g2 -> iso g2 g3 -> iso g1 g3.
     Proof. rewrite /iso/is_iso/eqb_rdf/relabeling => [[μ1 [bij1/eqP eqb1]] [μ2 [bij2/eqP eqb2]]].
-           exists (μ1 \o μ2). split.
-           by apply bij_comp.
+           exists (μ1 \o μ2). split; first by apply bij_comp.
            by rewrite eqb1 eqb2 relabeling_seq_triple_comp.
     Qed.
 
@@ -277,13 +271,14 @@ Section Rdf.
 
     Definition isocanonical_mapping (M : rdf_graph I B L -> rdf_graph I B L) :=
       forall g, iso (M g) g /\
-                  (forall g1 g2, (M g1) == (M g2) <-> iso g1 g2).
+             (forall g1 g2, (M g1) == (M g2) <-> iso g1 g2).
 
-    Definition dont_manipulate_names_mapping (M : rdf_graph I B L -> rdf_graph I B L) := forall g μ, (bijective μ) -> M g == M (relabeling μ g).
+    Definition dt_names (M : rdf_graph I B L -> rdf_graph I B L) := forall g μ, (bijective μ) -> M g == M (relabeling μ g).
 
     (* Definition dont_manipulate_names_mapping_idem (M : rdf_graph I B L -> rdf_graph I B L) (dnmn : dont_manipulate_names_mapping M) : forall g (μ : B -> B), (bijective μ) -> M (M g) = M g. *)
 
-    Definition iso_leads_canonical M (nmn : dont_manipulate_names_mapping M) g1 g2 (iso_g1_g2: iso g1 g2) : M g1 == M g2.
+    Definition iso_leads_canonical M (nmn : dt_names M) g1 g2 (iso_g1_g2: iso g1 g2) :
+      M g1 == M g2.
     Proof. case iso_g1_g2=> μ [bijmu /eqP ->].
            suffices ->: M g2 = M (relabeling μ g2). by [].
            by apply /eqP; apply (nmn g2 μ bijmu).
@@ -314,20 +309,8 @@ Section Rdf.
     Proof. by case. Qed.
   End CodeRdf.
 
-
-
-  (* Definition code_rdf g := graph g. *)
-  (* Definition decode_rdf (ts : seq (triple I B L)) := mkRdfGraph ts. *)
-
-  (* Lemma cancel_rdf_encode : cancel code_rdf decode_rdf. *)
-  (* Proof. by case. Qed. *)
-
-
   Definition rdf_canChoiceMixin' (I B L : choiceType) := CanChoiceMixin (@pcancel_code_decode I B L).
   Definition rdf_canCountMixin' (I B L : countType):= CanCountMixin (@pcancel_code_decode I B L).
-
-  (* Definition rdf_canChoiceMixin := CanChoiceMixin cancel_rdf_encode. *)
-  (* Definition rdf_canCountMixin := CanCountMixin cancel_rdf_encode. *)
 
   Canonical rdf_choiceType (I B L: choiceType):= Eval hnf in ChoiceType (rdf_graph I B L) (@rdf_canChoiceMixin' I B L).
   Canonical rdf_countType (I B L: countType):= Eval hnf in CountType (rdf_graph I B L) (@rdf_canCountMixin' I B L).
@@ -349,7 +332,7 @@ The term "g1" has type "rdf_graph I B L" while it is expected to have type
 
     Definition isocanonical_mapping_alt (M : rdf_graph I B L -> rdf_graph I B L) :=
       forall g, iso_alt (M g) g /\
-                  (forall g1 g2, (M g1) == (M g2) <-> iso g1 g2).
+             (forall g1 g2, (M g1) == (M g2) <-> iso g1 g2).
 
 
     Section FinTypeRdf.
@@ -379,7 +362,7 @@ The term "g1" has type "rdf_graph I B L" while it is expected to have type
 
       (* Other option *)
       Check bnodes g'.
-      (* membership function of list (bnodes g') has type (term I B L) -> bool. but 
+      (* membership function of list (bnodes g') has type (term I B L) -> bool. but
          (term I B L) is NOT a finite type so this fails: *)
       Fail Check [set x in (bnodes g')].
       (* but once we have a finite type, we can use this notation *)

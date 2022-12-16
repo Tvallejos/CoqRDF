@@ -127,3 +127,9 @@ Proof.
   by rewrite zip_uniq_sym; apply zip_uniq_l.
 Qed.
 
+
+Lemma size_0_nil (T : Type) (s : seq T) : size s = 0 -> s = [::].
+Proof. by case s. Qed.
+
+Lemma seq1_empty_seq (A : Type) (hd:A) d s : hd :: s = [:: d] -> s = [::].
+Proof. by case s. Qed.

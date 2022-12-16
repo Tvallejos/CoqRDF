@@ -29,7 +29,8 @@ End HashedData.
 Definition hash_eqMixin (H T : eqType) := Eval hnf in [eqMixin of hash H T by <:].
 Canonical hash_eqType (H T : eqType) :=
   Eval hnf in EqType (hash H T) (hash_eqMixin H T).
-Lemma eq_i_ch (H T : eqType) (h1 h2: hash H T) : h1 == h2 = ((input h1) == (input h2)) && ((current_hash h1) == (current_hash h2)).
+Lemma eq_i_ch (H T : eqType) (h1 h2: hash H T) :
+  h1 == h2 = ((input h1) == (input h2)) && ((current_hash h1) == (current_hash h2)).
 Proof. by case h1; case h2. Qed.
 
 Definition hash_choiceMixin (H T : choiceType) := [choiceMixin of hash H T by <:].
@@ -168,7 +169,7 @@ Section IsoCan.
         ~~ is_fine P && ~~ is_coarse P.
 
     End Partition.
-    
+
     Definition init_bnode (b : B) : (hash B) :=
       mkHinput b h0.
 
@@ -182,8 +183,6 @@ Section IsoCan.
 
     Definition label_bnode (hb : (hash B)) : B :=
       to_string (current_hash hb).
-
-    (* Definition inj_label_bnode : injective label_bnode. move=> x y. rewrite /label_bnode. apply inj_to_string. case. by inj_to_string. *)
 
     Definition label_term (htrm : hterm) : term I B L :=
       relabeling_term label_bnode htrm.
@@ -220,8 +219,6 @@ Section IsoCan.
 
     Hypothesis inj_hashTuple : injective hashTuple.
 
-
-    (* Definition update_bnode_triple (b : )(t : triple I (hash B) L) : *)
     Definition term_hash (trm : hterm) : h :=
       match trm with
       | Iri x | Lit x => hashTerm (term_of_hterm trm)
@@ -344,7 +341,8 @@ Section IsoCan.
       mkRdfGraph groundTriples.
 
     Lemma merge_split {t u v : Type} (g : rdf_graph t u v) :
-      merge_rdf_graph (merge_seq_rdf_graph (blank_node_split g)) (ground_split g) = g. Admitted.
+      merge_rdf_graph (merge_seq_rdf_graph (blank_node_split g)) (ground_split g) = g.
+    Admitted.
 
     (* Algorithm 2 *)
     Definition hashBnodesPerSplit (g : hgraph) : hgraph :=
@@ -381,7 +379,7 @@ Section IsoCan.
     (* choose canonical graph from sequence of graphs that have fine partitions *)
     Definition choose_graph (gs : seq hgraph) : hgraph :=
       if insub gs : {? x | all (is_fine \o mkPartition) x} is Some _
-      then foldl Order.min (mkRdfGraph [::]) gs
+      then foldl Order.max (mkRdfGraph [::]) gs
       else mkRdfGraph [::].
 
     (* give partition and proof that partition is not fine *)
@@ -443,19 +441,6 @@ Section IsoCan.
     Definition build_finfun_from_graph (g : hgraph) : (seq_sub (bnodes g)) -> (seq_sub (map label_term (bnodes g))).
     Proof. apply map_fintype. Qed.
 
-    (* label_term is injective only on terms when the hash partition *)
-    (* returned the discrete partition.  *)
-    (* Definition inj_label_term : injective label_term. *)
-    (* Proof. move=> t1 t2. rewrite /label_term. *)
-    (*        case t1; case t2=> x y //; rewrite /relabeling_term. *)
-    (*        - by case=> ->.  *)
-    (*        - by case=> ->.  *)
-    (*        - Abort. *)
-
-    
-
-    (* Definition bf_from_graph_inj g : injective (build_finfun_from_graph g). *)
-
     Definition build_mapping_from_seq (trms : seq hterm) : B -> B :=
       fun b =>
         if has (eqb_b_hterm b) trms then
@@ -464,18 +449,11 @@ Section IsoCan.
         else
           b.
 
-    (* nth_iota: forall (p m : nat) [n i : nat], (i < n)%N -> nth p (iota m n) i = m + i *)
-    (* nth (Bnode (mkHinput x herror)) (mapi (app_n mark_bnode) (undup s)) *)
-    (*                            (find (eqb_b_hterm x) (mapi (app_n mark_bnode) (undup s))) = *)
-
-
     Fixpoint app_n (T: Type)(f : T -> T) (x : T) (n:nat) :=
       match n with
       | O => x
       | S n' => f (app_n f x n')
       end.
-
-    (* Lemma nth_iota_mark : forall (b : B) g [n i : nat], (i < n)%N -> nth p (init_bnodes ) i = app_n mark_bnode () m + i *)
 
     Definition k_distinguish bns : seq (term I (hash B) L) :=
       let fix help bns n :=
@@ -492,13 +470,6 @@ Section IsoCan.
       let bns := bnodes (init_hash g) in
       mapi (app_n mark_bnode) bns.
 
-    (* Lemma mapi_marks_injective : injective (mapi (app_n mark_bnode)). *)
-    (*   Proof. move=> x y. *)
-
-    (* TODO uses app_n mark_node injective *)
-
-    (* Lemma k_mapping_injectiveb g : dinjectiveb (fun an=> app_n mark_bnode an.1 an.2) (seq_sub (bnodes (init_hash g))). *)
-
     Definition fun_to_fin (T : eqType) (s : seq T) (f : T -> T) : seq_sub s -> T:=
       fun s0=> let (ssval,_) := s0 in (f ssval).
 
@@ -508,36 +479,33 @@ Section IsoCan.
     Lemma mark_hash_init b g : Bnode b \in bnodes (init_hash g) -> current_hash b = h0.
     Proof. rewrite /bnodes/init_hash -filter_undup mem_filter /=.
            rewrite undup_terms (terms_relabeled g inj_init_bnode).
-           by move=> /map_inv [[] // ?]=> [[]] ->. 
+           by move=> /map_inv [[] // ?]=> [[]] ->.
     Qed.
-
-    (* Lemma app_n_Sn (A : Type) (f: A -> A) x n: app_n f x n.+1 = f (app_n f x n). *)
-    (* Proof. rewrite /=. elim n=> [//| n' IHn]. *)
-    (*        rewrite /=.  /app_n. *)
-    (*        rewrite -IHn. *)
-
 
     Lemma app_n_mark_bnode g b n:
       Bnode b \in bnodes (init_hash g) ->
-                  app_n mark_bnode (Bnode b) n = Bnode (app_n mark_hash (mkHinput (input b) h0) n).
+                  app_n mark_bnode (Bnode b) n =
+                    Bnode (app_n mark_hash (mkHinput (input b) h0) n).
     Proof. move=> /mark_hash_init b_hash. elim n=> [| n' IHn]; last by rewrite /= IHn.
            by rewrite /=; f_equal; case: b b_hash=> /= [[]] ? ? /= ->.
     Qed.
 
     Lemma mark_hash_idem_inj b1 b2:
-      mark_hash (mark_hash b1) = mark_hash (mark_hash b2) ->
-      mark_hash b1 = mark_hash b2.
-    Proof. case b1; case b2=> [[a b] [a' b']] /=.
-           by rewrite /mark_hash /==> /eqP; rewrite eq_i_ch /==> /andP [/eqP -> /eqP/inj_hashTuple [->]].
+      mark_hash (mark_hash b1) == mark_hash (mark_hash b2) ->
+      (mark_hash b1 == mark_hash b2).
+    Proof. rewrite /mark_hash; case b1; case b2=> [[a b] [a' b']] /=.
+           by rewrite eq_i_ch /==> /andP [/eqP -> /eqP/inj_hashTuple [->]].
     Qed.
 
     Lemma appn_mark_hash (b1 b2: hash B) n:
-      mark_hash (app_n mark_hash (mkHinput (input b1) h0) n) = mark_hash (app_n mark_hash (mkHinput (input b2) h0) n) ->
-      ((input b1) == (input b2)) && (app_n mark_hash (mkHinput (input b1) h0) n == app_n mark_hash (mkHinput (input b2) h0) n).
+      (mark_hash (app_n mark_hash (mkHinput (input b1) h0) n) ==
+         mark_hash (app_n mark_hash (mkHinput (input b2) h0) n)) ->
+      ((input b1) == (input b2)) &&
+        (app_n mark_hash (mkHinput (input b1) h0) n ==
+           app_n mark_hash (mkHinput (input b2) h0) n).
     Proof. elim: n=> [/=| n' IHn].
-           case b1; case b2=> [[a b] [a' b']] /==> /eqP.
-           by rewrite eq_i_ch /= => /andP [/eqP -> _]; rewrite !eqxx.
-           by move=> /= /mark_hash_idem_inj /IHn => /andP [-> /eqP ->]; rewrite eqxx.
+           case b1; case b2=> [[a b] [a' b']]; first by rewrite eq_i_ch/==> [/andP [/eqP ->]]; rewrite !eqxx.
+           by move=> /=/mark_hash_idem_inj/IHn => /andP [-> /eqP ->] /=. 
     Qed.
 
     Lemma inj_mark_bnode g: {in (bnodes g), injective mark_bnode}.
@@ -548,50 +516,38 @@ Section IsoCan.
            by f_equal; apply /eqP; rewrite eq_i_ch i_eq ch_eq !eqxx.
     Qed.
 
-    Lemma eq_appn_init_num b1 b2 g :
-      Bnode b1 \in bnodes (init_hash g) ->
-                   Bnode b2 \in bnodes (init_hash g) ->
-                                forall n m,
-                                  (app_n mark_bnode (Bnode b1) n) = (app_n mark_bnode (Bnode b2) m) -> n = m.
-      move=> b1in_bns b2in_bns.
+    Lemma eq_appn_init_eq_num b1 b2 g (b1in_bns : Bnode b1 \in bnodes (init_hash g))
+      (b2in_bns : Bnode b2 \in bnodes (init_hash g)) n m :
+      (app_n mark_bnode (Bnode b1) n) =
+        (app_n mark_bnode (Bnode b2) m) ->
+      n = m.
       have b1_hash:  current_hash b1 = h0. by apply: mark_hash_init b1in_bns.
       have b2_hash:  current_hash b2 = h0. by apply: mark_hash_init b2in_bns.
-      move=> n m. rewrite (app_n_mark_bnode n b1in_bns) (app_n_mark_bnode m b2in_bns).
-      move=> [appn_eq].
-      elim: n m appn_eq=> [// m | n' IHn m].
-      + by case: m=> [//| n' []] => _ /eqP; rewrite eq_sym hashTuple_neq_init.
+      rewrite (app_n_mark_bnode n b1in_bns) (app_n_mark_bnode m b2in_bns)=> [appn_eq].
+      elim: n m appn_eq=> [// m | n' IHn m]; first by case: m=> [//| m' []] => _ /eqP; rewrite eq_sym hashTuple_neq_init.
       + case: m IHn=> [//| m'] IHn []; first by move=> _ /eqP /=; rewrite hashTuple_neq_init.
       - move=> eq_i /inj_hashTuple [] eq_ch.
-        have eq_appn: app_n mark_hash (mkHinput (input b1) h0) n' = app_n mark_hash (mkHinput (input b2) h0) m'.
-        by apply /eqP; rewrite eq_i_ch eq_i eq_ch !eqxx.
-        by rewrite eq_appn in IHn; rewrite (IHn m').
+        by rewrite (IHn m')=> //; f_equal; apply /eqP; rewrite eq_i_ch eq_i eq_ch !eqxx.
     Qed.
-
-    (* Lemma inj_mark_bnode' b1 b2: is_bnode b1 -> is_bnode b2 -> *)
-    (*  mark_bnode b1 = mark_bnode b2 -> b1 = b2.  *)
-    (* Proof. move=> x y. *)
-    (*        case: x; case y=> x' y'. rewrite ?i_in_bnodes ?l_in_bnodes // => in_bns /= *)
-    (*            => mbns_eq; injection mbns_eq=> /eqP; rewrite ?hashTuple_neq_error //. *)
-    (*        move=> /eqP/inj_hashTuple eq_seq; injection eq_seq=> ch_eq i_eq. *)
-    (*        by f_equal; apply /eqP; rewrite eq_i_ch i_eq ch_eq !eqxx. *)
-    (* Qed. *)
 
     Lemma appn_mark_hash_eq_input (b1 b2: hash B) n:
-      (app_n mark_hash (mkHinput (input b1) h0) n) = app_n mark_hash (mkHinput (input b2) h0) n ->
-      input b1 = input b2.
+      ((app_n mark_hash (mkHinput (input b1) h0) n) ==
+         app_n mark_hash (mkHinput (input b2) h0) n) ->
+      ((input b1) == (input b2)).
     Proof.
-      case: n=> [/=| n']; first by move=> [] ->.
-      by rewrite /==> /appn_mark_hash /andP [/eqP -> _].
+      case: n=> [| n' /=]; first by rewrite eq_i_ch /= eqxx Bool.andb_true_r.
+      by move=> /appn_mark_hash/andP [/eqP -> _].
     Qed.
 
-    Lemma app_n_mark_eq_bns (b1 b2: hash B) g :
-      Bnode b1 \in bnodes (init_hash g) ->
-                   Bnode b2 \in bnodes (init_hash g) ->
-                                forall n,
-                                  (app_n mark_bnode (Bnode b1) n) = (app_n mark_bnode (Bnode b2) n) -> (@Bnode I (hash B) L b1) = (Bnode b2).
-      move=> b1in_bns b2in_bns n.
-      rewrite (app_n_mark_bnode n b1in_bns) (app_n_mark_bnode n b2in_bns)=> [[]] /appn_mark_hash_eq_input eq_i.
-      by f_equal; apply /eqP; rewrite eq_i_ch eq_i (mark_hash_init b1in_bns) (mark_hash_init b2in_bns) !eqxx.
+    Lemma app_n_mark_eq_bns (b1 b2: hash B) g (b1in_bns : Bnode b1 \in bnodes (init_hash g))
+      (b2in_bns : Bnode b2 \in bnodes (init_hash g)) n:
+      (app_n mark_bnode (Bnode b1) n) == (app_n mark_bnode (Bnode b2) n) ->
+      (@Bnode I (hash B) L b1) == (Bnode b2).
+    Proof.
+      rewrite (app_n_mark_bnode n b1in_bns) (app_n_mark_bnode n b2in_bns)=>
+                /eqP [] /eqP /appn_mark_hash_eq_input eq_i.
+      by apply /eqP; f_equal; apply /eqP;
+      rewrite eq_i_ch eq_i (mark_hash_init b1in_bns) (mark_hash_init b2in_bns) !eqxx.
     Qed.
 
     Lemma k_mapping_seq_uniq_graph g: uniq (mapi (app_n mark_bnode) (bnodes (init_hash g))).
@@ -599,46 +555,22 @@ Section IsoCan.
       rewrite /mapi; pose g' := init_hash g.
       rewrite map_inj_in_uniq; first by apply (zip_uniq_l _ (uniq_bnodes g')).
       move=> [t n] [u m] /in_zip/andP [tin_bns n_iota] /in_zip/andP [uin_bns m_iota] /= eq_app_n.
-      case: t tin_bns uin_bns eq_app_n; case: u => nt nu; rewrite ?i_in_bnodes ?l_in_bnodes // => nu_bns nt_bns.
-      move=> injH.
-      have eqnm: n = m. apply (eq_appn_init_num nu_bns nt_bns injH).
+      case: t tin_bns uin_bns eq_app_n; case: u =>
+            nt nu; rewrite ?i_in_bnodes ?l_in_bnodes // => nu_bns nt_bns injH.
+      have eqnm: n = m. apply (eq_appn_init_eq_num nu_bns nt_bns injH).
       f_equal; last by apply eqnm.
-      + rewrite eqnm in injH. apply (app_n_mark_eq_bns nu_bns nt_bns injH).
+      + by move: injH; rewrite eqnm=> /eqP injH; apply: eqP (app_n_mark_eq_bns nu_bns nt_bns injH).
     Qed.
-
-    Lemma k_mapping_seq_uniq_seq s (s_uniq: uniq s): uniq (mapi (app_n mark_bnode) s).
-    Proof.
-      rewrite /mapi map_inj_in_uniq.
-      apply: zip_uniq_l s_uniq.
-      move=> [t n] [u m] x_in_zip y_in_zip /= eq_app_n.
-      admit.
-    Admitted.
-    (* Lemma k_mapping_seq_uniq' g: uniq (mapi (app_n mark_bnode) {set (seq_sub (bnodes (init_hash g)))}). *)
-    (* Proof. *)
-    (*   rewrite /mapi. *)
-    (*   have injF : injective (fun an=> app_n mark_bnode an.1 an.2). admit. *)
-    (*   rewrite map_inj_uniq. *)
-    (*   have uniq_iota : uniq (iota 0 (size (bnodes (init_hash g)))). by apply iota_uniq. *)
-    (*   apply zip_uniq. apply uniq_bnodes. apply uniq_iota. *)
-    (*   apply injF. *)
-    (* Admitted. *)
 
     Definition k_mapping (g : rdf_graph I B L) : rdf_graph I B L :=
       let all_maps :=
         map (mapi (app_n mark_bnode)) (permutations (bnodes (init_hash g))) in
       let mus := map build_mapping_from_seq all_maps in
       let isocans := map (fun mu => relabeling mu g) mus in
-      foldl Order.min (relabeling id g) isocans.
+      foldl Order.max (mkRdfGraph [::]) isocans.
 
-
-    (* let isoG := choose_graph isocans in *)
-    (* let isoMu := nth id mus (find (eqb_rdf isoG) isocans) in *)
-    (* isoMu. *)
-
-    (* need the proof that is a blank node!
-       build_mapping (k_distinguish (mkRdfGraph bns)). *)
-
-    Definition isoCanonicalTemplate g (color color_refine: hgraph -> hgraph) p_refining : rdf_graph I B L:=
+    Definition isoCanonicalTemplate g (color color_refine: hgraph -> hgraph)
+      p_refining : rdf_graph I B L:=
       let g' := color (init_hash g) in
       let P := mkPartition g' in
       let g_iso := if is_fine P then g' else p_refining g' color_refine in
@@ -657,46 +589,40 @@ Section IsoCan.
     Definition isoCanonicalise g :=
       isoCanonicalTemplate g hashBnodesPerSplit hashNodes_initialized distinguish.
 
-    Lemma size_0_nil (T : Type) (s : seq T) : size s = 0 -> s = [::].
-    Proof. by case s. Qed.
-
-
-    (* Lemma singleton_g_is_coarse (g : hgraph) : size (bnodes g) = 1%N -> is_coarse (mkPartition g). *)
-    (* Proof. rewrite /mkPartition/bnodes. case g => g'. case g' => [// | [s p o sib pi] tl] => /= singleton.  *)
-    (*        rewrite /terms/terms_triple. case trpl=> s p o sib pi. case s. *)
-
-
-    Lemma seq1_empty_seq (A : Type) (hd:A) d s : hd :: s = [:: d] -> s = [::].
-    Proof. by case s. Qed.
-
-    Lemma no_bnodes_same_partition t ts : bnodes_triple t = [::] -> is_fine (mkPartition {| graph := ts |}) -> is_fine (mkPartition {| graph := t :: ts |}).
+    Lemma no_bnodes_same_partition t ts :
+      bnodes_triple t = [::] ->
+      is_fine (mkPartition {| graph := ts |}) ->
+      is_fine (mkPartition {| graph := t :: ts |}).
     Proof. by rewrite /mkPartition bnodes_cons /bnodes => -> /=; rewrite undup_idem. Qed.
 
-    Lemma eq_hash_refl_singl b g : bnodes g = [:: b] -> (if eq_hash b b then ([:: b], [::]) else ([::], [:: b])).1 = [:: b].
+    Lemma eq_hash_refl_singl b g :
+      bnodes g = [:: b] ->
+      (if eq_hash b b then ([:: b], [::]) else ([::], [:: b])).1 = [:: b].
     Proof. by move=> H; apply b_in_bnode_is_bnode in H; rewrite (eq_hash_refl H). Qed.
 
     Lemma sing_fine (g : hgraph) (b : hterm): bnodes g = [:: b] -> is_fine (mkPartition g).
     Proof.
       case: g b=> g'; elim: g'=> [//| t ts IHts].
       rewrite bnodes_cons. 
-      case t=> s p o; case s; case p; case o=> //;
-                                                 rewrite /bnodes_triple/terms_triple => id id0 id1 sib pii b;
-                                                                                        rewrite filter_undup ?undup_idem /mkPartition => /= singl;
-                                                                                                                                         try (move: singl; rewrite /undup_idem bnodes_cons /bnodes_triple /terms_triple filter_undup /= undup_bnodes).
+      case t=> s p o; case s; case p; case o=>
+             //; rewrite /bnodes_triple/terms_triple
+             => id id0 id1 sib pii b; rewrite filter_undup ?undup_idem /mkPartition
+             => /= singl; try (move: singl; rewrite /undup_idem bnodes_cons /bnodes_triple /terms_triple filter_undup /= undup_bnodes).
+      (* room for improvement *)
       + apply no_bnodes_same_partition. by rewrite /bnodes_triple filter_undup. apply (IHts b singl).
       + apply no_bnodes_same_partition. by rewrite /bnodes_triple filter_undup. apply (IHts b singl).
       (* =============== *)
       + case e: (Bnode id \in bnodes {| graph := ts |})=> singl.
       - by apply (IHts b singl).
-      - by case: singl=> _ -> /=; rewrite eq_hash_refl. 
+      - by case: singl=> _ -> /=; rewrite eq_hash_refl.
         (* =============== *)
         + case: (Bnode id1 \in bnodes {| graph := ts |})=> singl.
       - by apply (IHts b singl).
-      - by case: singl=> _ -> /=; rewrite eq_hash_refl. 
+      - by case: singl=> _ -> /=; rewrite eq_hash_refl.
         (* =============== *)
         + case: (Bnode id1 \in bnodes {| graph := ts |})=> singl.
       - by apply (IHts b singl).
-      - by case: singl=> _ -> /=; rewrite eq_hash_refl. 
+      - by case: singl=> _ -> /=; rewrite eq_hash_refl.
         (* =============== *)
         + move: singl.
           have b_def : (bnodes_triple
@@ -706,7 +632,9 @@ Section IsoCan.
                             object := Bnode id;
                             subject_in_IB := sib ;
                             predicate_in_I := pii
-                          |}) = (if Bnode id1 \in [:: Bnode id] then [:: Bnode id] else [:: Bnode id1; Bnode id]). move=> ? ?. by rewrite /bnodes_triple /terms_triple filter_undup /=.
+                          |}) =
+                         (if Bnode id1 \in [:: Bnode id] then [:: Bnode id] else [:: Bnode id1; Bnode id]).
+          move=> ? ?. by rewrite /bnodes_triple /terms_triple filter_undup /=.
           rewrite bnodes_cons /bnodes_triple filter_undup -b_def -bnodes_cons => singl.
           rewrite /= -b_def -bnodes_cons singl.
           have isbb: is_bnode b. by apply (b_in_bnode_is_bnode singl).
@@ -714,33 +642,33 @@ Section IsoCan.
     Qed.
 
     Lemma distinguish_preserves_isomorphism g : iso (justDistinguish g) g.
-    Proof. 
+    Proof.
       rewrite /iso/justDistinguish/isoCanonicalTemplate/is_iso.
       case (is_fine (mkPartition (init_hash g))).
       case g=> g'. elim g'=> [|t ts ihts].
       - exists id. split.
         + by exists id.
-                    + by rewrite relabeling_id. 
-                    - 
+                    + by rewrite relabeling_id.
+                    -
                       (* need to build μ. and μ bij. *)
     Admitted.
 
     Lemma empty_ak_mapping : ak_mapping (mkRdfGraph [::]) = [::]. Proof. by []. Qed.
 
-    Lemma inv_of_ak_mapping g : exists mu, eqb_rdf (relabeling mu g) (relabeling (build_mapping_from_seq (ak_mapping g)) g).
-    Proof. by exists (build_mapping_from_seq (ak_mapping g)); apply eqb_rdf_refl. Qed.
+    Lemma inv_of_ak_mapping g : exists mu,
+        (relabeling mu g) == (relabeling (build_mapping_from_seq (ak_mapping g)) g).
+    Proof. by exists (build_mapping_from_seq (ak_mapping g)). Qed.
 
 
-    Lemma inv_of_perm_ak_mapping g p :
-      p \in (permutations (ak_mapping g)) ->
-            exists mu, eqb_rdf (relabeling mu g) (relabeling (build_mapping_from_seq p) g).
+    Lemma inv_of_perm_ak_mapping g (p : seq hterm) :
+      p \in (permutations (ak_mapping g)) -> (*no need for this*)
+            exists mu, (relabeling mu g) == (relabeling (build_mapping_from_seq p) g).
     Proof.
-      move=> hp.
-      exists (build_mapping_from_seq p).
-      exact: eqb_rdf_refl.
+      by exists (build_mapping_from_seq p).
     Qed.
 
-    Lemma min_seq (disp : unit) (T: porderType disp) (s: seq T) (hd:T) : exists minimum, forall t, t \in (hd::s) -> minimum <= t.
+    Lemma min_seq (disp : unit) (T: porderType disp) (s: seq T) (hd:T) :
+      exists minimum, forall t, t \in (hd::s) -> minimum <= t.
     Proof. elim: (hd::s) => [| a t [minimum IHts]];
                             first by exists hd=> t; rewrite in_nil.
                                             case e: (minimum <= a); [exists minimum | exists a]=> a0; rewrite in_cons; case/orP.
@@ -781,8 +709,6 @@ Section IsoCan.
       + by move=> H; apply IHfs in H; apply H.
     Qed.
 
-
-    (* Lemma k_mapping  *)
     Lemma k_mapping_cons_const x y z sib pii as' :
       is_ground_term x -> is_ground_term y -> is_ground_term z ->
       (k_mapping {| graph :=
@@ -795,7 +721,7 @@ Section IsoCan.
                      |} :: as'
                  |})
       =
-        mkRdfGraph 
+        mkRdfGraph
           ({|
               subject := x;
               predicate :=  y;
@@ -803,56 +729,37 @@ Section IsoCan.
               subject_in_IB := sib;
               predicate_in_I := pii
             |} :: (k_mapping {| graph:= as' |})).
-    Proof. rewrite /k_mapping /init_hash relabeling_cons relabeling_id relabeling_triple_id. Admitted.
+    Proof.
+      (* TODO? *)
+    Admitted.
+    (* rewrite /k_mapping /init_hash relabeling_cons relabeling_triple_id. Admitted. *)
 
-    Lemma injection_hterm b (ht : hterm) : eqb_b_hterm b ht -> is_bnode ht. Proof. by case ht. Qed.
+    Lemma injection_hterm b (ht : hterm) : eqb_b_hterm b ht -> is_bnode ht.
+    Proof. by case ht. Qed.
+
     Lemma eqb_b_hterm_trans b b' ht : eqb_b_hterm b ht -> eqb_b_hterm b' ht -> b = b'.
     Proof. by case: ht=> // name; move=> /eqP -> /eqP ->. Qed.
 
-    Lemma injection_kmap b b' ht s : eqb_b_hterm b ht -> eqb_b_hterm b' ht ->
-                                     (build_mapping_from_seq (mapi (app_n mark_bnode) s) b) = (build_mapping_from_seq (mapi (app_n mark_bnode) s) b').
-    Proof. move=> eb eb'. suffices : b = b'. by move=> ->.
+    Lemma injection_kmap b b' ht s (eb: eqb_b_hterm b ht) (eb': eqb_b_hterm b' ht):
+      (build_mapping_from_seq (mapi (app_n mark_bnode) s) b) =
+        (build_mapping_from_seq (mapi (app_n mark_bnode) s) b').
+    Proof. suffices : b = b'. by move=> ->.
            by apply (eqb_b_hterm_trans eb eb'). Qed.
 
-    Lemma has_not_default T (s : seq T) p : has p s -> forall x0 x1,  nth x0 s (find p s) = nth x1 s (find p s).
+    Lemma has_not_default T (s : seq T) p :
+      has p s -> forall x0 x1,  nth x0 s (find p s) = nth x1 s (find p s).
     Proof. elim: s=> [//| hd tl IHtl] hps x1.
            rewrite /= in hps. case/orP: hps=> [| hptl]; first by move=> /= ->.
            + rewrite /=. case: (p hd); first by [].
              by apply (IHtl hptl).
     Qed.
 
-    (* Lemma nth_uniq (T: eqType) (s : seq T) x0 : uniq s -> forall n, nth x0 s n \in s -> forall m, nth x0 s n = nth x0 s m <-> n = m. *)
-    (* Proof. elim: s => [//| hd tl IHtl]. split; last by move=> ->. *)
-    (*        + case: n H0 => [//| n']. *)
-    (*          rewrite /=. *)
-    (*          case: m=> [//| m']. *)
-    (*          rewrite /= in H *. *)
-    
-
-    (* Lemma find_eq (T: eqType) (s : seq T) x y x0 : (x \in s) -> *)
-    (*                                                uniq s -> *)
-    (*                                                (nth x0 s (index x s)) = nth x0 s (index y s) -> x = y. *)
-    (* Proof. *)
-    (*   have: uniq (undup s). by apply undup_uniq. *)
-    (*   elim: (undup s)=> [//| a l IHl] uniq_s x_in_s. *)
-    (*   (* rewrite has_pred1 in has_x. *) *)
-    (*   (* + rewrite /=. *) *)
-
-
-
-    (*   rewrite (nth_index _ x_in_s)=> eq. *)
-    (*   rewrite eq /= in IHl x_in_s. *)
-    (*   case: (a ==y) IHl x_in_s=> /=. *)
-    (*   move=> uniq_l contr. rewrite /= in uniq_s. move: uniq_s=> /andP [a_nil_l _]. *)
-    (*   rewrite in_cons in contr. case/orP: contr. *)
-
-
-
-    (*   subst. rewrite /= in uniq_s *. rewrite in_cons in x_in_s. case/orP: x_in_s=> [| has_l]. rewrite eq_sym=> ->. *)
-    (*     rewrite /=. *)
-
-    Lemma eq_to_fin (T: eqType) (ft ft' : finType) (f : T -> T) (injF: injective f) (funt : ft -> T) (injFt: injective funt) (funt' : T -> ft') (injFt' : injective funt')
-      (eq_card : #|ft| = #|ft'|) : exists (f'' : ft -> ft'), injective f''.
+    Lemma eq_to_fin (T: eqType) (ft ft' : finType)
+      (f : T -> T) (injF: injective f)
+      (funt : ft -> T) (injFt: injective funt)
+      (funt' : T -> ft') (injFt' : injective funt')
+      (* (eq_card : #|ft| = #|ft'|) *)
+      : exists (f'' : ft -> ft'), injective f''.
     Proof. exists (fun argT => (funt' (f (funt argT)))).
            by apply: (inj_comp injFt') (inj_comp injF injFt). Qed.
 
@@ -888,7 +795,7 @@ Section IsoCan.
       rewrite -has_find. apply e.
       rewrite -has_find. apply e2.
       rewrite /the_list.
-      apply k_mapping_seq_uniq_seq. apply undup_uniq.
+      Fail apply k_mapping_seq_uniq_seq; apply undup_uniq.
       admit.
       admit.
       admit.
@@ -896,27 +803,29 @@ Section IsoCan.
     Admitted.
 
     (* TODO *)
+    (* only way of k_mapping g = [::] -> g = [::]*)
     Lemma inv_of_k_mapping g : exists mu, (relabeling mu g) == (k_mapping g) /\ bijective mu.
     Proof.
-      have step1 : k_mapping g = g \/
-                     (k_mapping g) \in [seq relabeling mu0 g
-                                       | mu0 <- [seq build_mapping_from_seq i
-                                                | i <- [seq mapi (app_n mark_bnode) i
-                                                       | i <- permutations
-                                                                (bnodes (init_hash g))]]].
-      by rewrite /k_mapping relabeling_id; apply: foldl_op.
-      case: step1=> [ -> | in_tail ].
-      + exists id; split.
-      - by rewrite relabeling_id.
-      - exact: id_bij. 
-        + have [mu eq_mu_map] : exists mu : B -> B, relabeling mu g == k_mapping g.
-          exact: relabeling_mu_inv in_tail.
-          exists mu. split; first exact eq_mu_map.
-          (* needs mu to have eqType, could be a finfun *)
-          have fin_mu : (seq_sub (bnodes g)) -> B.
-          Fail move: (finfun (fun b => b)).
-          admit.
-          (* Fail fin_mu \in in_tail. *)
+      (* FIX ME*)
+      (* have step1 : k_mapping g = mkRdfGraph [::] \/ *)
+      (*                (k_mapping g) \in [seq relabeling mu0 g *)
+      (*                                  | mu0 <- [seq build_mapping_from_seq i *)
+      (*                                           | i <- [seq mapi (app_n mark_bnode) i *)
+      (*                                                  | i <- permutations *)
+      (*                                                           (bnodes (init_hash g))]]]. *)
+      (* rewrite /=. /k_mapping relabeling_id; apply: foldl_op. *)
+      (* case: step1=> [ -> | in_tail ]. *)
+      (* + exists id; split. *)
+      (* - by rewrite relabeling_id. *)
+      (* - exact: id_bij.  *)
+      (*   + have [mu eq_mu_map] : exists mu : B -> B, relabeling mu g == k_mapping g. *)
+      (*     exact: relabeling_mu_inv in_tail. *)
+      (*     exists mu. split; first exact eq_mu_map. *)
+      (*     (* needs mu to have eqType, could be a finfun *) *)
+      (*     have fin_mu : (seq_sub (bnodes g)) -> B. *)
+      (*     Fail move: (finfun (fun b => b)). *)
+      (*     admit. *)
+      (* Fail fin_mu \in in_tail. *)
     Admitted.
 
     (* TODO *)
@@ -925,21 +834,13 @@ Section IsoCan.
     Proof. case (inv_of_k_mapping g)=> μ [rel_eq_kmap bijmu].
            exists μ. split. exact: bijmu. by rewrite eq_sym.
     Qed.
-
+    (* Lemma relabel_bij_init g mu : bnodes (init_hash (relabeling mu g)). *)
     (* TODO *)
-    Lemma k_mapping_dont_manipulate_names : (dont_manipulate_names_mapping k_mapping).
+    (* by case on g*)
+    Lemma k_mapping_dont_manipulate_names : (dt_names k_mapping).
     Proof.
-      rewrite /dont_manipulate_names_mapping=> g μ bijmu.
-      - have step1 : k_mapping g = g \/
-                       (k_mapping g) \in [seq relabeling mu0 g
-                                         | mu0 <- [seq build_mapping_from_seq i
-                                                  | i <- [seq mapi (app_n mark_bnode) i
-                                                         | i <- permutations
-                                                                  (bnodes (init_hash g))]]].
-        by rewrite /k_mapping relabeling_id; apply: foldl_op.
-        (* case: step1=> [ -> | in_tail ]. *)
-        (* elim g=> g'; elim: g'=> [//| a tl IHa]. *)
-        rewrite /k_mapping.
+      rewrite /dt_names=> g μ bijmu.
+      Fail rewrite /k_mapping !relabeling_comp.
     Admitted.
 
 
@@ -951,28 +852,24 @@ Section IsoCan.
            + have isog1k1 : iso g1 (k_mapping g1). by rewrite iso_symm; apply k_mapping_iso_output.
              have isog2k2 : iso (k_mapping g2) g2. by apply k_mapping_iso_output.
              move=> /eqP k1_eq_k2. rewrite k1_eq_k2 in isog1k1. apply (iso_trans isog1k1 isog2k2).
-           + have dmnm : (dont_manipulate_names_mapping k_mapping). apply k_mapping_dont_manipulate_names.
+           + have dmnm : (dt_names k_mapping). apply k_mapping_dont_manipulate_names.
              by apply iso_leads_canonical.
-    Admitted.
+    Qed.
 
-    (* Lemma relabeling_mu_inv_bij (g : rdf_graph I B L) (fs : seq (B -> B)) : *)
-    (*   List.Forall (fun mu => bijective mu) fs -> *)
-    (*         exists (mu : B->B), relabeling mu g == k_mapping g /\ bijective mu. *)
-    (* Proof. move => all_bij.  *)
-    (*        have H: exists mu, (relabeling mu g) == (k_mapping g). apply inv_of_k_mapping. *)
-    (*        case: H=> mu /eqP eqmu. *)
-    (*        exists mu. rewrite eqmu. split; first by []. *)
-    (* Qed. *)
+    Lemma relabeling_mu_inv_bij (g : rdf_graph I B L) (fs : seq (B -> B)) :
+      List.Forall (fun mu => bijective mu) fs ->
+      exists (mu : B->B), relabeling mu g == k_mapping g /\ bijective mu.
+    Proof. move => all_bij.
+           apply inv_of_k_mapping.
+    Qed.
 
-    (* Lemma k_mapping_iso g : iso (k_mapping g) g. *)
-    (* Proof. rewrite /iso/is_iso. *)
-    (*        have H: exists mu, (relabeling mu g) == (k_mapping g). apply inv_of_k_mapping. *)
-    (*        case: H=> mu /eqP eqmu. *)
-    (*        exists mu. rewrite eqmu. split; last by []. *)
-    (*        admit. *)
-    (* Admitted. *)
-
-    (* Hypothesis perfectHashingSchemeTriple : injective hashTriple. *)
+    Lemma k_mapping_iso g : iso (k_mapping g) g.
+    Proof. rewrite /iso/is_iso.
+           have H:exists mu : B -> B, relabeling mu g == k_mapping g /\ bijective mu. apply inv_of_k_mapping.
+           move: H=> [mu [eq bij]].
+           exists mu; split; first by exact: bij.
+           by rewrite eq_sym; apply eq.
+    Qed.
 
   End IsoCanAlgorithm.
 
@@ -1004,7 +901,6 @@ Section IsoCan.
     (* CountType ascii ascii_countMixin. *)
 
     Fail Compute isoCanonicalise h0 h1 h2 h3 h4 berror g .
-
 
   End Example.
 

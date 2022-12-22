@@ -837,9 +837,42 @@ Section IsoCan.
     (* Lemma relabel_bij_init g mu : bnodes (init_hash (relabeling mu g)). *)
     (* TODO *)
     (* by case on g*)
+
+    Lemma foldl_max_min disp (T: porderType disp) (l : seq T) (x0 : T) (x0_minimum: forall x:T, x0 <= x):
+      foldl Order.max x0 l == x0 -> (l == [::]) || (x0 \in l).
+    Proof.
+      elim: l=> [//| hd t IHtl].
+      + rewrite /=. case e: (x0 < hd).
+        rewrite /Order.max e /= in_cons.
+        have nle: ~ (hd <= x0).
+        by rewrite Order.POrderTheory.lt_geF.
+        (* case/orP: nle. *)
+        rewrite /negb in nle.
+        move/negP: nle; rewrite /negb.
+        
+
+
+        Fail rewrite Lt.lt_not_le.
+        Fail have -> : (Order.max x0 hd) = hd.
+        (* rewrite e. *)
+        Fail rewrite /Order.max e; apply IHtl; le_n.
+      Fail rewrite x0_minimum.
+      Admitted.
+
+
+    (* Lemma foldl_cancellable disp (T: porderType disp) (l : seq T) (x0 : T): *)
+    (*   (foldl f x0 l == foldl f r t') = (t == t'). *)
+    (* Proof. case t=> [| ht ts ]; case t'=> [| ht' ts']; first by rewrite !eqxx. *)
+    (*        rewrite /=. *)
+
+
+
+
     Lemma k_mapping_dont_manipulate_names : (dt_names k_mapping).
     Proof.
       rewrite /dt_names=> g μ bijmu.
+      case g=> g'; case g'=> [//| hd tl].
+      rewrite /k_mapping.
       Fail rewrite /k_mapping !relabeling_comp.
     Admitted.
 

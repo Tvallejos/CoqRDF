@@ -848,7 +848,9 @@ Section IsoCan.
     Lemma k_mapping_dont_manipulate_names : (dt_names k_mapping).
     Proof.
       rewrite /dt_names=> g μ bijmu.
-      Fail rewrite /k_mapping !relabeling_comp.
+      case g=> g'; case: g'=> [//| hd tl].
+      rewrite /k_mapping.
+      (* Fail rewrite /k_mapping !relabeling_comp. *)
     Admitted.
 
 

@@ -322,6 +322,9 @@ Section Rdf.
     Variables I B L : countType.
     Implicit Type g : rdf_graph I B L.
 
+    Lemma empty_min g : Order.max g (mkRdfGraph [::]) = g.
+    Proof. by case: g=> g'; case: g'=> [//|h t]; rewrite Order.POrderTheory.maxElt. Qed.
+
     (* assia : this requires rewriting relabeling function(. cf error message
 The term "g1" has type "rdf_graph I B L" while it is expected to have type
  "rdf_graph I (seq_sub_finType (bnodes g1)) ?L" *)

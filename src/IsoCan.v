@@ -763,6 +763,14 @@ Section IsoCan.
     Proof. exists (fun argT => (funt' (f (funt argT)))).
            by apply: (inj_comp injFt') (inj_comp injF injFt). Qed.
 
+
+    Lemma uniq_inj_build_mapping_from_seq s1 s2 (uniq_s1 : uniq s1) (uniq_s2 :uniq s2) :
+      build_mapping_from_seq s1 =1 build_mapping_from_seq s2 ->
+      s1 = s2.
+    Proof. elim: s1 s2 uniq_s1 uniq_s2=> s2; elim: s2=> /=. done.
+           Admitted.
+
+
     Lemma all_kmaps_bijective g : List.Forall (fun mu => bijective mu) [seq build_mapping_from_seq i
                                                                        | i <- [seq mapi (app_n mark_bnode) i
                                                                               | i <- permutations (bnodes (init_hash g))]].
@@ -873,7 +881,6 @@ Section IsoCan.
       rewrite /dt_names=> g μ bijmu.
       case g=> g'; case g'=> [//| hd tl].
       rewrite /k_mapping.
-      Fail rewrite /k_mapping !relabeling_comp.
     Admitted.
 
 

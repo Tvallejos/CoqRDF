@@ -845,27 +845,46 @@ Section IsoCan.
     (* Lemma relabel_bij_init g mu : bnodes (init_hash (relabeling mu g)). *)
     (* TODO *)
     (* by case on g*)
+    Lemma max_sym disp (T: porderType disp) : symmetric Order.max.
+    Proof. by move=> x y; rewrite Order.POrderTheory.maxEle Order.POrderTheory.maxElt Order.TotalTheory.leNgt; case: (y < x).
+    Qed.
 
-    Lemma foldl_max_min disp (T: porderType disp) (l : seq T) (x0 : T) (x0_minimum: forall x:T, x0 <= x):
-      foldl Order.max x0 l == x0 -> (l == [::]) || (x0 \in l).
-    Proof.
-      elim: l=> [//| hd t IHtl].
-      + rewrite /=. case e: (x0 < hd).
-        rewrite /Order.max e /= in_cons.
-        have nle: ~ (hd <= x0).
-        by rewrite Order.POrderTheory.lt_geF.
-        (* case/orP: nle. *)
-        rewrite /negb in nle.
-        move/negP: nle; rewrite /negb.
-        
+    Lemma min_sym : symmetric Order.min.
+    Proof. by move=> x y; rewrite Order.POrderTheory.minEle Order.POrderTheory.minElt Order.TotalTheory.leNgt; case: (y < x).
+    Qed.
 
-
-        Fail rewrite Lt.lt_not_le.
-        Fail have -> : (Order.max x0 hd) = hd.
-        (* rewrite e. *)
-        Fail rewrite /Order.max e; apply IHtl; le_n.
-      Fail rewrite x0_minimum.
+    Lemma max_distr_foldl disp (T: porderType disp) (l : seq T) (x y : T) :
+      foldl Order.max (Order.max x y) l = Order.max y (foldl Order.max x l).
+    Proof. elim: l=> [//| hd t IHt] /=.
+          (*  Error: The LHS of Order.TotalTheory.leNgt *)
+          (* (_ <= _) *)
+          (* does not match any subterm of the goal *)
+           (* rewrite Order.POrderTheory.maxEle Order.POrderTheory.maxElt Order.TotalTheory.leNgt; case: (y < x). *)
+            (* Error: The LHS of max_sym *)
+            (*     (Order.max _ _) *)
+            (* does not match any subterm of the goal *)
+           (* rewrite max_sym. *)
       Admitted.
+
+    Lemma foldl_foldl_max disp (T: orderType disp) (l : seq T) (x0 : T) :
+      foldl Order.max x0 l == foldr Order.max x0 l.
+    Proof. elim: l x0=> [//| hd t IHt] x0 /=.
+           have <- :  ((foldl Order.max x0 t) = (foldr Order.max x0 t)). by apply /eqP; apply IHt.
+           by rewrite max_distr_foldl.
+    Qed.
+
+    (* Lemma foldl_max_min disp (T: porderType disp) (l : seq T) (x0 : T) (x0_minimum: forall x:T, Order.max x0 x = x): *)
+    (*   foldl Order.max x0 l == x0 -> (l == [::]) || (x0 \in l). *)
+    (* Proof. *)
+    (*   (* move=> /eqP ans. apply foldl_max in ans. *) *)
+    (*   elim: l => [//| hd t IHtl]. *)
+    (*   + move=> ans. rewrite /= x0_minimum in ans. *)
+    (*     move: (foldl_max t x0)=> []=> /eqP H. apply IHtl in H. case/orP: H. *)
+    (*     case e: (x0 == hd). *)
+    (*     by rewrite in_cons e. *)
+    (*     have ->: x0 \in (hd :: t) = (x0 \in t). *)
+    (*     by rewrite in_cons e. *)
+    (*   Admitted. *)
 
 
     (* Lemma foldl_cancellable disp (T: porderType disp) (l : seq T) (x0 : T): *)
@@ -874,13 +893,44 @@ Section IsoCan.
     (*        rewrite /=. *)
 
 
+    (* dt_names to_string (lookup_hash_default the_bnode) *)
 
+    Lemma bnodes_init_hash g : bnodes (init_hash g) = (map (relabeling_term init_bnode) (bnodes g)).
+    Proof. Admitted.
 
+    Lemma bnodes_init_hash_relabel g (mu: B -> B): bnodes (init_hash (relabeling mu g)) = (map (relabeling_term init_bnode) (bnodes (relabeling mu g))).
+    Proof. Admitted.
+
+    Lemma bnodes_relabel (g: rdf_graph I B L) (mu: B -> B): bnodes (relabeling mu g) = (map (relabeling_term mu) (bnodes g)).
+    Proof. Admitted.
+
+    Lemma perm_map (T U: eqType) (s: seq T) (f: T -> U): permutations (map f s) = map (map f) (permutations s).
+    Proof. Admitted.
+    (* TODO  *)
+    Fail Lemma relabeling_swap_init_bnode g (mu : B -> B) :
+      map (relabeling_term init_bnode) (bnodes (relabeling mu g)) = relabeling mu (relabeling_term init_bnode (bnodes g)).
+                          (* | i <- permutations *)
+                          (*          [seq relabeling_term init_bnode i *)
+                          (*             | i <- [seq relabeling_term μ i | i <- bnodes {| graph := hd :: tl |}]]]]] *)
     Lemma k_mapping_dont_manipulate_names : (dt_names k_mapping).
     Proof.
       rewrite /dt_names=> g μ bijmu.
       case g=> g'; case g'=> [//| hd tl].
       rewrite /k_mapping.
+      suffices ->: [seq relabeling mu {| graph := hd :: tl |}
+       | mu <- [seq build_mapping_from_seq i
+                  | i <- [seq mapi (app_n mark_bnode) i
+                            | i <- permutations (bnodes (init_hash {| graph := hd :: tl |}))]]] = [seq relabeling mu (relabeling μ {| graph := hd :: tl |})
+       | mu <- [seq build_mapping_from_seq i
+                  | i <- [seq mapi (app_n mark_bnode) i
+                         | i <- permutations (bnodes (init_hash (relabeling μ {| graph := hd :: tl |})))]]].
+      by [].
+      rewrite !bnodes_init_hash.
+      (* rewrite !bnodes_init_hash_relabel. *)
+      rewrite bnodes_relabel.
+      rewrite perm_map.
+
+      (* rewrite relabeling_cons. *)
     Admitted.
 
 

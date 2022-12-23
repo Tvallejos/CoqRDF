@@ -57,13 +57,21 @@ Proof. elim : s => [| a t IHts] u /=; first by rewrite in_nil.
               - by apply: IHts y.
 Qed.
 
-Lemma foldl_op (disp: unit) (T: porderType disp) (l: seq T) (x0 : T) : foldl Order.min x0 l = x0 \/ foldl Order.min x0 l \in l.
-Proof. elim: l x0 => [ | t ts IHts] x0 /=.
-       + by left.
-       + rewrite in_cons; case: (IHts (Order.min x0 t))=> [ -> |intail] /=.
-       - rewrite Order.POrderTheory.minEle; case: ifP=> _.
-         * by left.
+Lemma foldl_min (disp: unit) (T: porderType disp) (l: seq T) (x0 : T) :
+  foldl Order.min x0 l = x0 \/ foldl Order.min x0 l \in l.
+Proof. elim: l x0 => [ | t ts IHts] x0; first by left.
+       + rewrite in_cons /=; case: (IHts (Order.min x0 t))=> [ -> |intail] /=.
+       - rewrite Order.POrderTheory.minEle; case: ifP=> _; first by left.
          * by right; rewrite eqxx.
+       - by right; rewrite intail orbT.
+Qed.
+
+Lemma foldl_max (disp: unit) (T: porderType disp) (l: seq T) (x0 : T) :
+  foldl Order.max x0 l = x0 \/ foldl Order.max x0 l \in l.
+Proof. elim: l x0 => [ | t ts IHts] x0; first by left.
+       + rewrite in_cons /=; case: (IHts (Order.max x0 t))=> [ -> |intail] /=.
+       - rewrite Order.POrderTheory.maxEle; case: ifP=> _; first by right; rewrite eqxx. 
+         * by left. 
        - by right; rewrite intail orbT.
 Qed.
 

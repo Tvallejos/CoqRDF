@@ -907,29 +907,85 @@ Section IsoCan.
     Lemma perm_map (T U: eqType) (s: seq T) (f: T -> U): permutations (map f s) = map (map f) (permutations s).
     Proof. Admitted.
     (* TODO  *)
-    Fail Lemma relabeling_swap_init_bnode g (mu : B -> B) :
-      map (relabeling_term init_bnode) (bnodes (relabeling mu g)) = relabeling mu (relabeling_term init_bnode (bnodes g)).
-                          (* | i <- permutations *)
-                          (*          [seq relabeling_term init_bnode i *)
-                          (*             | i <- [seq relabeling_term μ i | i <- bnodes {| graph := hd :: tl |}]]]]] *)
+
+    Definition relabeling_hgraph (mu : B -> B) (g: hgraph) : hgraph :=
+      relabeling (fun b => (mkHinput (mu (input b)) (current_hash b))) g.
+
+    Definition relabeling_hterm (mu : B -> B) ht : hterm :=
+      relabeling_term (fun b => (mkHinput (mu (input b)) (current_hash b))) ht.
+
+    Definition mu_extension (mu : B -> B) : (hash B) -> (hash B):=
+      fun b => (mkHinput (mu (input b)) (current_hash b)).
+
+    Lemma relabeling_swap_init_bnode g (mu : B -> B) :
+      (map (relabeling_term init_bnode) (bnodes (relabeling mu g))) =
+        map (relabeling_term (mu_extension mu)) (map (relabeling_term init_bnode) (@bnodes I B L g)).
+    Admitted.
+
+    Lemma eqb_b_hterm_relabeling b ht (mu : B -> B) :
+      (* (eq_bh : eqb_b_hterm b ht) *)
+      eqb_b_hterm b ht ->
+      eqb_b_hterm (mu b) (relabeling_hterm mu ht).
+      Proof. by rewrite /eqb_b_hterm; case: ht=> // ? /eqP -> /=; rewrite eqxx. Qed.
+
+
     Lemma k_mapping_dont_manipulate_names : (dt_names k_mapping).
     Proof.
       rewrite /dt_names=> g μ bijmu.
-      case g=> g'; case g'=> [//| hd tl].
-      rewrite /k_mapping.
-      suffices ->: [seq relabeling mu {| graph := hd :: tl |}
+      case g=> g';
+               (* case g'=> [//| hd tl]. *)
+               rewrite /k_mapping.
+      suffices ->:
+        [seq relabeling mu {| graph := g' |}
+        | mu <- [seq build_mapping_from_seq i
+                | i <- [seq mapi (app_n mark_bnode) i
+                       | i <- permutations (bnodes (init_hash {| graph := g' |}))]]] =
+                 [seq relabeling mu (relabeling μ {| graph := g' |})
+                 | mu <- [seq build_mapping_from_seq i
+                         | i <- [seq mapi (app_n mark_bnode) i
+                                | i <- permutations (bnodes (init_hash (relabeling μ {| graph := g' |})))]]].
+      by [].
+      elim: g'=> [//|hd tl IHtl].
+
+      (* f_equal. *)
+      (* admit. apply IHtl. *)
+      rewrite map_cons.
+
+      rewrite relabeling_cons.
+
+
+
+
+
+      f_equal.
+        f_equal
+
+
+
+
+        [seq relabeling mu {| graph := hd :: tl |}
        | mu <- [seq build_mapping_from_seq i
                   | i <- [seq mapi (app_n mark_bnode) i
-                            | i <- permutations (bnodes (init_hash {| graph := hd :: tl |}))]]] = [seq relabeling mu (relabeling μ {| graph := hd :: tl |})
+                         | i <- permutations (bnodes (init_hash {| graph := hd :: tl |}))]]] =
+                 [seq relabeling mu (relabeling μ {| graph := hd :: tl |})
        | mu <- [seq build_mapping_from_seq i
                   | i <- [seq mapi (app_n mark_bnode) i
                          | i <- permutations (bnodes (init_hash (relabeling μ {| graph := hd :: tl |})))]]].
       by [].
       rewrite !bnodes_init_hash.
       (* rewrite !bnodes_init_hash_relabel. *)
-      rewrite bnodes_relabel.
-      rewrite perm_map.
+      (* rewrite bnodes_relabel. *)
+      (* rewrite relabeling_swap_init_bnode. *)
+      rewrite !perm_map.
+      f_equal.
+      admit.
 
+
+      rewrite /relabeling.
+      (* pose eq_g :=  [seq [seq relabeling_term init_bnode i | i <- i] *)
+      (*               | i <- permutations (bnodes {| graph := hd :: tl |})]. *)
+      (* rewrite -/eq_g. *)
+      (* f_equal. rewrite relabeling_cons. *)
       (* rewrite relabeling_cons. *)
     Admitted.
 

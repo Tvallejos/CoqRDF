@@ -93,6 +93,14 @@ Section Rdf.
           {| graph := relabeling_triple μ trpl :: (relabeling_seq_triple μ ts) |}.
       Proof. by []. Qed.
 
+      (* TODO *)
+      Lemma map_rdfcons (I' L': Type) (f : rdf_graph I B L -> rdf_graph I' B' L') (trpl : triple I B L) (ts : seq (triple I B L)) :
+        map f {| graph := trpl :: ts |} = f (mkRdfGraph trpl) :: (map f {| graph := ts |}).
+
+
+        (x : T1) (s : seq T1),
+  [seq f i | i <- x :: s] = f x :: [seq f i | i <- s]
+
     End Relabeling_graph.
   End PolyRdf.
 

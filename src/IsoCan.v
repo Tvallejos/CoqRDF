@@ -747,8 +747,8 @@ Section IsoCan.
     Proof.
       elim: s=> [| hd tl IHtl]; first by rewrite has_nil.
       move=> beq has_b s'; case: s'=> [//| hd' tl'] f injF [eqhd eqtl].
-      move: IHtl; rewrite /build_mapping_from_seq eqhd eqtl -map_cons -has_map.
-      rewrite has_b /= -eqb_b_hterm_relabel. rewrite /= in has_b.
+      move: IHtl; rewrite /build_mapping_from_seq eqhd eqtl -map_cons -has_map; last by apply injF.
+      rewrite has_b /= -eqb_b_hterm_relabel; last by apply injF. rewrite /= in has_b.
       case/orP: has_b beq; first by rewrite /build_mapping_from_seq=> H /=; rewrite H; case hd=> // name /=.
       + rewrite /build_mapping_from_seq /= ; case e: (eqb_b_hterm b hd)
                 => /=; first by move=> _; rewrite -lookup_hash_relabeling.
@@ -768,17 +768,8 @@ Section IsoCan.
                 (lookup_hash_default (nth (Bnode (mkHinput (f b) herror)) s' (find (eqb_b_hterm (f b)) s')))
               =
                 n.
-        move=> s' f0 injF0 ->; rewrite -has_map; last by apply injF0. by rewrite has_tl.
-        erewrite IHtl'. reflexivity.
-        apply injF.
-        done.
-        rewrite -!eqtl. rewrite IHtl. done.
-        apply eq.
-        done.
-        apply injF.
-        apply eqtl.
-        apply injF.
-        apply injF.
+        by move=> s' f0 injF0 ->; rewrite -has_map ?has_tl; last by apply injF0.
+        by rewrite IHtl' // IHtl //.
     Qed.
 
     Lemma has_not_default T (s : seq T) p :

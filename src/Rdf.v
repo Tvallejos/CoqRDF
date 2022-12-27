@@ -25,8 +25,10 @@ Section Rdf.
     Definition merge_rdf_graph g1 g2 : rdf_graph I B L:=
       mkRdfGraph (g1 ++ g2).
 
+    Notation "g1 +-+ g2" := (merge_rdf_graph g1 g2) (at level 0, only parsing).
+
     Lemma merge_cons t ts :
-      {| graph := t::ts |} = merge_rdf_graph (mkRdfGraph [:: t]) (mkRdfGraph ts).
+      {| graph := t::ts |} = (mkRdfGraph [:: t]) +-+ (mkRdfGraph ts).
     Proof. by []. Qed.
 
     Definition merge_seq_rdf_graph (gs : seq (rdf_graph I B L)) : rdf_graph I B L :=
@@ -94,12 +96,10 @@ Section Rdf.
       Proof. by []. Qed.
 
       (* TODO *)
-      Lemma map_rdfcons (I' L': Type) (f : rdf_graph I B L -> rdf_graph I' B' L') (trpl : triple I B L) (ts : seq (triple I B L)) :
-        map f {| graph := trpl :: ts |} = f (mkRdfGraph trpl) :: (map f {| graph := ts |}).
+      (* Lemma map_rdfcons (I' L': Type) (f : rdf_graph I B L -> rdf_graph I' B' L') (trpl : triple I B L) (ts : seq (triple I B L)) : *)
+      (*   map f {| graph := trpl :: ts |} = f (mkRdfGraph trpl) +-+ (map f {| graph := ts |}). *)
 
 
-        (x : T1) (s : seq T1),
-  [seq f i | i <- x :: s] = f x :: [seq f i | i <- s]
 
     End Relabeling_graph.
   End PolyRdf.

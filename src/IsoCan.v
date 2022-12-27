@@ -709,31 +709,6 @@ Section IsoCan.
       + by move=> H; apply IHfs in H; apply H.
     Qed.
 
-    Lemma k_mapping_cons_const x y z sib pii as' :
-      is_ground_term x -> is_ground_term y -> is_ground_term z ->
-      (k_mapping {| graph :=
-                     {|
-                       subject := x;
-                       predicate := y;
-                       object := z;
-                       subject_in_IB := sib;
-                       predicate_in_I := pii
-                     |} :: as'
-                 |})
-      =
-        mkRdfGraph
-          ({|
-              subject := x;
-              predicate :=  y;
-              object := z;
-              subject_in_IB := sib;
-              predicate_in_I := pii
-            |} :: (k_mapping {| graph:= as' |})).
-    Proof.
-      (* TODO? *)
-    Admitted.
-    (* rewrite /k_mapping /init_hash relabeling_cons relabeling_triple_id. Admitted. *)
-
     Lemma injection_hterm b (ht : hterm) : eqb_b_hterm b ht -> is_bnode ht.
     Proof. by case ht. Qed.
 
@@ -745,6 +720,66 @@ Section IsoCan.
         (build_mapping_from_seq (mapi (app_n mark_bnode) s) b').
     Proof. suffices : b = b'. by move=> ->.
            by apply (eqb_b_hterm_trans eb eb'). Qed.
+
+    Definition mu_extension (mu : B -> B) : (hash B) -> (hash B):=
+      fun b => (mkHinput (mu (input b)) (current_hash b)).
+
+    Definition relabeling_hterm (mu : B -> B) ht : hterm :=
+      relabeling_term (mu_extension mu) ht.
+
+    Lemma eqb_b_hterm_relabel f b ht (injF: injective f): (eqb_b_hterm b ht) = (eqb_b_hterm (f b) (relabeling_hterm f ht)).
+    Proof. by case ht=> // name /=; rewrite inj_eq. Qed.
+
+    Lemma has_map s f b (injF: injective f): has (eqb_b_hterm b) s = has (eqb_b_hterm (f b)) (map (relabeling_hterm f) s).
+    Proof. elim: s=> [//|hd tl IHtl] /=.
+           + f_equal; last by rewrite IHtl.
+             by apply eqb_b_hterm_relabel.
+    Qed.
+
+    Lemma lookup_hash_relabeling ht mu: (lookup_hash_default ht) = (lookup_hash_default (relabeling_hterm mu ht)).
+    Proof. by case ht. Qed.
+
+    Lemma map_kmap b n s :
+      (build_mapping_from_seq s b) = n ->
+      (has (eqb_b_hterm b) s) ->
+      forall s' (f : B -> B), injective f -> s' = map (relabeling_hterm f) s ->
+                              (build_mapping_from_seq s' (f b)) = n.
+    Proof.
+      elim: s=> [| hd tl IHtl]; first by rewrite has_nil.
+      move=> beq has_b s'; case: s'=> [//| hd' tl'] f injF [eqhd eqtl].
+      move: IHtl; rewrite /build_mapping_from_seq eqhd eqtl -map_cons -has_map.
+      rewrite has_b /= -eqb_b_hterm_relabel. rewrite /= in has_b.
+      case/orP: has_b beq; first by rewrite /build_mapping_from_seq=> H /=; rewrite H; case hd=> // name /=.
+      + rewrite /build_mapping_from_seq /= ; case e: (eqb_b_hterm b hd)
+                => /=; first by move=> _; rewrite -lookup_hash_relabeling.
+        move=> /= has_tl /=; rewrite has_tl=> eq IHtl.
+        have IHtl':
+          forall (s' : seq hterm) (f : B -> B),
+            injective f ->
+            s' = [seq relabeling_hterm f i | i <- tl] ->
+            (if has (eqb_b_hterm (f b)) s'
+             then
+               to_string
+                 (lookup_hash_default (nth (Bnode (mkHinput (f b) herror)) s' (find (eqb_b_hterm (f b)) s')))
+             else f b) =
+              n
+            ->
+              to_string
+                (lookup_hash_default (nth (Bnode (mkHinput (f b) herror)) s' (find (eqb_b_hterm (f b)) s')))
+              =
+                n.
+        move=> s' f0 injF0 ->; rewrite -has_map; last by apply injF0. by rewrite has_tl.
+        erewrite IHtl'. reflexivity.
+        apply injF.
+        done.
+        rewrite -!eqtl. rewrite IHtl. done.
+        apply eq.
+        done.
+        apply injF.
+        apply eqtl.
+        apply injF.
+        apply injF.
+    Qed.
 
     Lemma has_not_default T (s : seq T) p :
       has p s -> forall x0 x1,  nth x0 s (find p s) = nth x1 s (find p s).
@@ -758,18 +793,10 @@ Section IsoCan.
       (f : T -> T) (injF: injective f)
       (funt : ft -> T) (injFt: injective funt)
       (funt' : T -> ft') (injFt' : injective funt')
-      (* (eq_card : #|ft| = #|ft'|) *)
       : exists (f'' : ft -> ft'), injective f''.
     Proof. exists (fun argT => (funt' (f (funt argT)))).
-           by apply: (inj_comp injFt') (inj_comp injF injFt). Qed.
-
-
-    Lemma uniq_inj_build_mapping_from_seq s1 s2 (uniq_s1 : uniq s1) (uniq_s2 :uniq s2) :
-      build_mapping_from_seq s1 =1 build_mapping_from_seq s2 ->
-      s1 = s2.
-    Proof. elim: s1 s2 uniq_s1 uniq_s2=> s2; elim: s2=> /=. done.
-           Admitted.
-
+           by apply: (inj_comp injFt') (inj_comp injF injFt).
+    Qed.
 
     Lemma all_kmaps_bijective g : List.Forall (fun mu => bijective mu) [seq build_mapping_from_seq i
                                                                        | i <- [seq mapi (app_n mark_bnode) i
@@ -911,12 +938,6 @@ Section IsoCan.
     Definition relabeling_hgraph (mu : B -> B) (g: hgraph) : hgraph :=
       relabeling (fun b => (mkHinput (mu (input b)) (current_hash b))) g.
 
-    Definition relabeling_hterm (mu : B -> B) ht : hterm :=
-      relabeling_term (fun b => (mkHinput (mu (input b)) (current_hash b))) ht.
-
-    Definition mu_extension (mu : B -> B) : (hash B) -> (hash B):=
-      fun b => (mkHinput (mu (input b)) (current_hash b)).
-
     Lemma relabeling_swap_init_bnode g (mu : B -> B) :
       (map (relabeling_term init_bnode) (bnodes (relabeling mu g))) =
         map (relabeling_term (mu_extension mu)) (map (relabeling_term init_bnode) (@bnodes I B L g)).
@@ -945,43 +966,52 @@ Section IsoCan.
                          | i <- [seq mapi (app_n mark_bnode) i
                                 | i <- permutations (bnodes (init_hash (relabeling μ {| graph := g' |})))]]].
       by [].
-      elim: g'=> [//|hd tl IHtl].
+      rewrite /build_mapping_from_seq.
+
+      (* have : forall h, [seq build_mapping_from_seq i *)
+      (*           | i <- [seq mapi (app_n mark_bnode) i *)
+      (*                  | i <- permutations (bnodes (init_hash {| graph := h |}))]] -> *)
+
+      (* List. *)
+      (* case: g'=> [//|hd tl]. *)
+      (* List.Forall2 (fun) *)
+      (* elim: g'=> [//|hd tl IHtl]. *)
 
       (* f_equal. *)
-      (* admit. apply IHtl. *)
-      rewrite map_cons.
+      (* (* admit. apply IHtl. *) *)
+      (* rewrite map_cons. *)
 
-      rewrite relabeling_cons.
-
-
-
-
-
-      f_equal.
-        f_equal
+      (* rewrite relabeling_cons. *)
 
 
 
 
-        [seq relabeling mu {| graph := hd :: tl |}
-       | mu <- [seq build_mapping_from_seq i
-                  | i <- [seq mapi (app_n mark_bnode) i
-                         | i <- permutations (bnodes (init_hash {| graph := hd :: tl |}))]]] =
-                 [seq relabeling mu (relabeling μ {| graph := hd :: tl |})
-       | mu <- [seq build_mapping_from_seq i
-                  | i <- [seq mapi (app_n mark_bnode) i
-                         | i <- permutations (bnodes (init_hash (relabeling μ {| graph := hd :: tl |})))]]].
-      by [].
-      rewrite !bnodes_init_hash.
-      (* rewrite !bnodes_init_hash_relabel. *)
-      (* rewrite bnodes_relabel. *)
-      (* rewrite relabeling_swap_init_bnode. *)
-      rewrite !perm_map.
-      f_equal.
-      admit.
+
+      (* f_equal. *)
+      (*   f_equal *)
 
 
-      rewrite /relabeling.
+
+
+      (*   [seq relabeling mu {| graph := hd :: tl |} *)
+      (*  | mu <- [seq build_mapping_from_seq i *)
+      (*             | i <- [seq mapi (app_n mark_bnode) i *)
+      (*                    | i <- permutations (bnodes (init_hash {| graph := hd :: tl |}))]]] = *)
+      (*            [seq relabeling mu (relabeling μ {| graph := hd :: tl |}) *)
+      (*  | mu <- [seq build_mapping_from_seq i *)
+      (*             | i <- [seq mapi (app_n mark_bnode) i *)
+      (*                    | i <- permutations (bnodes (init_hash (relabeling μ {| graph := hd :: tl |})))]]]. *)
+      (* by []. *)
+      (* rewrite !bnodes_init_hash. *)
+      (* (* rewrite !bnodes_init_hash_relabel. *) *)
+      (* (* rewrite bnodes_relabel. *) *)
+      (* (* rewrite relabeling_swap_init_bnode. *) *)
+      (* rewrite !perm_map. *)
+      (* f_equal. *)
+      (* admit. *)
+
+
+      (* rewrite /relabeling. *)
       (* pose eq_g :=  [seq [seq relabeling_term init_bnode i | i <- i] *)
       (*               | i <- permutations (bnodes {| graph := hd :: tl |})]. *)
       (* rewrite -/eq_g. *)

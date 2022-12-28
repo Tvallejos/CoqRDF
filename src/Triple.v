@@ -67,7 +67,6 @@ Section PolyTriple.
   End Relabeling_triple.
 End PolyTriple.
 
-
 Section CodeTriple.
 
   Variables (I B L : Type).
@@ -116,7 +115,6 @@ Definition triple_canPOrderMixin (I B L : countType) :=
 Canonical triple_POrderType (I B L : countType) :=
   Eval hnf in POrderType tt (triple_countType I B L) (triple_canPOrderMixin I B L).
 
-
 (* assia : below not cleaned up *)
 Section OperationsOnTriples.
 
@@ -139,9 +137,7 @@ Section OperationsOnTriples.
     filter (@is_bnode I B L) (terms_triple t).
 
   Lemma sizeO_filter T (s : seq T) p: size (filter p s) == 0 = all (negb \o p) s.
-  Proof.
-    by elim s=> //= h t <-; case (p h).
-  Qed.
+  Proof. by elim s=> //= h t <-; case (p h). Qed.
 
   Lemma is_ground_not_bnode t :
     is_ground_triple t =

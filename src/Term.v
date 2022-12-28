@@ -17,7 +17,6 @@ Arguments Iri {I B L}.
 Arguments Lit {I B L}.
 Arguments Bnode {I B L}.
 
-
 Definition is_lit (I B L : Type) (trm : term I B L) : bool :=
   match trm with
   | Lit _ => true
@@ -60,13 +59,6 @@ Definition is_ground_term (I B L : Type) (trm : term I B L) : bool :=
 
 Section Poly.
   Variables I B B1 B2 B3 L : Type.
-  (* Implicit Type trm : term I B L. *)
-
-  (* Definition get_b_term trm : is_bnode trm -> B. *)
-  (* Proof. rewrite /is_bnode=> is_b. case trm eqn:E; *)
-  (*          try discriminate is_b. *)
-  (*        exact name. *)
-  (* Defined. *)
 
   Definition relabeling_term B1 B2 μ (trm : term I B1 L) : term I B2 L :=
     match trm with
@@ -74,8 +66,6 @@ Section Poly.
     | Iri i => Iri i
     | Lit l => Lit l
     end.
-
-  (* Check relabeling_term. *)
 
   (* Definition relabeling_term_alt B1 B2 (μ : (trm : term I B1 L) : term I B2 L := *)
   (*   match trm with *)

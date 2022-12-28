@@ -95,12 +95,6 @@ Section Rdf.
           {| graph := relabeling_triple μ trpl :: (relabeling_seq_triple μ ts) |}.
       Proof. by []. Qed.
 
-      (* TODO *)
-      (* Lemma map_rdfcons (I' L': Type) (f : rdf_graph I B L -> rdf_graph I' B' L') (trpl : triple I B L) (ts : seq (triple I B L)) : *)
-      (*   map f {| graph := trpl :: ts |} = f (mkRdfGraph trpl) +-+ (map f {| graph := ts |}). *)
-
-
-
     End Relabeling_graph.
   End PolyRdf.
 
@@ -149,7 +143,6 @@ Section Rdf.
       terms (mkRdfGraph (trpl :: ts)) = undup (terms_triple trpl ++ (terms (mkRdfGraph ts))).
     Proof. by rewrite /terms; case: ts=>  [ // | ? ? ] ; rewrite undup_cat_r. Qed.
 
-
     Section TermRelabeling.
       Variable B1 B2: eqType.
 
@@ -159,7 +152,7 @@ Section Rdf.
              + rewrite relabeling_cons !terms_cons -undup_map_inj; last exact: relabeling_term_inj.
                by rewrite IHts map_cat terms_relabeled_triple //; apply inj_mu.
       Qed.
-    End TermRelabeling. 
+    End TermRelabeling.
 
     Definition bnodes g : seq (term I B L) :=
       undup (filter (@is_bnode _ _ _) (terms g)).
@@ -204,25 +197,25 @@ Section Rdf.
     Lemma ground_no_bnodes g : bnodes g = [::] <-> is_ground g.
     Proof. split=> [|].
            + rewrite /is_ground /bnodes. elim g=> g'; elim: g' => [| a t IHts]; first by rewrite all_nil.
-             rewrite -filter_undup. case a=> s p o; case: s; case: p; case o=> // x y z sib pii;
-                                                                             rewrite terms_cons undup_cat_l undup_idem  filter_undup /=.
+             rewrite -filter_undup.
+             case a=> s p o; case: s; case: p; case o
+                  => // x y z sib pii; rewrite terms_cons undup_cat_l undup_idem  filter_undup /=.
            - exact: IHts.
            - exact: IHts.
-           - case e: (Bnode x \in [seq x <- terms {| graph := t |} | is_bnode x]) => contr; last by done.
+           - case e: (Bnode x \in [seq x <- terms {| graph := t |} | is_bnode x]) => contr //.
              by apply undup_nil in contr; rewrite contr in_nil in e.
-           -
-             case e: (Bnode z \in [seq x <- terms {| graph := t |} | is_bnode x]) => contr; last by done.
+           - case e: (Bnode z \in [seq x <- terms {| graph := t |} | is_bnode x]) => contr //.
              apply undup_nil in contr. rewrite contr in_nil in e. done.
-           - case e: (Bnode z \in [seq x <- terms {| graph := t |} | is_bnode x]) => contr; last by done.
+           - case e: (Bnode z \in [seq x <- terms {| graph := t |} | is_bnode x]) => contr //.
              apply undup_nil in contr. rewrite contr in_nil in e. done.
            - case e: (Bnode x \in [seq x <- terms {| graph := t |} | is_bnode x]);
-               case e2: (Bnode z \in Bnode x :: [seq x <- terms {| graph := t |} | is_bnode x])=> contr; try done; first by apply undup_nil in contr; rewrite contr in_nil in e.
-             + rewrite /is_ground /bnodes /terms. elim g=> g'; elim g'=> [//| h t IHts].
-               move=> /= /andP [groundT allT]. apply IHts in allT. apply undup_nil in allT.
-               rewrite undup_cat filter_cat allT cats0.
-               rewrite -!filter_undup undup_idem !filter_undup -filter_predI.
-               case: h groundT=> s p o; case: s; case: p; case: o=> // ? ? ? ? ?;
-                     by rewrite /terms_triple filter_undup.
+               case e2: (Bnode z \in Bnode x :: [seq x <- terms {| graph := t |} | is_bnode x])
+                  => contr //; first by apply undup_nil in contr; rewrite contr in_nil in e.
+             + rewrite /is_ground/bnodes/terms. elim g=> g'; elim g'=> [//| h t IHts].
+               move=> /= /andP [groundT /IHts/undup_nil allT].
+               rewrite undup_cat filter_cat allT cats0 -!filter_undup undup_idem !filter_undup -filter_predI.
+               by case: h groundT=> s p o; case: s; case: p; case: o
+               => // ? ? ? ? ?; rewrite /terms_triple filter_undup.
     Qed.
 
     Definition get_b g : seq B.
@@ -232,12 +225,11 @@ Section Rdf.
     Defined.
 
     Lemma bijective_eqb_rdf mu nu g1 g2 :
-      cancel mu nu -> eqb_rdf g1 (relabeling mu g2) ->  eqb_rdf g2 (relabeling nu g1).
+      cancel mu nu -> g1 == (relabeling mu g2) -> g2 == (relabeling nu g1).
     Proof.
-      move=> cancel_mu_nu. rewrite /eqb_rdf => /eqP /= ->.
-      rewrite relabeling_seq_triple_comp.
+      move=> cancel_mu_nu=> /eqP ->; apply /eqP; rewrite relabeling_comp /relabeling.
       have /relabeling_seq_triple_ext-> : nu \o mu =1 id by [].
-      rewrite relabeling_seq_triple_id; exact: eqb_rdf_refl.
+      by rewrite relabeling_seq_triple_id; case g2.
     Qed.
 
     Definition is_iso g1 g2 (μ : B -> B) :=
@@ -252,14 +244,13 @@ Section Rdf.
     Remark id_bij T: bijective (@id T). Proof. by exists id. Qed.
 
     Lemma iso_refl g : iso g g.
-    Proof. rewrite /iso /is_iso; exists id; split.
-           exact: id_bij.
+    Proof. rewrite /iso /is_iso; exists id; split; first exact: id_bij.
            by rewrite relabeling_id.
     Qed.
 
     Remark eqiso g1 g2 : g1 == g2 -> iso g1 g2.
-    Proof. exists id. rewrite /is_iso; split; first by apply id_bij.
-           + by rewrite relabeling_id.
+    Proof. exists id. rewrite /is_iso; split; first exact (id_bij _).
+           by rewrite relabeling_id.
     Qed.
 
     Lemma iso_symm g1 g2 : iso g1 g2 <-> iso g2 g1.
@@ -279,7 +270,7 @@ Section Rdf.
 
     Definition isocanonical_mapping (M : rdf_graph I B L -> rdf_graph I B L) :=
       forall g, iso (M g) g /\
-             (forall g1 g2, (M g1) == (M g2) <-> iso g1 g2).
+                  (forall g1 g2, (M g1) == (M g2) <-> iso g1 g2).
 
     Definition dt_names (M : rdf_graph I B L -> rdf_graph I B L) := forall g μ, (bijective μ) -> M g == M (relabeling μ g).
 
@@ -343,7 +334,7 @@ The term "g1" has type "rdf_graph I B L" while it is expected to have type
 
     Definition isocanonical_mapping_alt (M : rdf_graph I B L -> rdf_graph I B L) :=
       forall g, iso_alt (M g) g /\
-             (forall g1 g2, (M g1) == (M g2) <-> iso g1 g2).
+                  (forall g1 g2, (M g1) == (M g2) <-> iso g1 g2).
 
 
     Section FinTypeRdf.

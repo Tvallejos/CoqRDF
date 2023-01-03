@@ -526,8 +526,8 @@ Section IsoCan.
          app_n mark_hash (mkHinput (input b2) h0) n) ->
       ((input b1) == (input b2)).
     Proof.
-      case: n=> [| n' /= /appn_mark_hash/andP [/eqP ->]]; first by rewrite eq_i_ch /= eqxx Bool.andb_true_r.
-      by rewrite eqxx.
+      case: n=> [| n' /= /appn_mark_hash/andP [/eqP ->]]; last by rewrite eqxx.
+      by rewrite eq_i_ch /= eqxx Bool.andb_true_r.
     Qed.
 
     Lemma app_n_mark_eq_bns (b1 b2: hash B) g (b1in_bns : Bnode b1 \in bnodes (init_hash g))
@@ -541,16 +541,37 @@ Section IsoCan.
       by apply /eqP; rewrite eq_i_ch eq_i (mark_hash_init b1in_bns) (mark_hash_init b2in_bns) eqxx.
     Qed.
 
+    Lemma can_app_n_mb_init g b1 b2 (b1_bns : Bnode b1 \in bnodes (init_hash g))
+      (b2_bns : Bnode b2 \in bnodes (init_hash g))
+      n m :
+       app_n mark_bnode (Bnode b1) n = app_n mark_bnode (Bnode b2) m ->
+       (@Bnode I (hash B) L b1 == Bnode b2) && (n == m).
+      move=> /eqP injH.
+      suffices eqnm: n = m.
+      rewrite eqnm in injH *; f_equal; rewrite eqxx Bool.andb_true_r; apply: (app_n_mark_eq_bns b1_bns b2_bns injH).
+      by move/eqP: injH; apply (eq_appn_init_eq_num b1_bns b2_bns).
+    Qed.
+
+
     Lemma k_mapping_seq_uniq_graph g: uniq (mapi (app_n mark_bnode) (bnodes (init_hash g))).
     Proof.
       rewrite /mapi; pose g' := init_hash g.
       rewrite map_inj_in_uniq; first by apply (zip_uniq_l _ (uniq_bnodes g')).
       move=> [t n] [u m] /in_zip/andP [tin_bns n_iota] /in_zip/andP [uin_bns m_iota] /= eq_app_n.
-      case: t tin_bns uin_bns eq_app_n; case: u =>
-            nt nu; rewrite ?i_in_bnodes ?l_in_bnodes // => nu_bns nt_bns injH.
-      suffices eqnm: n = m.
-      by move: injH; rewrite eqnm=> /eqP injH; f_equal; apply: eqP (app_n_mark_eq_bns nu_bns nt_bns injH).
-      by apply (eq_appn_init_eq_num nu_bns nt_bns injH).
+      case: t tin_bns uin_bns eq_app_n; case: u
+          => nt nu; rewrite ?i_in_bnodes ?l_in_bnodes // => nu_bns nt_bns injH.
+      by apply /eqP; rewrite xpair_eqE; apply (can_app_n_mb_init nu_bns nt_bns injH).
+    Qed.
+
+    Lemma k_mapping_seq_uniq_perm_eq g s: perm_eq s (bnodes (init_hash g)) -> uniq (mapi (app_n mark_bnode) s).
+    Proof. rewrite /mapi perm_sym=> perm_eq. rewrite map_inj_in_uniq. apply uniq_zip_iota.
+           move=> [x1 n] [y1 m] /in_zip/andP [x1_ins n_iniota] /in_zip/andP [y1_ins m_iniota] /=.
+           have : is_bnode x1. apply (in_all x1_ins); rewrite -(perm_all _ perm_eq); apply all_bnodes.
+           have : is_bnode y1. apply (in_all y1_ins); rewrite -(perm_all _ perm_eq); apply all_bnodes.
+           case :y1 x1_ins y1_ins; case x1=> // namey namex y_ins x_ins _ _.
+           have y1_init: Bnode namey \in (bnodes (init_hash g)). rewrite (perm_mem perm_eq). apply y_ins.
+           have x1_init: Bnode namex \in (bnodes (init_hash g)). rewrite (perm_mem perm_eq). apply x_ins.
+           by move=> ?; apply /eqP; rewrite xpair_eqE; apply (can_app_n_mb_init y1_init).
     Qed.
 
     Definition k_mapping (g : rdf_graph I B L) : rdf_graph I B L :=
@@ -658,22 +679,6 @@ Section IsoCan.
       by exists (build_mapping_from_seq p).
     Qed.
 
-    Lemma min_seq (disp : unit) (T: porderType disp) (s: seq T) (hd:T) :
-      exists minimum, forall t, t \in (hd::s) -> minimum <= t.
-    Proof. elim: (hd::s) => [| a t [minimum IHts]];
-                            first by exists hd=> t; rewrite in_nil.
-                                            case e: (minimum <= a); [exists minimum | exists a]=> a0; rewrite in_cons; case/orP.
-                                            - move=> /eqP ->. exact: e.
-                                            - move=> ain. apply: IHts ain.
-                                            - move=> /eqP ->; apply Order.POrderTheory.lexx.
-                                            - have legt : ((minimum <= a) == false = ((minimum > a) == true)).
-                                              admit.
-                                              move=> ain. eapply (Order.POrderTheory.le_trans).
-                                              (* by rewriting legt on the evidence of the case *)
-                                              admit.
-                                              apply: IHts ain.
-    Admitted.
-
     Lemma the_μ g :
       exists f,
         [seq relabeling mu0 g
@@ -773,32 +778,8 @@ Section IsoCan.
       suffices step s : perm_eq s (bnodes (init_hash g)) -> bijective (build_mapping_from_seq (mapi (app_n mark_bnode) s)).
       apply/List.Forall_nth=> i d lti. apply: step. rewrite -mem_permutations -nth2Listnth. apply: mem_nth.
       by rewrite -size2Listlength; apply/ltP.
-      have inj_lookup: injective lookup_hash_default. admit.
-      pose the_list := (mapi (app_n mark_bnode) (undup s)).
-      have inj_mu: injective (build_mapping_from_seq (mapi (app_n mark_bnode) (undup s))).
-      move=> x y. rewrite -/the_list /build_mapping_from_seq. case e: (has (eqb_b_hterm x) (mapi (app_n mark_bnode) (undup s))); case e2:  (has (eqb_b_hterm y) (mapi (app_n mark_bnode) (undup s))); last done.
-      move=> /inj_to_string /inj_lookup/eqP eq_hash.
-      have ansx : ((eqb_b_hterm x) (nth (Bnode (mkHinput x herror)) (mapi (app_n mark_bnode) (undup s))
-                                      (find (eqb_b_hterm x) (mapi (app_n mark_bnode) (undup s))))).
-      apply nth_find; apply e.
-      have ansy : ((eqb_b_hterm y) (nth (Bnode (mkHinput x herror)) (mapi (app_n mark_bnode) (undup s))
-                                      (find (eqb_b_hterm y) (mapi (app_n mark_bnode) (undup s))))).
-      apply nth_find; apply e2.
-      rewrite -/the_list in
-        e e2
-          eq_hash ansx ansy.
-      rewrite (has_not_default e (Bnode (mkHinput x herror)) (Bnode (mkHinput y herror))) nth_uniq in eq_hash.
-      move: eq_hash=> /eqP eq_hash. 
-      rewrite eq_hash in ansx.
-      apply: eqb_b_hterm_trans ansx ansy.
-      rewrite -has_find. apply e.
-      rewrite -has_find. apply e2.
-      rewrite /the_list.
-      Fail apply k_mapping_seq_uniq_seq; apply undup_uniq.
+      (* by using k_mapping_seq_uniq_perm_eq *)
       admit.
-      admit.
-      admit.
-      (* modify bijective on (bnodes g) -> (mapi (app_n mark_bnode) (bnodes g))*)
     Admitted.
 
     (* TODO *)

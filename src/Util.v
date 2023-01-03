@@ -61,6 +61,15 @@ Proof. elim: l x0 => [ | t ts IHts] x0; first by left.
        - by right; rewrite intail orbT.
 Qed.
 
+Lemma min_seq (disp : unit) (T: orderType disp) (s: seq T) (hd:T) :
+  exists (minimum: T), forall (t: T), t \in (hd::s) -> (<=%O minimum t).
+Proof. elim: (hd::s)=> [| a t [minimum IHts]]; first by exists hd=> t; rewrite in_nil.
+                                                               + case e: (<=%O minimum a); [exists minimum | exists a]
+                                                                      => a0; rewrite in_cons; case/orP=> [/eqP ->| /IHts ain] //.
+                                                               - have /Order.POrderTheory.ltW amin: (<%O a minimum). admit.
+                                                                 apply (Order.POrderTheory.le_trans amin ain).
+Admitted.
+
 Lemma foldl_max (disp: unit) (T: porderType disp) (l: seq T) (x0 : T) :
   foldl Order.max x0 l = x0 \/ foldl Order.max x0 l \in l.
 Proof. elim: l x0 => [ | t ts IHts] x0; first by left.
@@ -126,6 +135,18 @@ Qed.
 Lemma zip_uniq_r (S T : eqType) (ss : seq S) (ts : seq T) : uniq ts -> uniq (zip ss ts).
 Proof.
   by rewrite zip_uniq_sym; apply zip_uniq_l.
+Qed.
+
+Lemma uniq_zip_iota (T : eqType) (s: seq T) n m: uniq (zip s (iota n m)).
+Proof. by apply: zip_uniq_r _ (iota_uniq _ _). Qed.
+
+Lemma uniq_zip_map (T U V: eqType) (s: seq T) (u: seq U)
+  (f : (T*U) -> V) (injF: injective f) : uniq (zip s u) -> uniq (map f (zip s u)).
+Proof. by rewrite (map_inj_uniq injF). Qed.
+
+Lemma in_all (T : eqType) (s : seq T) t f : t \in s -> all f s -> f t.
+Proof. elim: s=> [| hd tl IHtl]; first by rewrite in_nil.
+       by rewrite in_cons; case/orP=> [/eqP->/andP [//]| /IHtl _/andP[//]].
 Qed.
 
 Lemma size_0_nil (T : Type) (s : seq T) : size s = 0 -> s = [::].

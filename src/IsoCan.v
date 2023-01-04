@@ -544,8 +544,8 @@ Section IsoCan.
     Lemma can_app_n_mb_init g b1 b2 (b1_bns : Bnode b1 \in bnodes (init_hash g))
       (b2_bns : Bnode b2 \in bnodes (init_hash g))
       n m :
-       app_n mark_bnode (Bnode b1) n = app_n mark_bnode (Bnode b2) m ->
-       (@Bnode I (hash B) L b1 == Bnode b2) && (n == m).
+      app_n mark_bnode (Bnode b1) n = app_n mark_bnode (Bnode b2) m ->
+      (@Bnode I (hash B) L b1 == Bnode b2) && (n == m).
       move=> /eqP injH.
       suffices eqnm: n = m.
       rewrite eqnm in injH *; f_equal; rewrite eqxx Bool.andb_true_r; apply: (app_n_mark_eq_bns b1_bns b2_bns injH).
@@ -810,8 +810,8 @@ Section IsoCan.
 
     (* TODO *)
     (* USES inv_of_k_mapping *)
-    Lemma k_mapping_iso_output g : iso (k_mapping g) g.
-    Proof. case (inv_of_k_mapping g)=> μ [rel_eq_kmap bijmu].
+    Lemma k_mapping_iso_output : mapping_is_iso k_mapping.
+    Proof. move=> g; case (inv_of_k_mapping g)=> μ [rel_eq_kmap bijmu].
            exists μ. split. exact: bijmu. by rewrite eq_sym.
     Qed.
 
@@ -907,14 +907,7 @@ Section IsoCan.
 
     (* USES inv_of_k_mapping *)
     Lemma k_mapping_isocan : isocanonical_mapping k_mapping.
-    Proof. split; first by apply k_mapping_iso_output.
-           split.
-           + have isog1k1 : iso g1 (k_mapping g1). by rewrite iso_symm; apply k_mapping_iso_output.
-             have isog2k2 : iso (k_mapping g2) g2. by apply k_mapping_iso_output.
-             move=> /eqP k1_eq_k2; rewrite k1_eq_k2 in isog1k1; apply (iso_trans isog1k1 isog2k2).
-           + have dmnm : (dt_names k_mapping). apply k_mapping_dont_manipulate_names.
-             by apply iso_leads_canonical.
-    Qed.
+    Proof. by apply: isocanonical_mapping_dt_out k_mapping_iso_output k_mapping_dont_manipulate_names. Qed.
 
     Lemma relabeling_mu_inv_bij (g : rdf_graph I B L) (fs : seq (B -> B)) :
       List.Forall (fun mu => bijective mu) fs ->

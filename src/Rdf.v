@@ -266,23 +266,36 @@ Section Rdf.
            by rewrite eqb1 eqb2 relabeling_seq_triple_comp.
     Qed.
 
-    (* Definition mapping_preserves_isomorphism (μ : rdf_graph I B L -> rdf_graph I B L) := forall g, iso (μ g) g. *)
+    Definition mapping_is_iso (M : rdf_graph I B L -> rdf_graph I B L) := forall g, iso (M g) g.
 
     Definition isocanonical_mapping (M : rdf_graph I B L -> rdf_graph I B L) :=
-      forall g, iso (M g) g /\
+      forall g, mapping_is_iso M /\
                   (forall g1 g2, (M g1) == (M g2) <-> iso g1 g2).
 
     Definition dt_names (M : rdf_graph I B L -> rdf_graph I B L) := forall g μ, (bijective μ) -> M g == M (relabeling μ g).
 
     (* Definition dont_manipulate_names_mapping_idem (M : rdf_graph I B L -> rdf_graph I B L) (dnmn : dont_manipulate_names_mapping M) : forall g (μ : B -> B), (bijective μ) -> M (M g) = M g. *)
 
-    Definition iso_leads_canonical M (nmn : dt_names M) g1 g2 (iso_g1_g2: iso g1 g2) :
+    Lemma iso_leads_canonical M (nmn : dt_names M) g1 g2 (iso_g1_g2: iso g1 g2) :
       M g1 == M g2.
     Proof. case iso_g1_g2=> μ [bijmu /eqP ->].
            suffices ->: M g2 = M (relabeling μ g2). by [].
            by apply /eqP; apply (nmn g2 μ bijmu).
     Qed.
 
+    Lemma same_res_impl_iso M g1 g2 (iso_output : mapping_is_iso M) : M g1 == M g2 -> iso g1 g2.
+    Proof.
+      have isog1k1 : iso g1 (M g1). by rewrite iso_symm; apply iso_output.
+      have isog2k2 : iso (M g2) g2. by apply iso_output.
+      by move=> /eqP k1_eq_k2; rewrite k1_eq_k2 in isog1k1; apply (iso_trans isog1k1 isog2k2).
+    Qed.
+
+    Lemma isocanonical_mapping_dt_out M (iso_out: mapping_is_iso M) (dt: dt_names M) : isocanonical_mapping M.
+    Proof. rewrite /isocanonical_mapping. split; first by apply iso_out.
+           split.
+           + by apply: same_res_impl_iso iso_out.
+           + by apply: (iso_leads_canonical dt).
+    Qed.
 
   End EqRdf.
   Section Relabeling_alt.

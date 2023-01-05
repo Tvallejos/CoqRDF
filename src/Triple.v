@@ -11,7 +11,6 @@ Record triple (I B L : Type) :=
     ; object: (term I B L)
     ; subject_in_IB: is_in_ib subject
     ; predicate_in_I: is_in_i predicate
-                              (* ; object_in_IBL: is_in_ibl object *)
     }.
 
 Lemma triple_inj (I B L : Type) (t1 t2 : triple I B L) :
@@ -29,8 +28,6 @@ Section PolyTriple.
   Variables I B L : Type.
   Implicit Type t : triple I B L.
 
-  (* I don't need eqType to know if triple is ground
-     but if I B L are not *)
   Definition is_ground_triple t : bool:=
     let (s,p,o,_,_) := t in
     ~~ (is_bnode s || is_bnode p || is_bnode o).
@@ -61,10 +58,6 @@ Section PolyTriple.
       is_in_i (predicate t) <-> is_in_i (predicate (relabeling_triple μ t)).
     Proof. by case t => ? p /= *; apply: relabeling_term_preserves_is_in_i. Qed.
 
-    (* Lemma relabeling_triple_preserves_is_in_ibl μ t : *)
-    (*   is_in_ibl (object t) <-> is_in_ibl (object (relabeling_triple μ t)). *)
-    (* Proof. by case t => ? ? o /= *; apply: relabeling_term_preserves_is_in_ibl. Qed. *)
-
     Lemma relabeling_triple_ext μ1 μ2:
       μ1 =1 μ2 -> relabeling_triple μ1 =1 relabeling_triple μ2.
     Proof.
@@ -73,7 +66,6 @@ Section PolyTriple.
 
   End Relabeling_triple.
 End PolyTriple.
-
 
 Section CodeTriple.
 
@@ -95,9 +87,9 @@ Section CodeTriple.
   Lemma pcancel_code_decode : pcancel code_triple decode_triple.
   Proof.
     case=> s p o ibs ip /=.
-    case: insubP=> [u uP us |]; last by rewrite ibs. 
-    case: insubP=> [v vP vs |]; last by rewrite ip. 
-    by congr Some; apply: triple_inj. 
+    case: insubP=> [u uP us |]; last by rewrite ibs.
+    case: insubP=> [v vP vs |]; last by rewrite ip.
+    by congr Some; apply: triple_inj.
   Qed.
 
 End CodeTriple.
@@ -123,54 +115,34 @@ Definition triple_canPOrderMixin (I B L : countType) :=
 Canonical triple_POrderType (I B L : countType) :=
   Eval hnf in POrderType tt (triple_countType I B L) (triple_canPOrderMixin I B L).
 
-
 (* assia : below not cleaned up *)
 Section OperationsOnTriples.
 
   Variables I B L : eqType.
   Implicit Type t : triple I B L.
 
-  Definition terms_triple (t : triple I B L) : seq (term I B L) :=
+  Definition terms_triple (I' B' L': eqType) (t : triple I' B' L') : seq (term I' B' L') :=
     let (s,p,o,_,_) := t in undup [:: s ; p ; o].
 
-  Canonical triple_predType := PredType (pred_of_seq \o (terms_triple)).
+  Lemma terms_relabeled_triple (B1 B2: eqType) (t : triple I B1 L)
+    (mu: B1 -> B2) (inj_mu: injective mu) :
+    terms_triple (relabeling_triple mu t) = map (relabeling_term mu) (terms_triple t).
+  Proof. case t=> s p o ? ?.
+         rewrite /relabeling_triple /terms_triple -undup_map_inj //; exact: relabeling_term_inj.
+  Qed.
+
+  Canonical triple_predType (I' B' L': eqType):= PredType (pred_of_seq \o (@terms_triple I' B' L')).
 
   Definition bnodes_triple (t : triple I B L) : seq (term I B L) :=
     filter (@is_bnode I B L) (terms_triple t).
 
   Lemma sizeO_filter T (s : seq T) p: size (filter p s) == 0 = all (negb \o p) s.
-  Proof.
-    by elim s=> //= h t <-; case (p h).
-  Qed.
+  Proof. by elim s=> //= h t <-; case (p h). Qed.
 
-  Lemma is_ground_not_bnode t : is_ground_triple t =
-                                  ~~ is_bnode (subject t) && ~~ is_bnode (predicate t) &&  ~~ is_bnode (object t).
-  Proof. by case t => s p o /= _ _; rewrite -orbA !negb_or; case: s p o.
-  Qed.
-
-
-  (* Lemma is_ground_not_bnode t : is_ground_triple t = *)
-  (*                                 (((negb \o (@is_bnode I B L) \o (@subject I B L)) t) && ((negb \o (@is_bnode I B L) \o (@predicate I B L)) t) && ((negb \o (@is_bnode I B L) \o (@object I B L )) t)). *)
-  (* Proof. by case t => s p o /= _ _; rewrite -orbA !negb_or; case: s p o. *)
-  (* Qed. *)
-
-  (* Lemma Obnodes_groundtriple_impl t : size (bnodes_triple t) == 0 <-> is_ground_triple t. *)
-  (* Proof. rewrite sizeO_filter.  *)
-  (*        rewrite /terms_triple. rewrite is_ground_not_bnode. *)
-
-  (*        (* rewrite /is_ground_triple. *) *)
-  (*        case t=> s p o /= _ _. case: s p o. => //=. *)
-  (*        + split=> sizeO. *)
-
-
-
-  (*        split=> [sizeO|groundt]. *)
-  (*        case: s p o. *)
-
-
-
-  (*        apply all_undup in sizeO. *)
-  (*        admit. *)
+  Lemma is_ground_not_bnode t :
+    is_ground_triple t =
+      ~~ is_bnode (subject t) && ~~ is_bnode (predicate t) &&  ~~ is_bnode (object t).
+  Proof. by case t => s p o /= _ _; rewrite -orbA !negb_or; case: s p o. Qed.
 
   Lemma Obnodes_groundtriple t : size (bnodes_triple t) == 0 = is_ground_triple t.
   Proof. rewrite sizeO_filter /terms_triple; case t=> s p o.
@@ -190,15 +162,20 @@ Section OperationsOnTriples.
 
   (* (μ :  {ffun (seq_sub (bnodes g1)) -> B}) *)
 
-  (* Definition bnodes_triple t :[seq x <- terms_triple t | x is_bnode] := *)
-  (*   undup (filter (@is_bnode _ _ _) (terms_triple t)). *)
-
-
   Definition all_bnodes_triple_is_bnode t : all (@is_bnode I B L) (bnodes_triple t).
-  Proof. case t=> s p o; rewrite /bnodes_triple/terms_triple=> _ _.
-         rewrite filter_undup all_undup. done.
-         exact: filter_all.
+  Proof.
+    case t=> s p o; rewrite /bnodes_triple/terms_triple=> _ _.
+    rewrite filter_undup all_undup; exact: filter_all.
   Qed.
+
+  Remark undup_bnodes_triple (t: triple I B L) : undup (bnodes_triple t) = bnodes_triple t.
+  Proof. by case t=> ? ? ? ? ?; rewrite /bnodes_triple/terms_triple filter_undup undup_idem. Qed.
+
+  Lemma i_in_bnodes_triple id t: Iri id \in bnodes_triple t = false.
+  Proof. by rewrite /bnodes_triple mem_filter. Qed.
+
+  Lemma l_in_bnodes_triple l t: Lit l \in bnodes_triple t = false.
+  Proof. by rewrite /bnodes_triple mem_filter. Qed.
 
   Definition get_b_triple t : seq B.
   Proof. apply bnodes_triple in t as bns.

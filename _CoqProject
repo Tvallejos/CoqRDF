@@ -1,5 +1,6 @@
 -R ./src RDF
 
+./src/Util.v
 ./src/Term.v
 ./src/Triple.v
 ./src/Rdf.v

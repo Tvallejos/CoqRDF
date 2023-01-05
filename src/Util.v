@@ -154,3 +154,76 @@ Proof. by case s. Qed.
 
 Lemma seq1_empty_seq (A : Type) (hd:A) d s : hd :: s = [:: d] -> s = [::].
 Proof. by case s. Qed.
+
+Definition map_fintype (T U: eqType) (s : seq T) (f : T -> U) (arg : seq_sub s) : seq_sub (map f s).
+Proof. suffices: f (ssval arg) \in (map f s). by apply SeqSub.
+       by apply (map_f f); apply (ssvalP arg).
+Qed.
+
+Definition is_some {T : Type} (ot : option T) : bool :=
+  match ot with Some _ => true | None => false end.
+
+Fixpoint someT_to_T {T : Type} (os : seq (option T)) : seq T :=
+  match os with
+  | nil => nil
+  | Some t :: oss => t :: someT_to_T oss
+  | None :: oss => someT_to_T oss
+  end.
+
+Fixpoint app_n (T: Type)(f : T -> T) (x : T) (n:nat) :=
+  match n with
+  | O => x
+  | S n' => f (app_n f x n')
+  end.
+
+Definition mapi {A B : Type} (f : A -> nat ->  B) (s : seq A) : seq B :=
+  map (fun an => (f an.1) an.2) (zip s (iota 0 (size s))).
+
+Definition fun_to_fin (T : eqType) (s : seq T) (f : T -> T) : seq_sub s -> T:=
+  fun s0=> let (ssval,_) := s0 in (f ssval).
+
+Lemma eq_to_fin (T: eqType) (ft ft' : finType)
+  (f : T -> T) (injF: injective f)
+  (funt : ft -> T) (injFt: injective funt)
+  (funt' : T -> ft') (injFt' : injective funt')
+  : exists (f'' : ft -> ft'), injective f''.
+Proof. exists (fun argT => (funt' (f (funt argT)))).
+       by apply: (inj_comp injFt') (inj_comp injF injFt).
+Qed.
+
+Lemma max_sym disp (T: orderType disp) : symmetric Order.max.
+Proof. by move=> x y; rewrite Order.POrderTheory.maxEle Order.POrderTheory.maxElt Order.TotalTheory.leNgt; case: (y < x)%O.
+Qed.
+
+Lemma min_sym : symmetric Order.min.
+Proof. by move=> x y; rewrite Order.POrderTheory.minEle Order.POrderTheory.minElt Order.TotalTheory.leNgt; case: (y < x)%O.
+Qed.
+
+Lemma max_distr_foldl disp (T: porderType disp) (l : seq T) (x y : T) :
+  foldl Order.max (Order.max x y) l = Order.max y (foldl Order.max x l).
+Proof. elim: l=> [//| hd t IHt] /=.
+       (*  Error: The LHS of Order.TotalTheory.leNgt *)
+       (* (_ <= _) *)
+       (* does not match any subterm of the goal *)
+       (* rewrite Order.POrderTheory.maxEle Order.POrderTheory.maxElt Order.TotalTheory.leNgt; case: (y < x). *)
+       (* Error: The LHS of max_sym *)
+       (*     (Order.max _ _) *)
+       (* does not match any subterm of the goal *)
+       (* rewrite max_sym. *)
+Admitted.
+
+Lemma foldl_foldl_max disp (T: orderType disp) (l : seq T) (x0 : T) :
+  foldl Order.max x0 l == foldr Order.max x0 l.
+Proof. elim: l x0=> [//| hd t IHt] x0 /=.
+       have <- :  ((foldl Order.max x0 t) = (foldr Order.max x0 t)). by apply /eqP; apply IHt.
+       by rewrite max_distr_foldl.
+Qed.
+
+Lemma has_not_default T (s : seq T) p :
+  has p s -> forall x0 x1,  nth x0 s (find p s) = nth x1 s (find p s).
+Proof. elim: s=> [//| hd tl IHtl] /= hps x1.
+       by case/orP: hps=> [-> //| /IHtl hptl]; case: (p hd)=> //; apply hptl.
+Qed.
+
+(* Lemma perm_map (T U: eqType) (s: seq T) (f: T -> U): permutations (map f s) = map (map f) (permutations s). *)
+(* Proof. Admitted. *)

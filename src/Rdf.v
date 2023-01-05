@@ -95,6 +95,7 @@ Section Rdf.
           {| graph := relabeling_triple μ trpl :: (relabeling_seq_triple μ ts) |}.
       Proof. by []. Qed.
 
+
     End Relabeling_graph.
   End PolyRdf.
 
@@ -133,11 +134,26 @@ Section Rdf.
     (* (* requieres trm to be finType *) *)
     (* Fail Check finset (trm \in g). *)
 
+    Section Relabeling_graph_eq.
+
+      Lemma relabeling_mu_inv (g : rdf_graph I B L) (fs : seq (B -> B))
+        (mapping : rdf_graph I B L -> rdf_graph I B L) :
+        (mapping g) \in (map (fun mu => relabeling mu g) fs) ->
+                        exists (mu : B -> B), relabeling mu g == mapping g.
+      Proof.
+        elim : fs => [| f fs' IHfs]; first by rewrite in_nil.
+        rewrite in_cons; case/orP.
+        + by rewrite eq_sym; exists f.
+        + by move=> /IHfs //.
+      Qed.
+
+    End Relabeling_graph_eq.
+
     Definition terms (I' B' L': eqType) (g : rdf_graph I' B' L') : seq (term I' B' L') :=
       undup (flatten (map (@terms_triple I' B' L') g)).
 
     Lemma undup_terms g : undup (terms g) = (terms g).
-    Proof. by rewrite /terms undup_idem. Qed. 
+    Proof. by rewrite /terms undup_idem. Qed.
 
     Definition terms_cons (I' B' L': eqType) (trpl : triple I' B' L') (ts : seq (triple I' B' L')) :
       terms (mkRdfGraph (trpl :: ts)) = undup (terms_triple trpl ++ (terms (mkRdfGraph ts))).
@@ -157,6 +173,12 @@ Section Rdf.
     Definition bnodes g : seq (term I B L) :=
       undup (filter (@is_bnode _ _ _) (terms g)).
 
+    Section BnodeRelabeling.
+      Variable B1 B2: eqType.
+      Lemma bnodes_relabel (g: rdf_graph I B L) (mu: B -> B): bnodes (relabeling mu g) = (map (relabeling_term mu) (bnodes g)).
+      Proof. Admitted.
+
+    End BnodeRelabeling.
     Lemma bnodes_cons (trpl : triple I B L) (ts : seq (triple I B L)) :
       bnodes {| graph := trpl :: ts |} = undup ((bnodes_triple trpl) ++ (bnodes {| graph := ts |})).
     Proof.

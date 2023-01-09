@@ -227,3 +227,14 @@ Qed.
 
 (* Lemma perm_map (T U: eqType) (s: seq T) (f: T -> U): permutations (map f s) = map (map f) (permutations s). *)
 (* Proof. Admitted. *)
+
+(* Lemma ext_pred_mem (T1 : eqType) (d1 d2: {pred T1}) P : {in d1, P } -> d1 =i d2 -> {in d2, P}. *)
+
+(* Lemma ext_pred_bij (T1 T2 : eqType) (d1 d2: {pred T1}) (f : T1 -> T2) : {in d1, bijective f} -> d1 =i d2 -> {in d2, bijective f}. *)
+(* Proof. *)
+(*   (* move=> H dwqd. *) *)
+(*   Locate "_ =i _". *)
+(*   (* move=> [g xin yon] d1eqd2. exists g. *) *)
+(*   Fail apply /allP. *)
+(* Abort. *)
+

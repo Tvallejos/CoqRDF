@@ -12,7 +12,7 @@ Section HashedData.
 
   Inductive hash  := Hash of T * H.
 
-  Definition input h :=  let: Hash th := h in th.1.
+  Definition input t :=  let: Hash th := t in th.1.
 
   Definition current_hash h := let: Hash th := h in th.2.
 
@@ -22,6 +22,8 @@ Section HashedData.
 
   Canonical hash_subType := [newType for pair_of_hash].
 
+  Definition forget_hashes (hbs: seq hash) : seq T :=
+    map (fun b=> input b) hbs.
 
 End HashedData.
 
@@ -769,6 +771,37 @@ Section IsoCan.
         (* by using k_mapping_seq_uniq_perm_eq *)
         admit.
       Admitted.
+
+      Section experiment.
+
+
+        (* Check forget_hashes \o @get_b I (hash B) L _). *)
+
+      Lemma all_kmaps_local_bijective g : List.Forall (fun mu => {in (get_b g) , bijective mu}) [seq build_kmapping_from_seq i
+                                                                         | i <- [seq mapi (app_n mark_bnode) i
+                                                                                | i <- permutations (bnodes (init_hash g))]].
+      Proof.
+        have map2Listmap U V (f : U -> V) (s : seq U) : map f s = List.map f s. admit.
+        have nth2Listnth U (d : U) (s : seq U) n : nth d s n = List.nth n s d. admit.
+        have size2Listlength U (s : seq U) : List.length s = size s. admit.
+        rewrite !map2Listmap !List.Forall_map.
+        suffices step s : perm_eq s (bnodes (init_hash g)) -> {in (get_b g), bijective (build_kmapping_from_seq (mapi (app_n mark_bnode) s))}.
+        apply/List.Forall_nth=> i d lti. apply: step. rewrite -mem_permutations -nth2Listnth. apply: mem_nth.
+        by rewrite -size2Listlength; apply/ltP.
+        have ext_pred_bij: forall (T1 T2 : eqType) (d1 d2: {pred T1}) (f : T1 -> T2), {in d1, bijective f} -> d1 =i d2 -> {in d2, bijective f}.
+        admit.
+        have mem_hash_unhash : perm_eq s (bnodes (init_hash g)) -> (get_b g) =i (forget_hashes (get_bs s)).
+        admit.
+        move=> /mem_hash_unhash peq.
+        have bij_fget: {in (forget_hashes (get_bs s)), bijective (build_kmapping_from_seq (mapi (app_n mark_bnode) s))}.
+        (* the hard one *)
+        admit.
+
+        have mem_eq_sym: forall (T: eqType) (d1 d2: {pred T}), d1 =i d2 -> d2 =i d1. by move=> T d1 d2 d12 x;  rewrite d12. 
+        eapply ext_pred_bij. apply bij_fget. apply mem_eq_sym.
+      Admitted.
+
+      End experiment.
 
       (* TODO *)
       (* only way of k_mapping g = [::] -> g = [::]*)

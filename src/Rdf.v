@@ -368,9 +368,113 @@ The term "g1" has type "rdf_graph I B L" while it is expected to have type
       {in {set (seq_sub (bnodes g1))} , bijective μ} /\ g2 == (relabeling_alt μ g1).
     (* The term "μ" has type "{ffun seq_sub (bnodes g1) -> B}" while it is expected to have type *)
     (*   "{set seq_sub (bnodes g1)} -> ?rT". *)
-    (* inT_bij: forall [T1 T2 : predArgType] [f : T1 -> T2], {in T1, bijective f} -> bijective f *)
 
     Fail Definition iso_alt g1 g2:= exists mu, @is_iso_alt g1 g2 mu.
+
+    Section IsoBij_in_dom.
+
+      Definition bijin (mu : B -> B) (D : list B) := {in D, bijective mu}.
+      Definition bijin_inv mu D (mu_bijin: bijin mu D) : exists nu, bijin nu (map mu D).
+      Proof. case mu_bijin=> nu canin canon. exists nu. rewrite /bijin. exists mu=> x xin.
+             +
+               (* have inj_mu: injective mu. eapply can_inj. admit. *)
+               rewrite canon //. 
+               admit.
+             + rewrite canin //.
+               (* have : injective mu. *)
+               (* needs to apply mem_image to the fintype of the list D *)
+               rewrite mem_map // in xin.
+               admit.
+      Admitted.
+
+      Definition list_intersection (D1 : list B) (D2 : list B) : list B :=
+        let fix help xs :=
+          match xs with
+          | nil => nil
+          | x :: xs => if (mem_seq xs x) then x :: (help xs) else help xs end in
+        help ((undup D1) ++ (undup D2)).
+
+      Section intersection_example.
+
+        Variables b1 b2 b3 : B.
+        Hypothesis b12_neq : b1 == b2 = false.
+        Hypothesis b23_neq : b2 == b3 = false.
+        Hypothesis b31_neq : b1 == b3 = false.
+        Example li : list_intersection [:: b1; b2] [:: b2; b3] == [:: b2].
+        Proof. rewrite /list_intersection.
+               by rewrite /= !in_cons !in_nil /= !b12_neq b23_neq /= b12_neq b31_neq b23_neq eqxx.
+        Qed.
+
+      End intersection_example.
+
+      Fixpoint find_preim (mu : B -> B) (D CD: list B) : list B :=
+        match D with
+        | nil => nil
+        | b :: bs => if mem_seq CD (mu b)
+                   then b :: find_preim mu bs CD else
+                     find_preim mu bs CD end.
+
+      Lemma in_preim1 mu D CD x : x \in find_preim mu D CD -> (x \in D).
+      Admitted.
+
+      Lemma in_preim2 mu D CD x : x \in find_preim mu D CD -> (mu x) \in CD.
+      Admitted.
+
+      Lemma in_li2 D1 D2 x : x \in list_intersection D1 D2 -> x \in D2.
+      Admitted.
+
+      Definition bijin_comp (mu1 : B -> B) D1 (mu2 : B -> B) D2 (bijin_mu1 : bijin mu1 D1) (bijin_mu2 : bijin mu2 D2) : bijin (mu2 \o mu1) (find_preim mu1 D1 (list_intersection (map mu1 D1) D2)).
+      Proof. rewrite /bijin. case bijin_mu1=> nu1 canin1 canon1; case bijin_mu2=> nu2 canin2 canon2.
+             exists (nu1 \o nu2)=> x xin.
+             rewrite /= canin2. rewrite canin1 //.
+             by move: xin=> /in_preim1.
+             by move: xin=> /in_preim2/in_li2.
+             have nunuin : nu1 (nu2 x) \in D1. by apply in_preim1 in xin.
+             rewrite /= canon1; last by apply nunuin. rewrite canon2 //.
+             by move: xin=> /in_preim2/in_li2; rewrite canon1.
+      Qed.
+
+      Definition iso_bijin g1 g2 := exists (mu : B -> B),
+          bijin mu (get_b g1) /\
+            relabeling mu g1 == g2.
+
+      Lemma get_b_map mu g : (@get_b I B L (relabeling mu g)) = [seq mu i | i <- get_b g].
+      Proof. elim g=> g'; elim: g'=> [//| t ts IHts].
+             rewrite relabeling_cons /= /get_b !bnodes_cons. rewrite !undup_cat. Abort.
+
+      Lemma one_to_one mu g1 g2 : bijin mu (get_b g1) -> relabeling mu g1 == g2 ->
+                                  perm_eq (get_b g2) (map mu (get_b g1)).
+      Proof. elim g1=> g1'; elim: g1'=> [| t ts IHts].
+             move=> _ /eqP <- /=. rewrite relabeling_nil //. 
+             move=> h /eqP H /=. rewrite -H. Abort.
+             (* relabeling_cons. /get_b/bnodes. apply perm_undup. //. *)
+             (* rewrite . *)
+
+
+      Definition iso_bijin_refl g: iso_bijin g g.
+      Proof. exists id; split; first by exists id.
+                                     by rewrite relabeling_id.
+      Qed.
+
+      Lemma iso_local_trans g1 g2 g3 : iso_bijin g1 g2 -> iso_bijin g2 g3 -> iso_bijin g1 g3.
+      Proof. rewrite /iso_bijin/bijin=> [[mu12 [bijin12 /eqP rel12]]] [mu23 [bijin23 /eqP rel23]].
+             exists (mu23 \o mu12). split; last by rewrite -relabeling_comp rel12 rel23.
+             (* have : (find_preim mu1 D1 (list_intersection [seq mu1 i | i <- D1] D2)) *)
+             rewrite /bijin. move: bijin12 bijin23=> [nu21 canin12 canon12] [nu32 canin23 canon23].
+             exists (nu21 \o nu32)=> x xin /=. rewrite canin23. rewrite canin12 //.
+             admit.
+             rewrite canon12. rewrite canon23 //.
+             admit.
+             exact: xin.
+      Admitted.
+
+
+      Definition iso_bijin_symm g1 g2 : iso_bijin g1 g2 <-> iso_bijin g2 g1.
+      Proof.
+        split; rewrite /iso_bijin=> [] [mu [bij relab]]. move: (bijin_inv bij).
+
+
+    End IsoBij_in_dom.
 
     Definition is_iso_local g1 g2  (μ :  B -> B) :=
       ({in (get_b g2), bijective μ})

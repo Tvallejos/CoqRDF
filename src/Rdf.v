@@ -374,18 +374,19 @@ The term "g1" has type "rdf_graph I B L" while it is expected to have type
     Section IsoBij_in_dom.
 
       Definition bijin (mu : B -> B) (D : list B) := {in D, bijective mu}.
-      Definition bijin_inv mu D (mu_bijin: bijin mu D) : exists nu, bijin nu (map mu D).
-      Proof. case mu_bijin=> nu canin canon. exists nu. rewrite /bijin. exists mu=> x xin.
-             +
-               (* have inj_mu: injective mu. eapply can_inj. admit. *)
-               rewrite canon //. 
-               admit.
-             + rewrite canin //.
-               (* have : injective mu. *)
-               (* needs to apply mem_image to the fintype of the list D *)
-               rewrite mem_map // in xin.
-               admit.
-      Admitted.
+
+      (* Definition bijin_inv mu D (mu_bijin: bijin mu D) : exists nu, bijin nu (map mu D). *)
+      (* Proof. case mu_bijin=> nu canin canon. exists nu. rewrite /bijin. exists mu=> x xin. *)
+      (*        + *)
+      (*          (* have inj_mu: injective mu. eapply can_inj. admit. *) *)
+      (*          rewrite canon //.  *)
+      (*          admit. *)
+      (*        + rewrite canin //. *)
+      (*          (* have : injective mu. *) *)
+      (*          (* needs to apply mem_image to the fintype of the list D *) *)
+      (*          rewrite mem_map // in xin. *)
+      (*          admit. *)
+      (* Admitted. *)
 
       Definition list_intersection (D1 : list B) (D2 : list B) : list B :=
         let fix help xs :=
@@ -438,15 +439,15 @@ The term "g1" has type "rdf_graph I B L" while it is expected to have type
           bijin mu (get_b g1) /\
             relabeling mu g1 == g2.
 
-      Lemma get_b_map mu g : (@get_b I B L (relabeling mu g)) = [seq mu i | i <- get_b g].
-      Proof. elim g=> g'; elim: g'=> [//| t ts IHts].
-             rewrite relabeling_cons /= /get_b !bnodes_cons. rewrite !undup_cat. Abort.
+      (* Lemma get_b_map mu g : (@get_b I B L (relabeling mu g)) = [seq mu i | i <- get_b g]. *)
+      (* Proof. elim g=> g'; elim: g'=> [//| t ts IHts]. *)
+      (*        rewrite relabeling_cons /= /get_b !bnodes_cons. rewrite !undup_cat. Abort. *)
 
-      Lemma one_to_one mu g1 g2 : bijin mu (get_b g1) -> relabeling mu g1 == g2 ->
-                                  perm_eq (get_b g2) (map mu (get_b g1)).
-      Proof. elim g1=> g1'; elim: g1'=> [| t ts IHts].
-             move=> _ /eqP <- /=. rewrite relabeling_nil //. 
-             move=> h /eqP H /=. rewrite -H. Abort.
+      (* Lemma one_to_one mu g1 g2 : bijin mu (get_b g1) -> relabeling mu g1 == g2 -> *)
+      (*                             perm_eq (get_b g2) (map mu (get_b g1)). *)
+      (* Proof. elim g1=> g1'; elim: g1'=> [| t ts IHts]. *)
+      (*        move=> _ /eqP <- /=. rewrite relabeling_nil //.  *)
+      (*        move=> h /eqP H /=. rewrite -H. Abort. *)
              (* relabeling_cons. /get_b/bnodes. apply perm_undup. //. *)
              (* rewrite . *)
 
@@ -456,22 +457,74 @@ The term "g1" has type "rdf_graph I B L" while it is expected to have type
                                      by rewrite relabeling_id.
       Qed.
 
-      Lemma iso_local_trans g1 g2 g3 : iso_bijin g1 g2 -> iso_bijin g2 g3 -> iso_bijin g1 g3.
+      Lemma relabeling_codom mu g1 g2 : relabeling mu g1 = g2 -> forall b, b \in (get_b g1) -> mu b \in (get_b g2).
+      Proof. Admitted.
+
+      (* Lemma relabeling_dom mu g1 g2 : relabeling mu g1 = g2 -> forall b, mu b \in (get_b g2) -> b \in (get_b g1). *)
+      (* Proof. Admitted. *)
+
+      (* Lemma bijective_in_eqb_rdf (I B L : eqType) (mu nu : B -> B) (g1 g2 : rdf_graph I B L) : *)
+      (*     {in (get_b g1), (cancel mu nu /\ (g1 == relabeling mu g2))} -> {in (get_b g2), g2 == relabeling nu g1}. *)
+
+      Lemma iso_bijin_trans g1 g2 g3 : iso_bijin g1 g2 -> iso_bijin g2 g3 -> iso_bijin g1 g3.
       Proof. rewrite /iso_bijin/bijin=> [[mu12 [bijin12 /eqP rel12]]] [mu23 [bijin23 /eqP rel23]].
              exists (mu23 \o mu12). split; last by rewrite -relabeling_comp rel12 rel23.
-             (* have : (find_preim mu1 D1 (list_intersection [seq mu1 i | i <- D1] D2)) *)
              rewrite /bijin. move: bijin12 bijin23=> [nu21 canin12 canon12] [nu32 canin23 canon23].
              exists (nu21 \o nu32)=> x xin /=. rewrite canin23. rewrite canin12 //.
-             admit.
-             rewrite canon12. rewrite canon23 //.
-             admit.
-             exact: xin.
-      Admitted.
+             apply (relabeling_codom rel12 xin).
+             rewrite canon12; last exact xin. rewrite canon23 //.
+             (* erewrite relabeling_dom=> //.  *)
+             (* no hypothesis about nu's composition *)
+             (* need something to build the other direction using the cancel,
+              something like the commented lemma above. *)
+             Abort.
+
+             (* one of these may also work *)
+
+(*              in_onS_can: *)
+(*   forall {aT rT : predArgType} (aD : {pred aT}) {f : aT -> rT} {g : rT -> aT}, *)
+(*   (forall x : rT, g x \in aD) -> {in rT, {on aD, cancel g & f}} -> cancel g f *)
+(* onW_can_in: *)
+(*   forall {aT rT : predArgType} (aD : {pred aT}) {rD : {pred rT}} {f : aT -> rT} {g : rT -> aT}, *)
+(*   {in rD, cancel g f} -> {in rD, {on aD, cancel g & f}} *)
+(* inj_can_sym_on: *)
+(*   forall {aT rT : predArgType} {aD : {pred aT}} {f : aT -> rT} {g : rT -> aT}, *)
+(*   {in aD, cancel f g} -> {on aD &, injective g} -> {on aD, cancel g & f} *)
+(* on_can_inj: *)
+(*   forall [T1 T2 : predArgType] [D2 : {pred T2}] [f : T1 -> T2] [g : T2 -> T1], *)
+(*   {on D2, cancel f & g} -> {on D2 &, injective f} *)
+(* in_onW_can: *)
+(*   forall {aT rT : predArgType} (aD : {pred aT}) (rD : {pred rT}) {f : aT -> rT} {g : rT -> aT}, *)
+(*   cancel g f -> {in rD, {on aD, cancel g & f}} *)
+(* can_in_eq: *)
+(*   forall [aT rT : eqType] [D : pred aT] [f : aT -> rT] [g : rT -> aT], *)
+(*   {in D, cancel f g} -> {in D &, forall x y : aT, (f x == f y) = (x == y)} *)
+(* canRL_on: *)
+(*   forall [T1 T2 : predArgType] [D2 : {pred T2}] [f : T1 -> T2] [g : T2 -> T1] [x : T1] [y : T2], *)
+(*   {on D2, cancel f & g} -> f x \in D2 -> f x = y -> x = g y *)
+(* canLR_on: *)
+(*   forall [T1 T2 : predArgType] [D2 : {pred T2}] [f : T1 -> T2] [g : T2 -> T1] [x : T2] [y : T1], *)
+(*   {on D2, cancel f & g} -> f y \in D2 -> x = f y -> g x = y *)
+
+(* bijective_eqb_rdf: *)
+(*   forall [I B L : eqType] [mu nu : B -> B] [g1 g2 : rdf_graph I B L], *)
+(*   cancel mu nu -> g1 == relabeling mu g2 -> g2 == relabeling nu g1 *)
+(*         canLR_in: *)
+(*   forall [T1 T2 : predArgType] [D1 : {pred T1}] [f : T1 -> T2] [g : T2 -> T1] [x : T2] [y : T1], *)
+(*   {in D1, cancel f g} -> y \in D1 -> x = f y -> g x = y *)
+(* canRL_in: *)
+(*   forall [T1 T2 : predArgType] [D1 : {pred T1}] [f : T1 -> T2] [g : T2 -> T1] [x : T1] [y : T2], *)
+(*   {in D1, cancel f g} -> x \in D1 -> f x = y -> x = g y *)
+(* can_in_inj: *)
+(*   forall [T1 T2 : predArgType] [D1 : {pred T1}] [f : T1 -> T2] [g : T2 -> T1], *)
+(*   {in D1, cancel f g} -> {in D1 &, injective f} *)
 
 
       Definition iso_bijin_symm g1 g2 : iso_bijin g1 g2 <-> iso_bijin g2 g1.
       Proof.
-        split; rewrite /iso_bijin=> [] [mu [bij relab]]. move: (bijin_inv bij).
+        split; rewrite /iso_bijin=> [] [mu [[nu canin] canon]] relab.
+      Abort.
+      (* solving the problem of trans would also solve symmetry *)
 
 
     End IsoBij_in_dom.

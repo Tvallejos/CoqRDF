@@ -293,7 +293,7 @@ Section Rdf.
 
     Definition isocanonical_mapping (M : rdf_graph I B L -> rdf_graph I B L) :=
       forall g, mapping_is_iso M /\
-                  (forall g1 g2, (M g1) == (M g2) <-> iso g1 g2).
+             (forall g1 g2, (M g1) == (M g2) <-> iso g1 g2).
 
     Definition dt_names (M : rdf_graph I B L -> rdf_graph I B L) := forall g μ, (bijective μ) -> M g == M (relabeling μ g).
 
@@ -461,7 +461,7 @@ The term "g1" has type "rdf_graph I B L" while it is expected to have type
       Proof. Admitted.
 
       Lemma mem_in_map (T1 T2 : eqType) (f : T1 -> T2) (s : seq T1) : {in s, injective f} -> forall (x : T1), (f x \in [seq f i | i <- s]) = (x \in s).
-      Proof. move=> H x. apply /mapP/idP; last by exists x. 
+      Proof. move=> H x. apply /mapP/idP; last by exists x.
                                                    by move=> [y yin] /eqP; rewrite eq_sym=> /eqP/H <-.
       Qed.
 
@@ -490,7 +490,8 @@ The term "g1" has type "rdf_graph I B L" while it is expected to have type
         move=> h1 h2. move=> a ain.
         have [c ceq]: exists t : C, a = f t.
         by apply map_inv in ain.
-        rewrite ceq. rewrite h1 //. rewrite ceq in ain. erewrite <- mem_in_map. apply ain. Abort.
+        rewrite ceq. rewrite h1 //. rewrite ceq in ain. erewrite <- mem_in_map. apply ain.
+      Abort.
 
 
       (* Lemma relabeling_dom mu g1 g2 : relabeling mu g1 = g2 -> forall b, mu b \in (get_b g2) -> b \in (get_b g1). *)
@@ -579,10 +580,52 @@ The term "g1" has type "rdf_graph I B L" while it is expected to have type
              + by rewrite map_id. Qed.
 
 
-      (* Definition one_to_one_mapping mu g1 g2 : perm_eq (map mu (get_b g1)) (get_b g2) -> injective mu. *)
+      (* eventually would have to prove : *)
+      Definition one_to_one_mapping mu g1 g2 : perm_eq (map mu (get_b g1)) (get_b g2) -> {in (get_b g1) &, injective mu}. Admitted.
+
+      Definition map_nil_is_nil (A C: eqType) (f : A -> C) (s : seq A) : (map f s == [::]) = (s == [::]).
+      Proof. by case s. Qed.
+
+      Definition perm_eq_map_inv (T1 T2 : eqType) s1 s2 (f : T1 -> T2) :
+        perm_eq (map f s1) s2 -> (exists (g : T2 -> T1), perm_eq s1 (map g s2)) \/ (s2 == [::]).
+      Proof. elim: s1 s2=> [| h t IHts] s2; first by rewrite /= perm_sym=> /perm_nilP -> /=; right.
+             case: s2 => [| h2 t2]; first by right.
+             rewrite /=. move=> /perm_consP [n [t2' [arot pmeq]]].
+      Abort.
+
+      Definition perm_eq_map_all (T1 T2 : eqType) s1 s2 (f : T1 -> T2) :
+        perm_eq (map f s1) s2 -> forall t2, t2 \in s2 -> exists t1, t1 \in s1 /\ f t1 == t2.
+      Proof.
+        (* case: s2 s1 => [| h2 t2]; first by move=> x _ ?; rewrite in_nil. *)
+        elim: s1 s2=> [| h t IHts] s2; first by rewrite /= perm_sym=> /perm_nilP -> ?; rewrite in_nil.
+        case: s2=> [| h2 t2]; first by move=> _ ?; rewrite in_nil.
+        move=> /perm_consP [n [t2' [rot pmeq]]]. rewrite /= in rot.
+        move=> t0 tin.
+      Abort.
+
+      Lemma mem_eq_is_nil (A : eqType) (s : seq A) : s =i [::] -> s = [::].
+      Proof. case: s=> [// | h t] H.
+             + have: h \in [::]. rewrite -H in_cons eqxx //.
+               by rewrite in_nil.
+      Qed.
 
       Definition iso_mapping_sym g1 g2 : iso_mapping g1 g2 <-> iso_mapping g2 g1.
-      Proof. split; rewrite /iso_mapping; move=> [mu [pmeq relab]]. Abort.
+      Proof. split; rewrite /iso_mapping; move=> [mu [pmeq relab]].
+             have x0: B. admit.
+             exists (fun y=> (if (y \in (get_b g2))
+                      then
+                        let idx := (index y (map mu (get_b g1))) in
+                        (* need x0 but actually checked I do not need one by performing the if condition *)
+                        nth x0 (get_b g1) idx
+                      else
+                        y)).
+             split.
+             have : (map mu (get_b g1)) =i get_b g2. by apply perm_mem.
+             elim : (get_b g2) relab pmeq=> [/= | h t ihts].
+             by move=> _ _ /mem_eq_is_nil/eqP; rewrite map_nil_is_nil=> /eqP ->.
+             move=> relab pmeq same_elem.
+             rewrite /= in_cons eqxx /=.
+      Abort.
 
     End IsoMapping.
 

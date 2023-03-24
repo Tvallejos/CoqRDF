@@ -373,7 +373,7 @@ The term "g1" has type "rdf_graph I B L" while it is expected to have type
 
     Section IsoBij_in_dom.
 
-      Definition bijin (mu : B -> B) (D : list B) := {in D, bijective mu}.
+      Definition bijin (mu : B -> B) (D : seq B) := {in D, bijective mu}.
 
       (* Definition bijin_inv mu D (mu_bijin: bijin mu D) : exists nu, bijin nu (map mu D). *)
       (* Proof. case mu_bijin=> nu canin canon. exists nu. rewrite /bijin. exists mu=> x xin. *)
@@ -491,6 +491,8 @@ The term "g1" has type "rdf_graph I B L" while it is expected to have type
         have [c ceq]: exists t : C, a = f t.
         by apply map_inv in ain.
         rewrite ceq. rewrite h1 //. rewrite ceq in ain. erewrite <- mem_in_map. apply ain.
+        have : {in cs&, injective f}. apply (can_in_inj h1). 
+        (* here I need {in cs, injective f}, but have {in cs&, injective f} instead*)
       Abort.
 
 

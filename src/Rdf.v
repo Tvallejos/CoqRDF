@@ -104,21 +104,21 @@ Section Rdf.
     Implicit Type g : rdf_graph I B L.
 
     Definition eqb_rdf g1 g2 : bool :=
-      (graph g1) == (graph g2).
+      perm_eq (graph g1) (graph g2).
 
     Lemma eqb_rdf_refl g : eqb_rdf g g.
     Proof. by rewrite /eqb_rdf. Qed.
 
-    Lemma eqb_rdf_symm g1 g2 : eqb_rdf g1 g2 = eqb_rdf g2 g1.
-    Proof. by rewrite /eqb_rdf. Qed.
+    Lemma eqb_rdf_sym g1 g2 : eqb_rdf g1 g2 = eqb_rdf g2 g1.
+    Proof. by rewrite /eqb_rdf perm_sym. Qed.
 
     Lemma eqb_rdf_trans g1 g2 g3: eqb_rdf g1 g2 -> eqb_rdf g2 g3 -> eqb_rdf g1 g3.
-    Proof. by rewrite /eqb_rdf=> /eqP -> /eqP ->. Qed.
+    Proof. by rewrite /eqb_rdf; apply perm_trans. Qed.
 
     Definition rdf_eqP : Equality.axiom eqb_rdf.
     Proof. rewrite /Equality.axiom => x y.
            apply: (iffP idP) => //= [| ->]; case: x y=> [g1] [g2].
-           by rewrite /eqb_rdf => /eqP /= ->.
+           rewrite /eqb_rdf. => /eqP /= ->.
            by apply eqb_rdf_refl.
     Qed.
 

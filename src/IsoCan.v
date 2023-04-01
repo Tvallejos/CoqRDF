@@ -832,49 +832,52 @@ Section IsoCan.
       (* TODO *)
       (* USES inv_of_k_mapping *)
       Lemma k_mapping_iso_output : mapping_is_iso k_mapping.
-      Proof. move=> g; case (inv_of_k_mapping g)=> μ [rel_eq_kmap bijmu].
-             exists μ. split. exact: bijmu. by rewrite eq_sym.
+      Proof. move=> g; case (inv_of_k_mapping g)=> μ [/eq_eqb_rdf rel_eq_kmap bijmu].
+             exists μ. split. exact: bijmu. by rewrite eqb_rdf_sym. 
       Qed.
 
       Lemma k_mapping_dont_manipulate_names : (dt_names k_mapping).
       Proof.
-        rewrite /dt_names=> g μ bijmu.
-        case g=> g'; rewrite /k_mapping.
-        suffices ->:
-          [seq relabeling mu {| graph := g' |}
-          | mu <- [seq build_kmapping_from_seq i
-                  | i <- [seq mapi (app_n mark_bnode) i
-                         | i <- permutations (bnodes (init_hash {| graph := g' |}))]]] =
-                   [seq relabeling mu (relabeling μ {| graph := g' |})
-                   | mu <- [seq build_kmapping_from_seq i
-                           | i <- [seq mapi (app_n mark_bnode) i
-                                  | i <- permutations (bnodes (init_hash (relabeling μ {| graph := g' |})))]]].
-        by [].
-        elim e: [seq build_kmapping_from_seq i
-                | i <- [seq mapi (app_n mark_bnode) i
-                       | i <- permutations (bnodes (init_hash {| graph := g' |}))]]=> [|mu' mus IHmu].
-        have ->: [seq build_kmapping_from_seq i
-                 | i <- [seq mapi (app_n mark_bnode) i
-                        | i <- permutations (bnodes (init_hash (relabeling μ {| graph := g' |})))]] = [::].
-        admit.
-        by [].
-        case e2: [seq build_kmapping_from_seq i
-                 | i <- [seq mapi (app_n mark_bnode) i
-                        | i <- permutations (bnodes (init_hash (relabeling μ {| graph := g' |})))]]=> [|mu'' mus'].
-        admit. (* this is a contradiction *)
-        rewrite /= relabeling_comp.
-        f_equal.
-        have mu_ext: mu' =1 (mu'' \o μ).
-        (* using map_kmap *)
-        admit.
-        by rewrite (relabeling_ext {| graph := g' |} mu_ext).
-        (* this should be exactically IHmu *)
-        admit.
+        (* rewrite /dt_names=> g μ bijmu. *)
+        (* case g=> g'; rewrite /k_mapping. *)
+        (* suffices ->: *)
+        (*   [seq relabeling mu {| graph := g' |} *)
+        (*   | mu <- [seq build_kmapping_from_seq i *)
+        (*           | i <- [seq mapi (app_n mark_bnode) i *)
+        (*                  | i <- permutations (bnodes (init_hash {| graph := g' |}))]]] = *)
+        (*            [seq relabeling mu (relabeling μ {| graph := g' |}) *)
+        (*            | mu <- [seq build_kmapping_from_seq i *)
+        (*                    | i <- [seq mapi (app_n mark_bnode) i *)
+        (*                           | i <- permutations (bnodes (init_hash (relabeling μ {| graph := g' |})))]]]. *)
+        (* by []. *)
+        (* elim e: [seq build_kmapping_from_seq i *)
+        (*         | i <- [seq mapi (app_n mark_bnode) i *)
+        (*                | i <- permutations (bnodes (init_hash {| graph := g' |}))]]=> [|mu' mus IHmu]. *)
+        (* have ->: [seq build_kmapping_from_seq i *)
+        (*          | i <- [seq mapi (app_n mark_bnode) i *)
+        (*                 | i <- permutations (bnodes (init_hash (relabeling μ {| graph := g' |})))]] = [::]. *)
+        (* admit. *)
+        (* by []. *)
+        (* case e2: [seq build_kmapping_from_seq i *)
+        (*          | i <- [seq mapi (app_n mark_bnode) i *)
+        (*                 | i <- permutations (bnodes (init_hash (relabeling μ {| graph := g' |})))]]=> [|mu'' mus']. *)
+        (* admit. (* this is a contradiction *) *)
+        (* rewrite /= relabeling_comp. *)
+        (* f_equal. *)
+        (* have mu_ext: mu' =1 (mu'' \o μ). *)
+        (* (* using map_kmap *) *)
+        (* admit. *)
+        (* by rewrite (relabeling_ext {| graph := g' |} mu_ext). *)
+        (* (* this should be exactically IHmu *) *)
+        (* admit. *)
       Admitted.
+
+      Lemma k_mapping_order_agnostic : order_agnostic k_mapping.
+        Proof. Admitted.
 
       (* USES inv_of_k_mapping *)
       Lemma k_mapping_isocan : isocanonical_mapping k_mapping.
-      Proof. by apply: isocanonical_mapping_dt_out k_mapping_iso_output k_mapping_dont_manipulate_names. Qed.
+      Proof. by apply: isocanonical_mapping_dt_out k_mapping_iso_output k_mapping_dont_manipulate_names k_mapping_order_agnostic. Qed.
 
       Lemma relabeling_mu_inv_bij (g : rdf_graph I B L) (fs : seq (B -> B)) :
         List.Forall (fun mu => bijective mu) fs ->
@@ -886,9 +889,9 @@ Section IsoCan.
       Lemma k_mapping_iso g : iso (k_mapping g) g.
       Proof. rewrite /iso/is_iso.
              have H:exists mu : B -> B, relabeling mu g == k_mapping g /\ bijective mu. apply inv_of_k_mapping.
-             move: H=> [mu [eq bij]].
+             move: H=> [mu [/eq_eqb_rdf eq bij]].
              exists mu; split; first by exact: bij.
-             by rewrite eq_sym; apply eq.
+             by rewrite eqb_rdf_sym.
       Qed.
 
     End Kmapping.

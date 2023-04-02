@@ -723,12 +723,8 @@ The term "g1" has type "rdf_graph I B L" while it is expected to have type
       Definition iso_mapping_trans g1 g2 g3 : iso_mapping g1 g2 -> iso_mapping g2 g3 -> iso_mapping g1 g3.
       Proof. move=> [mu12 [peq12 eqb12]] [mu23 [peq23 eqb23]].
              rewrite /iso_mapping. exists (mu23 \o mu12). split. apply: perm_map_comp peq12 peq23.
-             rewrite /eqb_rdf in eqb12 eqb23.
-             eapply perm_map in eqb12.
-             rewrite /eqb_rdf/relabeling/relabeling_seq_triple.
-             eapply perm_map_comp.
-             eapply eqb_rdf_trans; last by apply eqb23. eqb12 eqb23.
-
+             apply (eqb_relabeling_comp eqb12 eqb23).
+      Qed.
 
     End IsoMapping.
 

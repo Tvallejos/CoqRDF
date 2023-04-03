@@ -831,12 +831,13 @@ Section IsoCan.
 
       (* TODO *)
       (* USES inv_of_k_mapping *)
-      Lemma k_mapping_iso_output : mapping_is_iso k_mapping.
-      Proof. move=> g; case (inv_of_k_mapping g)=> μ [/eq_eqb_rdf rel_eq_kmap bijmu].
-             exists μ. split. exact: bijmu. by rewrite eqb_rdf_sym. 
-      Qed.
+      Lemma k_mapping_iso_output : mapping_is_iso_mapping k_mapping.
+      Proof. rewrite /mapping_is_iso_mapping/k_mapping=> g.
+             Admitted.
+             (* case (inv_of_k_mapping g)=> μ [/eq_eqb_rdf rel_eq_kmap bijmu]. *)
+             (* exists μ. split. exact: bijmu. by rewrite eqb_rdf_sym.  *)
 
-      Lemma k_mapping_dont_manipulate_names : (dt_names k_mapping).
+      Lemma k_mapping_dont_manipulate_names : (dt_names_mapping k_mapping).
       Proof.
         (* rewrite /dt_names=> g μ bijmu. *)
         (* case g=> g'; rewrite /k_mapping. *)
@@ -876,8 +877,8 @@ Section IsoCan.
         Proof. Admitted.
 
       (* USES inv_of_k_mapping *)
-      Lemma k_mapping_isocan : isocanonical_mapping k_mapping.
-      Proof. by apply: isocanonical_mapping_dt_out k_mapping_iso_output k_mapping_dont_manipulate_names k_mapping_order_agnostic. Qed.
+      Lemma k_mapping_isocan : isocanonical_mapping_map k_mapping.
+      Proof. apply: isocanonical_mapping_dt_out_mapping k_mapping_iso_output k_mapping_dont_manipulate_names. Qed.
 
       Lemma relabeling_mu_inv_bij (g : rdf_graph I B L) (fs : seq (B -> B)) :
         List.Forall (fun mu => bijective mu) fs ->

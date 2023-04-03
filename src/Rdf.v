@@ -293,6 +293,7 @@ Section Rdf.
         is_iso g1 g2 μ.
 
     Remark id_bij T: bijective (@id T). Proof. by exists id. Qed.
+    Hint Resolve id_bij.
 
     Lemma iso_refl g : iso g g.
     Proof. rewrite /iso /is_iso; exists id; split; first exact: id_bij.
@@ -329,7 +330,7 @@ Section Rdf.
 
     Definition isocanonical_mapping (M : rdf_graph I B L -> rdf_graph I B L) :=
       forall g, mapping_is_iso M /\
-                  (forall g1 g2, perm_eq (M g1) (M g2) <-> iso g1 g2).
+             (forall g1 g2, perm_eq (M g1) (M g2) <-> iso g1 g2).
 
     Definition dt_names (M : rdf_graph I B L -> rdf_graph I B L) := forall g μ, (bijective μ) -> (eqb_rdf  (M (relabeling μ g)) (M g)).
 
@@ -439,8 +440,8 @@ The term "g1" has type "rdf_graph I B L" while it is expected to have type
         match D with
         | nil => nil
         | b :: bs => if mem_seq CD (mu b)
-                     then b :: find_preim mu bs CD else
-                       find_preim mu bs CD end.
+                   then b :: find_preim mu bs CD else
+                     find_preim mu bs CD end.
 
       Lemma in_preim1 mu D CD x : x \in find_preim mu D CD -> (x \in D).
       Admitted.
@@ -481,7 +482,7 @@ The term "g1" has type "rdf_graph I B L" while it is expected to have type
 
       Definition iso_bijin_refl g: iso_bijin g g.
       Proof. exists id; split; first by exists id.
-                                               by rewrite relabeling_id.
+                                     by rewrite relabeling_id.
       Qed.
 
       Lemma relabeling_codom mu g1 g2 : relabeling mu g1 = g2 -> forall b, b \in (get_b g1) -> mu b \in (get_b g2).
@@ -489,7 +490,7 @@ The term "g1" has type "rdf_graph I B L" while it is expected to have type
 
       Lemma mem_in_map (T1 T2 : eqType) (f : T1 -> T2) (s : seq T1) : {in s, injective f} -> forall (x : T1), (f x \in [seq f i | i <- s]) = (x \in s).
       Proof. move=> H x. apply /mapP/idP; last by exists x.
-                                                         by move=> [y yin] /eqP; rewrite eq_sym=> /eqP/H <-.
+                                                   by move=> [y yin] /eqP; rewrite eq_sym=> /eqP/H <-.
       Qed.
 
       Lemma can_in_pcan_in (T1 T2 : eqType) (f : T1 -> T2) (g : T2 -> T1) (s : seq T2): {in s, cancel g f} -> {in s, pcancel g (fun y => Some (f y))}.
@@ -602,6 +603,59 @@ The term "g1" has type "rdf_graph I B L" while it is expected to have type
     End IsoBij_in_dom.
 
     Section IsoMapping.
+
+      Section PreIso.
+        Definition is_pre_iso g1 g2 (μ : B -> B) := perm_eq (map μ (get_b g1)) (get_b g2).
+
+        (* Definition is_iso g1 g2 (μ : B -> B) := *)
+        (*   (* ({in bnodes g2, bijective μ}) *) *)
+        (*   (bijective μ) *)
+
+        (*   /\ g1 == (relabeling μ g2). *)
+
+
+        Definition pre_iso g1 g2 := exists (μ : B -> B), is_pre_iso g1 g2 μ.
+
+        Lemma pre_iso_refl g : pre_iso g g.
+        Proof. by rewrite /pre_iso /is_pre_iso; exists id; rewrite map_id perm_refl. Qed.
+
+
+        (* Lemma is_pre_iso_inj g1 g2 mu : is_pre_iso g1 g2 mu -> {in get_b g1 &, injective mu}. *)
+        (* Proof. *)
+        (* move=> hmu b b' hb1 hb'.  *)
+        (* apply: contra_eq => neqb. *)
+        (* apply/negP=> eqmu. *)
+        (* move: (hmu p). *)
+
+
+        Search _ perm_eq.
+
+        Lemma is_iso_bij g1 g2 mu : is_pre_iso g1 g2 mu -> {in get_b g1, bijective mu}.
+        Proof.
+          case e: (get_b g1) => [| bdflt tl].
+          - by move=> h; exists id.
+          - rewrite -{}e {tl} => hiso.
+            pose mu_inv b := nth bdflt (get_b g1) (index b [seq mu i | i <- get_b g1]).
+            exists mu_inv.
+            + move=> b hb1. rewrite /mu_inv.
+              apply: nth_index_map=> //. admit. (* mu injective in get_b g1, as stated above *)
+            + move=> b. rewrite /mu_inv.
+              set i := index _ _.
+              Abort.
+
+      (*
+       Search _ perm_eq.
+       t = [a, b, c]
+       s = [b, a, c]
+
+       Is:= [1, 0, 2]
+
+       perm_iotaP:
+         forall {T : eqType} {s t : seq T} (x0 : T),
+         let It := iota 0 (size t) in
+     reflect (exists2 Is : seq nat_eqType, perm_eq Is It & s = [seq nth x0 t i | i <- Is]) (perm_eq s t)
+       *)
+      End PreIso.
 
       Definition is_iso_mapping g1 g2 mu :=
         perm_eq (map mu (get_b g1)) (get_b g2) &&
@@ -753,9 +807,9 @@ The term "g1" has type "rdf_graph I B L" while it is expected to have type
 
 
       Definition dt_names_mapping (M : rdf_graph I B L -> rdf_graph I B L) := forall g1 g2,
-        iso_mapping g1 g2 -> eqb_rdf (M g1) (M g2).
+          iso_mapping g1 g2 -> eqb_rdf (M g1) (M g2).
 
-                              (* forall g μ, {in (get_b g), bijective μ} -> M g == M (relabeling μ g). *)
+      (* forall g μ, {in (get_b g), bijective μ} -> M g == M (relabeling μ g). *)
 
       (* Definition dont_manipulate_names_mapping_idem (M : rdf_graph I B L -> rdf_graph I B L) (dnmn : dont_manipulate_names_mapping M) : forall g (μ : B -> B), (bijective μ) -> M (M g) = M g. *)
 

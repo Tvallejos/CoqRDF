@@ -602,12 +602,15 @@ The term "g1" has type "rdf_graph I B L" while it is expected to have type
     End IsoBij_in_dom.
 
     Section IsoMapping.
-      Definition iso_mapping g1 g2 := exists mu,
-          perm_eq (map mu (get_b g1)) (get_b g2) /\
+
+      Definition is_iso_mapping g1 g2 mu :=
+          perm_eq (map mu (get_b g1)) (get_b g2) &&
             eqb_rdf (relabeling mu g1) g2.
 
+      Definition iso_mapping g1 g2 := exists mu, is_iso_mapping g1 g2 mu.
+
       Definition iso_mapping_refl g : iso_mapping g g.
-      Proof. exists id. split; last by rewrite relabeling_id eqb_rdf_refl.
+      Proof. exists id; rewrite /is_iso_mapping; apply /andP; split; last by rewrite relabeling_id eqb_rdf_refl.
              + by rewrite map_id. Qed.
 
 
@@ -691,10 +694,11 @@ The term "g1" has type "rdf_graph I B L" while it is expected to have type
       (* Proof. by move=> /perm_uniq ->; apply get_bs_uniq; rewrite undup_uniq. Qed. *)
 
       Definition iso_mapping_sym g1 g2 : iso_mapping g1 g2 <-> iso_mapping g2 g1.
-      Proof. split; rewrite /iso_mapping; move=> [mu []]=> peq.
+      Proof. split;
+               rewrite /iso_mapping/is_iso_mapping; move=> [mu /andP[]]=> peq.
              have : perm_eq [seq mu i | i <- get_b g1] (get_b g2). exact: peq.
              rewrite perm_sym=> [pmeq relab].
-             exists (iso_mapping_inv g1 g2 mu).
+             exists (iso_mapping_inv g1 g2 mu); apply /andP.
              split. apply (perm_map (iso_mapping_inv g1 g2 mu)) in pmeq.
              apply (perm_trans pmeq).
              rewrite -map_comp. apply relabeling_get_b. rewrite -relabeling_comp.
@@ -705,7 +709,22 @@ The term "g1" has type "rdf_graph I B L" while it is expected to have type
              have -> : [seq relabeling_triple (iso_mapping_inv g1 g2 mu) i | i <- relabeling mu g1] = relabeling ((iso_mapping_inv g1 g2 mu) \o mu) g1.
              by rewrite -relabeling_comp /relabeling/relabeling_seq_triple.
              rewrite -relabeling_comp. apply: mapping_inv_cancel peq relab.
-      Admitted.
+             (* the symmetric part *)
+             have : perm_eq [seq mu i | i <- get_b g2] (get_b g1). exact: peq.
+             rewrite perm_sym=> [pmeq relab].
+             exists (iso_mapping_inv g2 g1 mu); apply /andP.
+             split. apply (perm_map (iso_mapping_inv g2 g1 mu)) in pmeq.
+             apply (perm_trans pmeq).
+             rewrite -map_comp. apply relabeling_get_b. rewrite -relabeling_comp.
+             apply: mapping_inv_cancel peq relab.
+             rewrite /eqb_rdf in relab.
+             rewrite /eqb_rdf. eapply perm_trans. rewrite perm_sym.
+             apply: perm_map relab.
+             have -> : [seq relabeling_triple (iso_mapping_inv g2 g1 mu) i | i <- relabeling mu g2] = relabeling ((iso_mapping_inv g2 g1 mu) \o mu) g2.
+             by rewrite -relabeling_comp /relabeling/relabeling_seq_triple.
+             rewrite -relabeling_comp. apply: mapping_inv_cancel peq relab.
+      Qed.
+
 
       Lemma perm_map_comp (T1 T2 T3 : eqType) (f: T1 -> T2) (g : T2 -> T3) s1 s2 s3 :
                perm_eq (map f s1) s2 ->
@@ -721,9 +740,9 @@ The term "g1" has type "rdf_graph I B L" while it is expected to have type
 
 
       Definition iso_mapping_trans g1 g2 g3 : iso_mapping g1 g2 -> iso_mapping g2 g3 -> iso_mapping g1 g3.
-      Proof. move=> [mu12 [peq12 eqb12]] [mu23 [peq23 eqb23]].
-             rewrite /iso_mapping. exists (mu23 \o mu12). split. apply: perm_map_comp peq12 peq23.
-             apply (eqb_relabeling_comp eqb12 eqb23).
+      Proof. rewrite /iso_mapping/is_iso_mapping; move=> [mu12 /andP[peq12 eqb12]] [mu23 /andP[peq23 eqb23]].
+              exists (mu23 \o mu12); apply /andP; split; first by apply: perm_map_comp peq12 peq23.
+              apply : eqb_relabeling_comp eqb12 eqb23.
       Qed.
 
     End IsoMapping.

@@ -132,12 +132,11 @@ Definition term_canEqMixin (I B L : eqType) := PcanEqMixin (@pcancel_code_decode
 Canonical term_eqType (I B L : eqType) :=
   Eval hnf in EqType (term I B L) (term_canEqMixin I B L).
 
-Fixpoint get_bs (I B L : eqType) (ts : seq (term I B L)) :=
-  match ts with
-  | nil => nil
-  | Bnode b :: ts' => b :: (get_bs ts')
-  | _ :: ts' => (get_bs ts')
-  end.
+Definition get_b_term (I B L :eqType) (t : (term I B L)) : option B :=
+  if t is Bnode b then Some b else None.
+
+Definition get_bs (I B L : eqType) (ts : seq (term I B L)) :=
+  pmap (@get_b_term I B L) ts.
 
 Definition term_canChoiceMixin (I B L : choiceType) :=
   PcanChoiceMixin (@pcancel_code_decode I B L).

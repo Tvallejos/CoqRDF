@@ -131,15 +131,6 @@ Section Rdf.
     Lemma eqb_rdf_trans g1 g2 g3: eqb_rdf g1 g2 -> eqb_rdf g2 g3 -> eqb_rdf g1 g3.
     Proof. by rewrite /eqb_rdf; apply perm_trans. Qed.
 
-    (* lost eqType *)
-    (* Definition rdf_eqP : Equality.axiom eqb_rdf. *)
-    (* Proof. rewrite /Equality.axiom => x y. *)
-    (*        apply: (iffP idP) => //= [| ->]; case: x y=> [g1] [g2]. *)
-    (*        by rewrite /eqb_rdf; => /eqP /= ->. *)
-    (*        by apply eqb_rdf_refl. *)
-    (* Qed. *)
-
-    (* Canonical rdf_eqType := EqType (rdf_graph I B L) (EqMixin rdf_eqP). *)
     Canonical rdf_eqType := EqType (rdf_graph I B L) (CanEqMixin (@pcancel_code_decode I B L)).
     Canonical rdf_predType := PredType (pred_of_seq \o (@graph I B L)).
 
@@ -520,26 +511,6 @@ The term "g1" has type "rdf_graph I B L" while it is expected to have type
                                                    by move=> [y yin] /eqP; rewrite eq_sym=> /eqP/H <-.
       Qed.
 
-      Lemma can_in_pcan_in (T1 T2 : eqType) (f : T1 -> T2) (g : T2 -> T1) (s : seq T2): {in s, cancel g f} -> {in s, pcancel g (fun y => Some (f y))}.
-      Proof. by move=> can y yin; congr (Some _); apply can. Qed.
-      (* from coq ssr ssrfun *)
-
-      (* Lemma pcan_in_inj1 (T1 T2 : eqType) (f : T1 -> T2) (g : T2 -> option T1) (s : seq T1) : *)
-      (*   {in s, pcancel f g} -> {in s, injective f}. *)
-      (* Proof. move=> fK x xin y=> /(congr1 g); rewrite fK //. => [[//] |]. Qed. *)
-
-      Lemma pcan_in_inj (T1 T2 : eqType) (f : T1 -> T2) (g : T2 -> option T1) (s : seq T1) :
-        {in s, pcancel f g} -> {in s &, injective f}.
-      Proof. by move=> fK x y xin yin=> /(congr1 g); rewrite !fK // => [[]]. Qed.
-      (* from coq ssr ssrfun *)
-
-      Lemma inj_in_inamp (T1 T2 : eqType) (f : T1 -> T2) (s : seq T1): {in s, injective f} -> {in s &, injective f}.
-      Proof. by move=> injf x y xin /injf H /eqP; rewrite eq_sym=> /eqP/H ->. Qed.
-
-      Lemma can_in_inj (T1 T2 : eqType) (f : T1 -> T2) (g : T2 -> T1) (s : seq T1) : {in s, cancel f g} -> {in s &, injective f}.
-      Proof. move/can_in_pcan_in. move=> pcan. eapply pcan_in_inj. exact: pcan. Qed.
-      (* from coq ssr ssrfun *)
-
       Lemma local_inj_can_sym (A C : eqType) (f : C -> A) (f' : A -> C) (cs : list C): {in cs, cancel f f'} -> {in (map f cs) &, injective f'} -> {in (map f cs), cancel f' f}.
       Proof.
         move=> h1 h2. move=> a ain.
@@ -575,48 +546,7 @@ The term "g1" has type "rdf_graph I B L" while it is expected to have type
               something like the commented lemma above. *)
       Abort.
 
-      (* one of these may also work *)
-
-      (*              in_onS_can: *)
-      (*   forall {aT rT : predArgType} (aD : {pred aT}) {f : aT -> rT} {g : rT -> aT}, *)
-      (*   (forall x : rT, g x \in aD) -> {in rT, {on aD, cancel g & f}} -> cancel g f *)
-      (* onW_can_in: *)
-      (*   forall {aT rT : predArgType} (aD : {pred aT}) {rD : {pred rT}} {f : aT -> rT} {g : rT -> aT}, *)
-      (*   {in rD, cancel g f} -> {in rD, {on aD, cancel g & f}} *)
-      (* inj_can_sym_on: *)
-      (*   forall {aT rT : predArgType} {aD : {pred aT}} {f : aT -> rT} {g : rT -> aT}, *)
-      (*   {in aD, cancel f g} -> {on aD &, injective g} -> {on aD, cancel g & f} *)
-      (* on_can_inj: *)
-      (*   forall [T1 T2 : predArgType] [D2 : {pred T2}] [f : T1 -> T2] [g : T2 -> T1], *)
-      (*   {on D2, cancel f & g} -> {on D2 &, injective f} *)
-      (* in_onW_can: *)
-      (*   forall {aT rT : predArgType} (aD : {pred aT}) (rD : {pred rT}) {f : aT -> rT} {g : rT -> aT}, *)
-      (*   cancel g f -> {in rD, {on aD, cancel g & f}} *)
-      (* can_in_eq: *)
-      (*   forall [aT rT : eqType] [D : pred aT] [f : aT -> rT] [g : rT -> aT], *)
-      (*   {in D, cancel f g} -> {in D &, forall x y : aT, (f x == f y) = (x == y)} *)
-      (* canRL_on: *)
-      (*   forall [T1 T2 : predArgType] [D2 : {pred T2}] [f : T1 -> T2] [g : T2 -> T1] [x : T1] [y : T2], *)
-      (*   {on D2, cancel f & g} -> f x \in D2 -> f x = y -> x = g y *)
-      (* canLR_on: *)
-      (*   forall [T1 T2 : predArgType] [D2 : {pred T2}] [f : T1 -> T2] [g : T2 -> T1] [x : T2] [y : T1], *)
-      (*   {on D2, cancel f & g} -> f y \in D2 -> x = f y -> g x = y *)
-
-      (* bijective_eqb_rdf: *)
-      (*   forall [I B L : eqType] [mu nu : B -> B] [g1 g2 : rdf_graph I B L], *)
-      (*   cancel mu nu -> g1 == relabeling mu g2 -> g2 == relabeling nu g1 *)
-      (*         canLR_in: *)
-      (*   forall [T1 T2 : predArgType] [D1 : {pred T1}] [f : T1 -> T2] [g : T2 -> T1] [x : T2] [y : T1], *)
-      (*   {in D1, cancel f g} -> y \in D1 -> x = f y -> g x = y *)
-      (* canRL_in: *)
-      (*   forall [T1 T2 : predArgType] [D1 : {pred T1}] [f : T1 -> T2] [g : T2 -> T1] [x : T1] [y : T2], *)
-      (*   {in D1, cancel f g} -> x \in D1 -> f x = y -> x = g y *)
-      (* can_in_inj: *)
-      (*   forall [T1 T2 : predArgType] [D1 : {pred T1}] [f : T1 -> T2] [g : T2 -> T1], *)
-      (*   {in D1, cancel f g} -> {in D1 &, injective f} *)
-
-
-      Definition iso_bijin_symm g1 g2 : iso_bijin g1 g2 <-> iso_bijin g2 g1.
+      Lemma iso_bijin_symm g1 g2 : iso_bijin g1 g2 <-> iso_bijin g2 g1.
       Proof.
         (* Abort. *)
         (* split; rewrite /iso_bijin=> [] [mu [[nu canin] canon]] /eq_eqb_rdf relab. *)
@@ -660,6 +590,9 @@ The term "g1" has type "rdf_graph I B L" while it is expected to have type
 
       Definition iso_mapping g1 g2 := exists mu, is_iso_mapping g1 g2 mu.
 
+      Remark is_iso_is_pre_iso g1 g2 mu: is_iso_mapping g1 g2 mu -> is_pre_iso g1 g2 mu.
+      Proof. by move=> /andP []. Qed.
+
       Definition iso_mapping_refl g : iso_mapping g g.
       Proof. exists id; rewrite /is_iso_mapping; apply /andP; split; last by rewrite relabeling_id eqb_rdf_refl.
              + by rewrite /is_pre_iso map_id.
@@ -674,28 +607,43 @@ The term "g1" has type "rdf_graph I B L" while it is expected to have type
                by rewrite in_nil.
       Qed.
 
-      (* Definition iso_mapping_inv g1 g2 (mu : B -> B) : B -> B := *)
-      (* fun b => if (b \in (get_b g2)) then *)
-      (*           (nth b (get_b g1) (index b (map mu (get_b g1)))) *) (*         else b. *)
-      (* Lemma mapping_inv_cancel g1 g2 (mu : B -> B) : *)
-      (*   perm_eq (map mu (get_b g1)) (get_b g2) -> *)
-      (*   eqb_rdf (relabeling mu g1) g2 ->:w *)
-      (*   eqb_rdf (relabeling (iso_mapping_inv g1 g2 mu) (relabeling mu g1)) g1. *)
-      (* Proof. Admitted. *)
+
+      Lemma eqb_rdf_terms g1 g2 : eqb_rdf g1 g2 -> perm_eq (terms g1) (terms g2).
+      Proof. rewrite /eqb_rdf/terms=> peq.
+             by rewrite perm_undup //; apply perm_mem; rewrite perm_flatten //; apply: perm_map peq.
+      Qed.
+
+      Lemma eqb_rdf_bnodes g1 g2 : eqb_rdf g1 g2 -> perm_eq (bnodes g1) (bnodes g2).
+      Proof. move=> /eqb_rdf_terms eqb.
+             by rewrite /bnodes perm_undup //; apply: perm_mem; apply: perm_filter.
+      Qed.
+
+      Lemma eqb_rdf_get_b g1 g2 : eqb_rdf g1 g2 -> perm_eq (get_b g1) (get_b g2).
+      Proof. move=> /eqb_rdf_bnodes eqb ; rewrite /get_b/get_bs; apply: perm_pmap eqb. Qed.
+
+      (* Lemma terms_filter g f : filter f (terms g) = terms (filter f g). *)
+
+      Lemma get_b_relabeling g mu : @get_b I B L (relabeling mu g) = map mu (get_b g).
+      Proof. rewrite /relabeling/get_b/get_bs/bnodes/terms !filter_undup filter_flatten !undup_idem.
+             Admitted.
 
       Lemma relabeling_get_b g1 g2 (mu : B -> B) :
-        eqb_rdf (relabeling mu g1) g2 ->
-        perm_eq (map mu (get_b g1)) (get_b g2).
-      Proof. Admitted.
+        eqb_rdf (relabeling mu g1) g2 <->
+        is_iso_mapping g1 g2 mu.
+      Proof. split; last by move=> /andP [_ b].
+             move=> eqb.
+             suffices : is_pre_iso g1 g2 mu. by rewrite /is_iso_mapping=> ->.
+             by move : eqb => /eqb_rdf_get_b; rewrite /is_pre_iso/relabeling get_b_relabeling.
+      Qed.
 
       Remark eqiso_mapping g1 g2 : eqb_rdf g1 g2 -> iso_mapping g1 g2.
-      Proof. rewrite /is_iso_mapping -{1}(relabeling_id g1). exists id; apply /andP; split; last by exact: H.
-             by apply: relabeling_get_b H.
+      Proof. rewrite /is_iso_mapping -{1}(relabeling_id g1). exists id; apply /andP; split=> [|//].
+             by move: H=> /relabeling_get_b/is_iso_is_pre_iso.
       Qed.
 
       Lemma eqb_rdf_relabeling_sym g1 g2 mu nu :
         eqb_rdf (relabeling mu g1) g2 -> is_pre_iso g2 g1 nu -> eqb_rdf (relabeling nu g2) g1.
-      Proof. Admitted.
+      Proof. move=> /relabeling_get_b eqb. rewrite /is_pre_iso. Admitted.
 
       Definition iso_mapping_sym g1 g2 : iso_mapping g1 g2 <-> iso_mapping g2 g1.
       Proof.
@@ -707,12 +655,6 @@ The term "g1" has type "rdf_graph I B L" while it is expected to have type
         by apply (eqb_rdf_relabeling_sym rel).
       Qed.
 
-      Lemma perm_map_comp (T1 T2 T3 : eqType) (f: T1 -> T2) (g : T2 -> T3) s1 s2 s3 :
-        perm_eq (map f s1) s2 ->
-        perm_eq (map g s2) s3 ->
-        perm_eq (map (g \o f) s1) s3.
-      Proof. by move=> /(perm_map g); rewrite -map_comp; apply perm_trans. Qed.
-
       Lemma eqb_rdf_map g1 g2 mu : eqb_rdf (relabeling mu g1) g2 = eqb_rdf (mkRdfGraph (map (relabeling_triple mu) g1)) g2.
         Proof. by []. Qed.
 
@@ -721,16 +663,16 @@ The term "g1" has type "rdf_graph I B L" while it is expected to have type
         eqb_rdf (relabeling mu23 g2) g3 ->
         eqb_rdf (relabeling (mu23 \o mu12) g1) g3.
       Proof. rewrite /eqb_rdf/relabeling=> /(perm_map (relabeling_triple mu23)) p12 p23.
-             have <- : [seq relabeling_triple mu23 i | i <- {| graph := relabeling_seq_triple mu12 g1 |}] = 
+             suffices <- : [seq relabeling_triple mu23 i | i <- {| graph := relabeling_seq_triple mu12 g1 |}] =
                         {| graph := relabeling_seq_triple (mu23 \o mu12) g1 |}.
+             by apply: perm_trans p12 p23.
              by rewrite -relabeling_seq_triple_comp/relabeling_seq_triple; case g1.
-             apply: perm_trans p12 p23.
       Qed.
 
       Definition iso_mapping_trans g1 g2 g3 : iso_mapping g1 g2 -> iso_mapping g2 g3 -> iso_mapping g1 g3.
       Proof. rewrite /iso_mapping/is_iso_mapping; move=> [mu12 /andP[peq12 eqb12]] [mu23 /andP[peq23 eqb23]].
              exists (mu23 \o mu12); apply /andP; split; first by apply: is_pre_iso_trans peq12 peq23.
-             apply : eqb_relabeling_comp eqb12 eqb23.
+             by apply : eqb_relabeling_comp eqb12 eqb23.
       Qed.
 
       Definition isocanonical_mapping_map (M : rdf_graph I B L -> rdf_graph I B L) :=

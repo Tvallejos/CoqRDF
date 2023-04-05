@@ -225,8 +225,28 @@ Proof. elim: s=> [//| hd tl IHtl] /= hps x1.
        by case/orP: hps=> [-> //| /IHtl hptl]; case: (p hd)=> //; apply hptl.
 Qed.
 
-(* Lemma perm_map (T U: eqType) (s: seq T) (f: T -> U): permutations (map f s) = map (map f) (permutations s). *)
-(* Proof. Admitted. *)
+Lemma perm_map_comp (T1 T2 T3 : eqType) (f: T1 -> T2) (g : T2 -> T3) s1 s2 s3 :
+  perm_eq (map f s1) s2 ->
+  perm_eq (map g s2) s3 ->
+  perm_eq (map (g \o f) s1) s3.
+Proof. by move=> /(perm_map g); rewrite -map_comp; apply perm_trans. Qed.
+
+      Lemma can_in_pcan_in (T1 T2 : eqType) (f : T1 -> T2) (g : T2 -> T1) (s : seq T2): {in s, cancel g f} -> {in s, pcancel g (fun y => Some (f y))}.
+      Proof. by move=> can y yin; congr (Some _); apply can. Qed.
+
+      Lemma pcan_in_inj (T1 T2 : eqType) (f : T1 -> T2) (g : T2 -> option T1) (s : seq T1) :
+        {in s, pcancel f g} -> {in s &, injective f}.
+      Proof. by move=> fK x y xin yin=> /(congr1 g); rewrite !fK // => [[]]. Qed.
+
+      Lemma inj_in_inamp (T1 T2 : eqType) (f : T1 -> T2) (s : seq T1): {in s, injective f} -> {in s &, injective f}.
+      Proof. by move=> injf x y xin /injf H /eqP; rewrite eq_sym=> /eqP/H ->. Qed.
+
+      Lemma can_in_inj (T1 T2 : eqType) (f : T1 -> T2) (g : T2 -> T1) (s : seq T1) : {in s, cancel f g} -> {in s &, injective f}.
+      Proof. move/can_in_pcan_in. move=> pcan. eapply pcan_in_inj. exact: pcan. Qed.
+      (* from coq ssr ssrfun *)
+
+      (* Lemma perm_map (T U: eqType) (s: seq T) (f: T -> U): permutations (map f s) = map (map f) (permutations s). *)
+      (* Proof. Admitted. *)
 
 (* Lemma ext_pred_mem (T1 : eqType) (d1 d2: {pred T1}) P : {in d1, P } -> d1 =i d2 -> {in d2, P}. *)
 

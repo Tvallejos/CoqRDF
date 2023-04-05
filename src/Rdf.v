@@ -713,12 +713,19 @@ The term "g1" has type "rdf_graph I B L" while it is expected to have type
         perm_eq (map (g \o f) s1) s3.
       Proof. by move=> /(perm_map g); rewrite -map_comp; apply perm_trans. Qed.
 
+      Lemma eqb_rdf_map g1 g2 mu : eqb_rdf (relabeling mu g1) g2 = eqb_rdf (mkRdfGraph (map (relabeling_triple mu) g1)) g2.
+        Proof. by []. Qed.
+
       Lemma eqb_relabeling_comp g1 g2 g3 mu12 mu23:
         eqb_rdf (relabeling mu12 g1) g2 ->
         eqb_rdf (relabeling mu23 g2) g3 ->
         eqb_rdf (relabeling (mu23 \o mu12) g1) g3.
-      Proof. rewrite /eqb_rdf/relabeling/relabeling_seq_triple. Admitted.
-
+      Proof. rewrite /eqb_rdf/relabeling=> /(perm_map (relabeling_triple mu23)) p12 p23.
+             have <- : [seq relabeling_triple mu23 i | i <- {| graph := relabeling_seq_triple mu12 g1 |}] = 
+                        {| graph := relabeling_seq_triple (mu23 \o mu12) g1 |}.
+             by rewrite -relabeling_seq_triple_comp/relabeling_seq_triple; case g1.
+             apply: perm_trans p12 p23.
+      Qed.
 
       Definition iso_mapping_trans g1 g2 g3 : iso_mapping g1 g2 -> iso_mapping g2 g3 -> iso_mapping g1 g3.
       Proof. rewrite /iso_mapping/is_iso_mapping; move=> [mu12 /andP[peq12 eqb12]] [mu23 /andP[peq23 eqb23]].

@@ -94,10 +94,8 @@ Section Poly.
   Proof. by move=> μpweq [//| // | b] /=; rewrite μpweq. Qed.
 
   Lemma relabeling_term_inj (mu: B1 -> B2) (inj_mu : injective mu) : injective (relabeling_term mu).
-  Proof. move=> x y; case x; case y=> // x' y'; rewrite /=
-             => [[]]; last by move=> /inj_mu ->.
-         by move=> ->.
-         by move=> ->.
+  Proof. move=> x y; case x; case y => // x' y'; case=> eq; rewrite ?eq //.
+         by congr Bnode; apply inj_mu.
   Qed.
 
 End Poly.

@@ -647,19 +647,21 @@ The term "g1" has type "rdf_graph I B L" while it is expected to have type
       Lemma perm_relabel_bnodes g1 g2 mu : perm_eq (undup (map (relabeling_term mu) (bnodes g1))) (bnodes g2) = perm_eq (map mu (get_b g1)) (get_b g2).
       Proof. Admitted.
 
-      Lemma perm_relabel_graph g1 g2 mu : perm_eq (relabeling mu g1) g2 = perm_eq (map (relabeling_triple mu) (graph g1)) (graph g2).
-      Proof. rewrite /relabeling/relabeling_seq_triple.
-             case : g1 g2=> g1'. elim: g1'=> [// | h1 t1 IHtl]. Admitted.
+      (* Lemma perm_relabel_graph g1 g2 mu : perm_eq (relabeling mu g1) g2 = perm_eq (map (relabeling_triple mu) (graph g1)) (graph g2). *)
+      (* Proof. rewrite /relabeling/relabeling_seq_triple. *)
+      (*        case : g1 g2=> g1'. elim: g1'=> [// | h1 t1 IHtl]. Admitted. *)
 
       Lemma get_b_relabeling_perm g mu : perm_eq  (map mu (get_b g)) (@get_b I B L (relabeling mu g)).
       Proof. rewrite -perm_relabel_bnodes. apply uniq_perm. apply undup_uniq. apply uniq_bnodes.
              rewrite /bnodes=> x. rewrite !mem_undup. rewrite -filter_undup undup_terms.
              rewrite mem_filter terms_relabeled_mem; last exact: I. rewrite mem_undup.
              case g=> g'; elim: g' => [/= | h t IHts]; first by rewrite in_nil andbC.
-             rewrite terms_cons. rewrite -mem_map_undup undup_cat filter_cat !map_cat !mem_cat.
-             rewrite Bool.andb_orb_distrib_r -IHts undup_terms.
+             rewrite terms_cons. rewrite filter_undup -!mem_map_undup.
+             rewrite filter_cat !map_cat !mem_cat Bool.andb_orb_distrib_r -IHts.
              congr orb. rewrite -mem_filter filter_map.
-      Admitted.
+             elim: (terms_triple h)=> [//| hh tt IHtts].
+             by case hh=> // name; rewrite /= !in_cons IHtts.
+      Qed.
 
       Lemma relabeling_get_b g1 g2 (mu : B -> B):
         eqb_rdf (relabeling mu g1) g2 <->

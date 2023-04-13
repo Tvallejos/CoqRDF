@@ -6,39 +6,41 @@ From RDF Require Import Triple Term Util.
 
 Section Rdf.
 
-  Record rdf_graph (I B L : Type) := mkRdfGraph {
+  Record rdf_graph (I B L : eqType) := mkRdfGraph {
                                          graph :> seq (triple I B L) ;
+                                         ugraph : uniq graph
                                        }.
 
   Section PolyRdf.
-    Variables I B L : Type.
+    Variables I B L : eqType.
+
     Implicit Type g : rdf_graph I B L.
     Implicit Type t : triple I B L.
     Implicit Type ts : seq (triple I B L).
 
-    Definition empty_rdf_graph := mkRdfGraph [::] : rdf_graph I B L.
+    Definition empty_rdf_graph := @mkRdfGraph I B L [::] (eqxx true) : rdf_graph I B L.
 
     Definition is_ground g : bool :=
       all (@is_ground_triple _ _ _) g.
 
     (* assumes shared identifier scope *)
-    Definition merge_rdf_graph g1 g2 : rdf_graph I B L:=
-      mkRdfGraph (g1 ++ g2).
+    (* Definition merge_rdf_graph g1 g2 : rdf_graph I B L:= *)
+    (*   mkRdfGraph (g1 ++ g2). *)
 
-    Notation "g1 +-+ g2" := (merge_rdf_graph g1 g2) (at level 0, only parsing).
+    (* Notation "g1 +-+ g2" := (merge_rdf_graph g1 g2) (at level 0, only parsing). *)
 
-    Lemma merge_cons t ts :
-      {| graph := t::ts |} = (mkRdfGraph [:: t]) +-+ (mkRdfGraph ts).
-    Proof. by []. Qed.
+    (* Lemma merge_cons t ts : *)
+    (*   {| graph := t::ts |} = (mkRdfGraph [:: t]) +-+ (mkRdfGraph ts). *)
+    (* Proof. by []. Qed. *)
 
-    Definition merge_seq_rdf_graph (gs : seq (rdf_graph I B L)) : rdf_graph I B L :=
-      foldr merge_rdf_graph empty_rdf_graph gs.
+    (* Definition merge_seq_rdf_graph (gs : seq (rdf_graph I B L)) : rdf_graph I B L := *)
+    (*   foldr merge_rdf_graph empty_rdf_graph gs. *)
 
-    Definition add_triple (og : option (rdf_graph I B L)) t : option (rdf_graph I B L) :=
-      match og with
-      | Some ts => Some (mkRdfGraph (t::ts))
-      | None=> None
-      end.
+    (* Definition add_triple (og : option (rdf_graph I B L)) t : option (rdf_graph I B L) := *)
+    (*   match og with *)
+    (*   | Some ts => Some (mkRdfGraph (t::ts)) *)
+    (*   | None=> None *)
+    (*   end. *)
 
     Definition relabeling_seq_triple
       (B' B'': Type) (μ : B' -> B'')
@@ -67,11 +69,11 @@ Section Rdf.
     Qed.
 
     Definition relabeling
-      (B' B'' : Type) (μ : B' -> B'')
+      (B' B'' : eqType) (μ : B' -> B'')
       (g : rdf_graph I B' L) : rdf_graph I B'' L:=
-      mkRdfGraph (relabeling_seq_triple μ (graph g)).
+      mkRdfGraph (undup_uniq (relabeling_seq_triple μ (graph g))).
 
-    Lemma relabeling_comp (B' B'': Type) g (μ1 : B -> B') (μ2: B' -> B'') :
+    Lemma relabeling_comp (B' B'': eqType) g (μ1 : B -> B') (μ2: B' -> B'') :
       relabeling μ2 (relabeling μ1 g) = relabeling (μ2 \o μ1) g.
     Proof. by case g => g'; rewrite /= /relabeling relabeling_seq_triple_comp.
     Qed.

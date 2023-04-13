@@ -7,40 +7,75 @@ From RDF Require Import Triple Term Util.
 Section Rdf.
 
   Record rdf_graph (I B L : eqType) := mkRdfGraph {
-                                         graph :> seq (triple I B L) ;
-                                         ugraph : uniq graph
-                                       }.
+                                           graph :> seq (triple I B L) ;
+                                           ugraph : uniq graph
+                                         }.
 
-  Section PolyRdf.
+  Section EqRdf.
+
+    Lemma rdf_inj (I B L : eqType) (g1 g2 : rdf_graph I B L) :
+      graph g1 = graph g2 ->
+      g1 = g2.
+    Proof.
+      case: g1 g2 => [g1' ug1] [g2' ug2'] /= eq.
+      subst; congr mkRdfGraph; exact: eq_irrelevance.
+    Qed.
+
+    Section CodeRdf.
+      Variables I B L : eqType.
+
+      Definition code_rdf g : (seq (triple I B L))%type :=
+        graph g.
+
+      Definition decode_rdf (s: seq (triple I B L)) : option (rdf_graph I B L) :=
+        if insub s : {? x | uniq x} is Some us
+        then Some (mkRdfGraph (valP us))
+        else None.
+
+      Lemma pcancel_code_decode : pcancel code_rdf decode_rdf.
+      Proof. case=> g ug=> /= ; rewrite /decode_rdf.
+             case: insubP=> [? _ ?|]; last by rewrite ug.
+             by congr Some; apply: rdf_inj.
+      Qed.
+
+    End CodeRdf.
     Variables I B L : eqType.
-
     Implicit Type g : rdf_graph I B L.
+
+    Definition eqb_rdf g1 g2 : bool :=
+      perm_eq (graph g1) (graph g2).
+
+    Lemma eqb_rdf_refl g : eqb_rdf g g.
+    Proof. by rewrite /eqb_rdf. Qed.
+
+    Lemma eqb_rdf_sym g1 g2 : eqb_rdf g1 g2 = eqb_rdf g2 g1.
+    Proof. by rewrite /eqb_rdf perm_sym. Qed.
+
+    Lemma eqb_rdf_trans g1 g2 g3: eqb_rdf g1 g2 -> eqb_rdf g2 g3 -> eqb_rdf g1 g3.
+    Proof. by rewrite /eqb_rdf; apply perm_trans. Qed.
+
+    Canonical rdf_eqType (i b l : eqType):= EqType (rdf_graph i b l) (PcanEqMixin (@pcancel_code_decode i b l)).
+    Canonical rdf_predType (i b l : eqType) := PredType (pred_of_seq \o (@graph i b l)).
+
+    Remark eq_eqb_rdf g1 g2 : g1 == g2 -> eqb_rdf g1 g2.
+    Proof. by move=> /eqP ->; rewrite eqb_rdf_refl. Qed.
+
+    (* Variable g : rdf_graph I B L. *)
+    (* Variable trm : term I B L. *)
+    (* Variable t : triple I B L. *)
+    (* Check trm \in t. *)
+    (* Check t \in g. *)
+    (* Print SetDef.finset. *)
+    (* (* requieres trm to be finType *) *)
+    (* Fail Check finset (trm \in g). *)
+
     Implicit Type t : triple I B L.
     Implicit Type ts : seq (triple I B L).
 
-    Definition empty_rdf_graph := @mkRdfGraph I B L [::] (eqxx true) : rdf_graph I B L.
+    Definition empty_rdf_graph (i b l : eqType):= @mkRdfGraph i b l [::] (eqxx true) : rdf_graph i b l.
 
     Definition is_ground g : bool :=
       all (@is_ground_triple _ _ _) g.
-
-    (* assumes shared identifier scope *)
-    (* Definition merge_rdf_graph g1 g2 : rdf_graph I B L:= *)
-    (*   mkRdfGraph (g1 ++ g2). *)
-
-    (* Notation "g1 +-+ g2" := (merge_rdf_graph g1 g2) (at level 0, only parsing). *)
-
-    (* Lemma merge_cons t ts : *)
-    (*   {| graph := t::ts |} = (mkRdfGraph [:: t]) +-+ (mkRdfGraph ts). *)
-    (* Proof. by []. Qed. *)
-
-    (* Definition merge_seq_rdf_graph (gs : seq (rdf_graph I B L)) : rdf_graph I B L := *)
-    (*   foldr merge_rdf_graph empty_rdf_graph gs. *)
-
-    (* Definition add_triple (og : option (rdf_graph I B L)) t : option (rdf_graph I B L) := *)
-    (*   match og with *)
-    (*   | Some ts => Some (mkRdfGraph (t::ts)) *)
-    (*   | None=> None *)
-    (*   end. *)
 
     Definition relabeling_seq_triple
       (B' B'': Type) (μ : B' -> B'')
@@ -54,7 +89,7 @@ Section Rdf.
         μ1 =1 μ2 -> relabeling_seq_triple μ1 ts = relabeling_seq_triple μ2 ts.
       Proof. move=> mu_eq; apply: eq_map; exact: relabeling_triple_ext. Qed.
 
-      Lemma relabeling_seq_triple_comp (B'' : Type) (μ2 : B -> B') (μ1 : B' -> B'') ts :
+      Lemma relabeling_seq_triple_comp (B'' : eqType) (μ2 : B -> B') (μ1 : B' -> B'') ts :
         relabeling_seq_triple μ1 (relabeling_seq_triple μ2 ts) =
           relabeling_seq_triple (μ1 \o μ2) ts.
       Proof.
@@ -73,77 +108,39 @@ Section Rdf.
       (g : rdf_graph I B' L) : rdf_graph I B'' L:=
       mkRdfGraph (undup_uniq (relabeling_seq_triple μ (graph g))).
 
+    Lemma relabeling_triple_map_comp (B' B'': eqType) (g : seq (triple I B L)) (mu1: B -> B') (mu2 : B' -> B'') :
+      [seq relabeling_triple mu2 i | i <- [seq relabeling_triple mu1 i | i <- g]] =
+        [seq relabeling_triple (mu2 \o mu1) i | i <- g].
+    Proof. by rewrite -map_comp; apply eq_map=> t /=; rewrite -relabeling_triple_comp. Qed.
+
     Lemma relabeling_comp (B' B'': eqType) g (μ1 : B -> B') (μ2: B' -> B'') :
-      relabeling μ2 (relabeling μ1 g) = relabeling (μ2 \o μ1) g.
-    Proof. by case g => g'; rewrite /= /relabeling relabeling_seq_triple_comp.
+      perm_eq (relabeling μ2 (relabeling μ1 g)) (relabeling (μ2 \o μ1) g).
+    Proof. case g => g' ug'; apply uniq_perm; rewrite ?undup_uniq //.
+           by move=> x /=; rewrite !mem_undup /relabeling_seq_triple -mem_map_undup relabeling_triple_map_comp.
     Qed.
 
     Section Relabeling_graph.
-      Variable B' : Type.
 
       Lemma relabeling_id g : relabeling id g = g.
-      Proof. case g => g' /=. by rewrite /relabeling relabeling_seq_triple_id.
+      Proof. case g => g' ug /=. rewrite /relabeling relabeling_seq_triple_id; apply rdf_inj.
+             by rewrite /= undup_id.
       Qed.
+
+      Variable B' : eqType.
 
       Lemma relabeling_ext  (μ1 μ2 : B -> B') g :  μ1 =1 μ2 -> relabeling μ1 g = relabeling μ2 g.
       Proof. by move=> μpweq; rewrite /relabeling (relabeling_seq_triple_ext _ μpweq). Qed.
 
-      Lemma relabeling_nil B1 B2 (μ: B1 -> B2) :
-        relabeling μ {| graph := [::] |} = {| graph := [::] |}.
-      Proof. by []. Qed.
+      Lemma relabeling_nil (B1 B2: eqType) (μ: B1 -> B2) :
+        relabeling μ (empty_rdf_graph I B1 L) = (@empty_rdf_graph I B2 L).
+      Proof. by apply rdf_inj. Qed.
 
-      Lemma relabeling_cons B1 B2 (μ: B1 -> B2) (trpl : triple I B1 L) (ts : seq (triple I B1 L)) :
-        relabeling μ {| graph := trpl :: ts |} =
-          {| graph := relabeling_triple μ trpl :: (relabeling_seq_triple μ ts) |}.
-      Proof. by []. Qed.
-
+      Lemma relabeling_cons (B1 B2 : eqType) (μ: B1 -> B2) (trpl : triple I B1 L) (ts : seq (triple I B1 L)) (ucons : uniq (trpl :: ts)) :
+        relabeling μ (mkRdfGraph ucons) =
+          mkRdfGraph (undup_uniq (relabeling_triple μ trpl :: (relabeling_seq_triple μ ts))).
+      Proof. by apply rdf_inj. Qed.
 
     End Relabeling_graph.
-    Section CodeRdf.
-
-      Definition code_rdf g : (seq (triple I B L))%type :=
-        graph g.
-
-      Definition decode_rdf (s: seq (triple I B L)) : (rdf_graph I B L) :=
-        (mkRdfGraph s).
-
-      Lemma pcancel_code_decode : cancel code_rdf decode_rdf.
-      Proof. by case. Qed.
-
-    End CodeRdf.
-  End PolyRdf.
-
-  Section EqRdf.
-    Variables I B L : eqType.
-    Implicit Type g : rdf_graph I B L.
-
-    Definition eqb_rdf g1 g2 : bool :=
-      perm_eq (graph g1) (graph g2).
-
-    Lemma eqb_rdf_refl g : eqb_rdf g g.
-    Proof. by rewrite /eqb_rdf. Qed.
-
-    Lemma eqb_rdf_sym g1 g2 : eqb_rdf g1 g2 = eqb_rdf g2 g1.
-    Proof. by rewrite /eqb_rdf perm_sym. Qed.
-
-    Lemma eqb_rdf_trans g1 g2 g3: eqb_rdf g1 g2 -> eqb_rdf g2 g3 -> eqb_rdf g1 g3.
-    Proof. by rewrite /eqb_rdf; apply perm_trans. Qed.
-
-    Canonical rdf_eqType := EqType (rdf_graph I B L) (CanEqMixin (@pcancel_code_decode I B L)).
-    Canonical rdf_predType := PredType (pred_of_seq \o (@graph I B L)).
-
-    Remark eq_eqb_rdf g1 g2 : g1 == g2 -> eqb_rdf g1 g2.
-    Proof. by move=> /eqP ->; rewrite eqb_rdf_refl. Qed.
-
-    (* Variable g : rdf_graph I B L. *)
-    (* Variable trm : term I B L. *)
-    (* Variable t : triple I B L. *)
-    (* Check trm \in t. *)
-    (* Check t \in g. *)
-    (* Print SetDef.finset. *)
-    (* (* requieres trm to be finType *) *)
-    (* Fail Check finset (trm \in g). *)
-
     Section Relabeling_graph_eq.
 
       Lemma relabeling_mu_inv (g : rdf_graph I B L) (fs : seq (B -> B))
@@ -162,12 +159,19 @@ Section Rdf.
     Definition terms (I' B' L': eqType) (g : rdf_graph I' B' L') : seq (term I' B' L') :=
       undup (flatten (map (@terms_triple I' B' L') g)).
 
+    Lemma terms_graph (I' B' L': eqType) (g : rdf_graph I' B' L') :
+      terms g = undup (flatten (map (@terms_triple I' B' L') (graph g))).
+    Proof. by case g. Qed.
+
     Lemma undup_terms g : undup (terms g) = (terms g).
     Proof. by rewrite /terms undup_idem. Qed.
 
-    Definition terms_cons (I' B' L': eqType) (trpl : triple I' B' L') (ts : seq (triple I' B' L')) :
-      terms (mkRdfGraph (trpl :: ts)) = undup (terms_triple trpl ++ (terms (mkRdfGraph ts))).
-    Proof. by rewrite /terms; case: ts=>  [ // | ? ? ] ; rewrite undup_cat_r. Qed.
+    Definition uniq_tail (T: eqType) a (t : seq T) : (uniq (a :: t)) -> uniq t.
+    Proof. by move=> /andP[_ //]. Qed.
+
+    Definition terms_cons (I' B' L': eqType) (trpl : triple I' B' L') (ts : seq (triple I' B' L')) (us : uniq (trpl :: ts)):
+      terms (mkRdfGraph us) = undup (terms_triple trpl ++ (terms (mkRdfGraph (uniq_tail us)))).
+    Proof. by rewrite /terms; case: ts us=>  [ // | ? ? ]; rewrite /= undup_cat_r. Qed.
 
     Section TermRelabeling.
       Variable B1 B2: eqType.
@@ -176,12 +180,29 @@ Section Rdf.
         (@terms I B2 L (relabeling mu g)) =i undup (map (relabeling_term mu) (terms g)).
       Proof. Admitted.
 
+      Lemma relabeling_triple_inj (B' B'' : Type) (mu : B' -> B'') (inj_mu :injective mu) : injective (@relabeling_triple I L B' B'' mu).
+      Proof.
+        have inj_rtmu : injective (relabeling_term mu). by move=> ? ?; apply relabeling_term_inj.
+        move=> x y; rewrite /relabeling_triple; case x; case y=> // ? ? ? ? ? ? ? ? ? ?.
+             by move=> [] /inj_rtmu eq1 /inj_rtmu eq2 /inj_rtmu eq3; apply triple_inj.
+      Qed.
+
       Lemma terms_relabeled (g : rdf_graph I B1 L) (mu: B1 -> B2) (inj_mu : injective mu):
         (@terms I B2 L (relabeling mu g)) = map (relabeling_term mu) (terms g).
-      Proof. elim g=> g'; elim g'=> [//|t ts IHts].
-             + rewrite relabeling_cons !terms_cons -undup_map_inj; last exact: relabeling_term_inj.
-               by rewrite IHts map_cat terms_relabeled_triple //; apply inj_mu.
-      Qed.
+      Proof. elim g=> g'; elim g'=> [//|t ts IHts] us.
+             + rewrite relabeling_cons.
+               have H: undup (relabeling_triple mu t :: relabeling_seq_triple mu ts) =
+                        relabeling_triple mu t :: relabeling_seq_triple mu ts.
+               rewrite /relabeling_seq_triple -map_cons undup_map_inj; last by apply relabeling_triple_inj.
+               by f_equal; apply undup_id.
+
+               rewrite terms_graph /=.
+               have ->: (relabeling_triple mu t \in relabeling_seq_triple mu ts) = false.
+               admit.
+               rewrite terms_graph /= undup_cat. rewrite /terms in IHts.
+               rewrite (IHts (uniq_tail us)).
+               (* TODO *)
+      Abort.
     End TermRelabeling.
 
     Definition bnodes g : seq (term I B L) :=
@@ -328,7 +349,7 @@ Section Rdf.
 
     Definition isocanonical_mapping (M : rdf_graph I B L -> rdf_graph I B L) :=
       forall g, mapping_is_iso M /\
-             (forall g1 g2, perm_eq (M g1) (M g2) <-> iso g1 g2).
+                  (forall g1 g2, perm_eq (M g1) (M g2) <-> iso g1 g2).
 
     Definition dt_names (M : rdf_graph I B L -> rdf_graph I B L) := forall g μ, (bijective μ) -> (eqb_rdf  (M (relabeling μ g)) (M g)).
 
@@ -452,7 +473,7 @@ The term "g1" has type "rdf_graph I B L" while it is expected to have type
 
       Definition iso_bijin_refl g: iso_bijin g g.
       Proof. exists id; split; first by exists id.
-                                     by rewrite relabeling_id.
+                                               by rewrite relabeling_id.
       Qed.
 
       Lemma iso_bijin_trans g1 g2 g3 : iso_bijin g1 g2 -> iso_bijin g2 g3 -> iso_bijin g1 g3.

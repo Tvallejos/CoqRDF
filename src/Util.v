@@ -49,7 +49,7 @@ Lemma map_inv (T U: eqType) (s:seq T) (f: T -> U):
 Proof. elim : s => [| a t IHts] u /=; first by rewrite in_nil.
        + rewrite in_cons; case/orP => [/eqP -> | y].
          by exists a.
-                   - by apply: IHts y.
+              - by apply: IHts y.
 Qed.
 
 Lemma foldl_min (disp: unit) (T: porderType disp) (l: seq T) (x0 : T) :
@@ -64,10 +64,10 @@ Qed.
 Lemma min_seq (disp : unit) (T: orderType disp) (s: seq T) (hd:T) :
   exists (minimum: T), forall (t: T), t \in (hd::s) -> (<=%O minimum t).
 Proof. elim: (hd::s)=> [| a t [minimum IHts]]; first by exists hd=> t; rewrite in_nil.
-                                                               + case e: (<=%O minimum a); [exists minimum | exists a]
-                                                                      => a0; rewrite in_cons; case/orP=> [/eqP ->| /IHts ain] //.
-                                                               - have /Order.POrderTheory.ltW amin: (<%O a minimum). admit.
-                                                                 apply (Order.POrderTheory.le_trans amin ain).
+                                                        + case e: (<=%O minimum a); [exists minimum | exists a]
+                                                               => a0; rewrite in_cons; case/orP=> [/eqP ->| /IHts ain] //.
+                                                        - have /Order.POrderTheory.ltW amin: (<%O a minimum). admit.
+                                                          apply (Order.POrderTheory.le_trans amin ain).
 Admitted.
 
 Lemma foldl_max (disp: unit) (T: porderType disp) (l: seq T) (x0 : T) :
@@ -231,30 +231,47 @@ Lemma perm_map_comp (T1 T2 T3 : eqType) (f: T1 -> T2) (g : T2 -> T3) s1 s2 s3 :
   perm_eq (map (g \o f) s1) s3.
 Proof. by move=> /(perm_map g); rewrite -map_comp; apply perm_trans. Qed.
 
-      Lemma can_in_pcan_in (T1 T2 : eqType) (f : T1 -> T2) (g : T2 -> T1) (s : seq T2): {in s, cancel g f} -> {in s, pcancel g (fun y => Some (f y))}.
-      Proof. by move=> can y yin; congr (Some _); apply can. Qed.
+Lemma can_in_pcan_in (T1 T2 : eqType) (f : T1 -> T2) (g : T2 -> T1) (s : seq T2): {in s, cancel g f} -> {in s, pcancel g (fun y => Some (f y))}.
+Proof. by move=> can y yin; congr (Some _); apply can. Qed.
 
-      Lemma pcan_in_inj (T1 T2 : eqType) (f : T1 -> T2) (g : T2 -> option T1) (s : seq T1) :
-        {in s, pcancel f g} -> {in s &, injective f}.
-      Proof. by move=> fK x y xin yin=> /(congr1 g); rewrite !fK // => [[]]. Qed.
+Lemma pcan_in_inj (T1 T2 : eqType) (f : T1 -> T2) (g : T2 -> option T1) (s : seq T1) :
+  {in s, pcancel f g} -> {in s &, injective f}.
+Proof. by move=> fK x y xin yin=> /(congr1 g); rewrite !fK // => [[]]. Qed.
 
-      Lemma inj_in_inamp (T1 T2 : eqType) (f : T1 -> T2) (s : seq T1): {in s, injective f} -> {in s &, injective f}.
-      Proof. by move=> injf x y xin /injf H /eqP; rewrite eq_sym=> /eqP/H ->. Qed.
+Lemma inj_in_inamp (T1 T2 : eqType) (f : T1 -> T2) (s : seq T1): {in s, injective f} -> {in s &, injective f}.
+Proof. by move=> injf x y xin /injf H /eqP; rewrite eq_sym=> /eqP/H ->. Qed.
 
-      Lemma can_in_inj (T1 T2 : eqType) (f : T1 -> T2) (g : T2 -> T1) (s : seq T1) : {in s, cancel f g} -> {in s &, injective f}.
-      Proof. move/can_in_pcan_in. move=> pcan. eapply pcan_in_inj. exact: pcan. Qed.
-      (* from coq ssr ssrfun *)
+Lemma can_in_inj (T1 T2 : eqType) (f : T1 -> T2) (g : T2 -> T1) (s : seq T1) : {in s, cancel f g} -> {in s &, injective f}.
+Proof. move/can_in_pcan_in. move=> pcan. eapply pcan_in_inj. exact: pcan. Qed.
+(* from coq ssr ssrfun *)
 
-      (* Lemma perm_map (T U: eqType) (s: seq T) (f: T -> U): permutations (map f s) = map (map f) (permutations s). *)
-      (* Proof. Admitted. *)
 
-(* Lemma ext_pred_mem (T1 : eqType) (d1 d2: {pred T1}) P : {in d1, P } -> d1 =i d2 -> {in d2, P}. *)
+Lemma mem_in_map (T1 T2 : eqType) (f : T1 -> T2) (s : seq T1) : {in s, injective f} -> forall (x : T1), (f x \in [seq f i | i <- s]) = (x \in s).
+Proof. move=> H x. apply /mapP/idP; last by exists x.
+                                             by move=> [y yin] /eqP; rewrite eq_sym=> /eqP/H <-.
+Qed.
 
-(* Lemma ext_pred_bij (T1 T2 : eqType) (d1 d2: {pred T1}) (f : T1 -> T2) : {in d1, bijective f} -> d1 =i d2 -> {in d2, bijective f}. *)
-(* Proof. *)
-(*   (* move=> H dwqd. *) *)
-(*   Locate "_ =i _". *)
-(*   (* move=> [g xin yon] d1eqd2. exists g. *) *)
-(*   Fail apply /allP. *)
-(* Abort. *)
+Lemma map_nil_is_nil (A C: eqType) (f : A -> C) (s : seq A) : (map f s == [::]) = (s == [::]).
+Proof. by case s. Qed.
 
+Lemma mem_eq_is_nil (A : eqType) (s : seq A) : s =i [::] -> s = [::].
+Proof. case: s=> [// | h t] H.
+       + have: h \in [::]. rewrite -H in_cons eqxx //.
+         by rewrite in_nil.
+Qed.
+
+Lemma perm_eq_nil_cons (T: eqType) t (s : seq T) : perm_eq [::] (t :: s) = false.
+Proof. by rewrite /perm_eq /= eqxx. Qed.
+
+Lemma mem_cons (T : eqType) (x y : T) (s : seq T) : x \in s -> x \in y :: s.
+Proof. by rewrite in_cons orbC=> ->. Qed.
+
+Lemma mem_map_undup (T1 T2 : eqType) (f : T1 -> T2) (s : seq T1):
+  map f s =i map f (undup s).
+Proof. elim: s=> [//| h t IHl].
+       case e: (h \in t)=> x /=.
+       have ->: (x \in f h :: [seq f i | i <- t]) = (x \in [seq f i | i <- t]).
+       by rewrite -mem_undup /= ; rewrite map_f // mem_undup.
+       by rewrite e -IHl.
+       by rewrite e !in_cons -IHl.
+Qed.

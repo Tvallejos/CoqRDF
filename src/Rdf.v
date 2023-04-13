@@ -170,25 +170,6 @@ Section Rdf.
     Section TermRelabeling.
       Variable B1 B2: eqType.
 
-      Lemma mem_cons (T : eqType) (x y : T) (s : seq T) : x \in s -> x \in y :: s.
-      Proof. by rewrite in_cons orbC=> ->. Qed.
-
-      Lemma mem_map_undup (T1 T2 : eqType) (f : T1 -> T2) (s : seq T1):
-        map f s =i map f (undup s).
-      Proof. elim: s=> [//| h t IHl].
-             case e: (h \in t)=> x /=.
-             have ->: (x \in f h :: [seq f i | i <- t]) = (x \in [seq f i | i <- t]).
-             by rewrite -mem_undup /= ; rewrite map_f // mem_undup.
-             by rewrite e -IHl.
-             by rewrite e !in_cons -IHl.
-      Qed.
-
-      (* Lemma flatten_map_mem (g : rdf_graph I B1 L) (mu : B1 -> B2) : *)
-      (*   flatten [seq terms_triple i | i <- relabeling mu g] =i map (relabeling_term mu) (terms g). *)
-      (* Proof. rewrite /relabeling/terms=> x; rewrite -mem_map_undup. *)
-      (*        rewrite /relabeling_seq_triple. *)
-      (*        case: g=> g'; elim g'=> [//| t tl IHtl]. *)
-
       Lemma terms_relabeled_mem (g : rdf_graph I B1 L) (mu: B1 -> B2) :
         (@terms I B2 L (relabeling mu g)) =i undup (map (relabeling_term mu) (terms g)).
       Proof. Admitted.
@@ -291,33 +272,6 @@ Section Rdf.
     Definition get_b g : seq B :=
       undup (get_bs (bnodes g)).
 
-    (* Lemma get_bs_cons (trpl : triple I B L) (ts : seq (triple I B L)) : *)
-    (*   get_b {| graph := (trpl :: ts) |} = undup (get_bs (bnodes_triple trpl) ++ get_b {| graph := ts |}). *)
-    (* Proof. rewrite /get_b bnodes_cons. Admitted. *)
-
-
-    (* Lemma get_bs_bnodes (b : B) g: (Bnode b) \in (bnodes g) -> b \in (get_b g). *)
-    (* Proof. elim g=> g'; elim: g'=> [//| h t IHtl]. *)
-    (*        rewrite bnodes_cons get_bs_cons undup_cat mem_cat. *)
-    (*        Admitted. *)
-
-    (* Lemma get_bs_notin (b : B) (s: seq (term I B L)): (Bnode b) \notin s -> b \notin (get_bs s). *)
-    (*   Proof. Admitted. *)
-
-
-    (* Lemma get_bs_uniq (s : seq (term I B L)) : uniq s -> uniq (get_bs s). *)
-    (* Proof. rewrite /get_b. elim: s=> [//| h t IHtl]. *)
-    (*        rewrite /=; case: h=> x /andP [nin unt]. *)
-    (*         apply: IHtl unt. *)
-    (*         apply: IHtl unt. *)
-    (*         by rewrite cons_uniq (IHtl unt) (get_bs_notin nin). *)
-    (* Qed. *)
-
-    (* Lemma mapping_permutation_injective g1 g2 mu: *)
-    (*     perm_eq (map mu (get_b g1)) (get_b g2) -> *)
-    (*     uniq (map mu (get_b g1)). *)
-    (* Proof. by move=> /perm_uniq ->; apply get_bs_uniq; rewrite undup_uniq. Qed. *)
-
     Lemma relabeling_triple_of_comp (B1 B2 B3: eqType)(mu : B2 -> B3) (nu : B1 -> B2): ((@relabeling_triple I L _ _ mu) \o (@relabeling_triple I L _ _ nu)) =1 (relabeling_triple (mu \o nu)).
     Proof. by move=> t; rewrite relabeling_triple_comp. Qed.
 
@@ -328,7 +282,7 @@ Section Rdf.
       suffices : [seq relabeling_triple nu i | i <- relabeling mu g2] = g2. by rewrite perm_sym; move ->.
       have-> : [seq relabeling_triple nu i | i <- relabeling mu g2] = relabeling_seq_triple (nu \o mu) g2.
       rewrite /relabeling_seq_triple. case:  g2=> g2'; elim : g2' => [//| a t IHtl /=].
-      by rewrite relabeling_triple_comp IHtl. 
+      by rewrite relabeling_triple_comp IHtl.
       have /relabeling_seq_triple_ext-> : nu \o mu =1 id by [].
       by rewrite relabeling_seq_triple_id.
     Qed.
@@ -443,19 +397,6 @@ The term "g1" has type "rdf_graph I B L" while it is expected to have type
 
       Definition bijin (mu : B -> B) (D : seq B) := {in D, bijective mu}.
 
-      (* Definition bijin_inv mu D (mu_bijin: bijin mu D) : exists nu, bijin nu (map mu D). *)
-      (* Proof. case mu_bijin=> nu canin canon. exists nu. rewrite /bijin. exists mu=> x xin. *)
-      (*        + *)
-      (*          (* have inj_mu: injective mu. eapply can_inj. admit. *) *)
-      (*          rewrite canon //.  *)
-      (*          admit. *)
-      (*        + rewrite canin //. *)
-      (*          (* have : injective mu. *) *)
-      (*          (* needs to apply mem_image to the fintype of the list D *) *)
-      (*          rewrite mem_map //) in xin. *)
-      (*          admit. *)
-      (* Admitted. *)
-
       Definition list_intersection (D1 : list B) (D2 : list B) : list B :=
         let fix help xs :=
           match xs with
@@ -480,8 +421,8 @@ The term "g1" has type "rdf_graph I B L" while it is expected to have type
         match D with
         | nil => nil
         | b :: bs => if mem_seq CD (mu b)
-                   then b :: find_preim mu bs CD else
-                     find_preim mu bs CD end.
+                     then b :: find_preim mu bs CD else
+                       find_preim mu bs CD end.
 
       Lemma in_preim1 mu D CD x : x \in find_preim mu D CD -> (x \in D).
       Admitted.
@@ -507,76 +448,19 @@ The term "g1" has type "rdf_graph I B L" while it is expected to have type
           bijin mu (get_b g1) /\
             perm_eq (relabeling mu g1) g2.
 
-      (* Lemma get_b_map mu g : (@get_b I B L (relabeling mu g)) = [seq mu i | i <- get_b g]. *)
-      (* Proof. elim g=> g'; elim: g'=> [//| t ts IHts]. *)
-      (*        rewrite relabeling_cons /= /get_b !bnodes_cons. rewrite !undup_cat. Abort. *)
-
-      (* Lemma one_to_one mu g1 g2 : bijin mu (get_b g1) -> relabeling mu g1 == g2 -> *)
-      (*                             perm_eq (get_b g2) (map mu (get_b g1)). *)
-      (* Proof. elim g1=> g1'; elim: g1'=> [| t ts IHts]. *)
-      (*        move=> _ /eqP <- /=. rewrite relabeling_nil //.  *)
-      (*        move=> h /eqP H /=. rewrite -H. Abort. *)
-      (* relabeling_cons. /get_b/bnodes. apply perm_undup. //. *)
-      (* rewrite . *)
-
-
       Definition iso_bijin_refl g: iso_bijin g g.
       Proof. exists id; split; first by exists id.
                                      by rewrite relabeling_id.
       Qed.
 
-      Lemma relabeling_codom mu g1 g2 : relabeling mu g1 = g2 -> forall b, b \in (get_b g1) -> mu b \in (get_b g2).
-      Proof. Admitted.
-
-      Lemma mem_in_map (T1 T2 : eqType) (f : T1 -> T2) (s : seq T1) : {in s, injective f} -> forall (x : T1), (f x \in [seq f i | i <- s]) = (x \in s).
-      Proof. move=> H x. apply /mapP/idP; last by exists x.
-                                                   by move=> [y yin] /eqP; rewrite eq_sym=> /eqP/H <-.
-      Qed.
-
-      Lemma local_inj_can_sym (A C : eqType) (f : C -> A) (f' : A -> C) (cs : list C): {in cs, cancel f f'} -> {in (map f cs) &, injective f'} -> {in (map f cs), cancel f' f}.
-      Proof.
-        move=> h1 h2. move=> a ain.
-        have [c ceq]: exists t : C, a = f t.
-        by apply map_inv in ain.
-        rewrite ceq. rewrite h1 //. rewrite ceq in ain. erewrite <- mem_in_map. apply ain.
-        have : {in cs&, injective f}. apply (can_in_inj h1). 
-        (* here I need {in cs, injective f}, but have {in cs&, injective f} instead*)
-      Abort.
-
-
-      (* Lemma relabeling_dom mu g1 g2 : relabeling mu g1 = g2 -> forall b, mu b \in (get_b g2) -> b \in (get_b g1). *)
-      (* Proof. Admitted. *)
-
-      (* Lemma bijective_in_eqb_rdf (I B L : eqType) (mu nu : B -> B) (g1 g2 : rdf_graph I B L) : *)
-      (*     {in (get_b g1), (cancel mu nu /\ (g1 == relabeling mu g2))} -> {in (get_b g2), g2 == relabeling nu g1}. *)
-
       Lemma iso_bijin_trans g1 g2 g3 : iso_bijin g1 g2 -> iso_bijin g2 g3 -> iso_bijin g1 g3.
       Proof. rewrite /iso_bijin/bijin=> [[mu12 [bijin12 rel12]]] [mu23 [bijin23 rel23]].
              exists (mu23 \o mu12). split.
-             (* last by rewrite -relabeling_comp rel12 rel23. *)
-             (* rewrite /bijin. move: bijin12 bijin23=> [nu21 canin12 canon12] [nu32 canin23 canon23]. *)
-             (* exists (nu21 \o nu32)=> x xin /=. *)
-             (* rewrite canin23 ?canin12 //; apply (relabeling_codom rel12 xin). *)
-             (* (* have can21: {in get_b g2, cancel nu21 mu12}. apply inj_can_sym. apply canin12. *) *)
-             (* rewrite canon12; last exact xin. rewrite canon23 //. *)
-
-             (* inj_can_sym: forall [A B : Type] [f : B -> A] [f' : A -> B], cancel f f' -> injective f' -> cancel f' f *)
-             (* erewrite relabeling_dom=> //.  *)
-             (* no hypothesis about nu's composition *)
-
-      (* need something to build the other direction using the cancel,
-              something like the commented lemma above. *)
       Abort.
 
       Lemma iso_bijin_symm g1 g2 : iso_bijin g1 g2 <-> iso_bijin g2 g1.
       Proof.
-        (* Abort. *)
-        (* split; rewrite /iso_bijin=> [] [mu [[nu canin] canon]] /eq_eqb_rdf relab. *)
-        (* exists nu; split. rewrite /bijin. admit. *)
-        (* rewrite eq_sym in relab *. rewrite eq_sym. eapply bijective_eqb_rdf; last by apply relab. *)
-        (* Fail apply canin. *)
       Abort.
-      (* solving the problem of trans would also solve symmetry *)
 
 
     End IsoBij_in_dom.
@@ -618,15 +502,6 @@ The term "g1" has type "rdf_graph I B L" while it is expected to have type
       Definition iso_mapping_refl g : iso_mapping g g.
       Proof. exists id; rewrite /is_iso_mapping; apply /andP; split; last by rewrite relabeling_id eqb_rdf_refl.
              + by rewrite /is_pre_iso map_id.
-      Qed.
-
-      Definition map_nil_is_nil (A C: eqType) (f : A -> C) (s : seq A) : (map f s == [::]) = (s == [::]).
-      Proof. by case s. Qed.
-
-      Lemma mem_eq_is_nil (A : eqType) (s : seq A) : s =i [::] -> s = [::].
-      Proof. case: s=> [// | h t] H.
-             + have: h \in [::]. rewrite -H in_cons eqxx //.
-               by rewrite in_nil.
       Qed.
 
       Lemma eqb_rdf_terms g1 g2 : eqb_rdf g1 g2 -> perm_eq (terms g1) (terms g2).
@@ -706,15 +581,11 @@ The term "g1" has type "rdf_graph I B L" while it is expected to have type
                case: (b \in get_bs t)=> //; by rewrite IHt.
       Qed.
 
-      Lemma perm_eq_nil_cons (T: eqType) t (s : seq T) : perm_eq [::] (t :: s) = false.
-      Proof. by rewrite /perm_eq /= eqxx. Qed.
-
       Lemma bnodes_map_get_b g : bnodes g = map (fun b=> Bnode b) (get_b g).
       Proof. rewrite /get_b. move: (all_bnodes g); rewrite undup_get_bsC. elim: (bnodes g)=> [//| h t IHl].
              case: h=> // b /= H. by rewrite {1}IHl.
              apply uniq_bnodes.
       Qed.
-
 
       Lemma count_mem_bnodes b l: all (@is_bnode I B L) l -> count_mem b (get_bs l) = count_mem (Bnode b) l.
       Proof. elim: l=> [//|[//|//|//]b' t IHt] albn.
@@ -723,20 +594,6 @@ The term "g1" has type "rdf_graph I B L" while it is expected to have type
 
       Lemma perm_eq_1s (b1 b2: B) : perm_eq [:: b1] [:: b2] = perm_eq [:: (@Bnode I B L b1)] [:: Bnode b2].
       Proof. by rewrite /perm_eq /= -!eqb_eq /=. Qed.
-
-      (* Lemma perm_eq_bnodes_get_bs_cons b1 b2 s1 s2: uniq s1 -> uniq s2 -> all (@is_bnode I B L) s1 -> all (@is_bnode I B L) s2  -> (perm_eq (b1 :: (get_bs s1)) (b2 :: get_bs s2) == perm_eq (Bnode b1 :: s1) (Bnode b2 :: s2)) = (perm_eq (get_bs s1) (get_bs s2) == perm_eq s1 s2). *)
-      (* Proof. Admitted. *)
-
-      (* Lemma perm_eq_bnodes_get_bs s1 s2: all (@is_bnode I B L) s1 -> all (@is_bnode I B L) s2  -> perm_eq (get_bs s1) (get_bs s2) = perm_eq s1 s2. *)
-      (*   Proof. elim: s1 s2 => [//| h t IHt]. *)
-      (*        case=> [//| a l]. case: a=> // b. *)
-      (*        by rewrite /= !perm_eq_nil_cons. *)
-      (*        case: h=> // b /=. *)
-      (*        case => [//| a l' ]. *)
-      (*        by rewrite /= perm_sym perm_eq_nil_cons perm_sym perm_eq_nil_cons. *)
-      (*        case: a=> // b2 alb1 alb2. *)
-      (*        apply /eqP. rewrite perm_eq_bnodes_get_bs_cons // IHt //. *)
-      (*   Qed. *)
 
       Lemma get_bs_map s mu: all (@is_bnode I B L) s -> (@get_bs I B L (map (relabeling_term mu) s)) = map mu (get_bs s).
       Proof. by elim: s=> [//| [//|//|//]b t IHtl] /==> ? ; rewrite IHtl. Qed.
@@ -813,21 +670,9 @@ The term "g1" has type "rdf_graph I B L" while it is expected to have type
         have all_bnodes_triple: forall t, all (@is_bnode I B L) (bnodes_triple t). admit.
         move: (all_bnodes_triple h) (all_bnodes_triple (relabeling_triple mu h)).
         have bnodes_triple_filter: forall (t : triple I B L), bnodes_triple t =
-                                                           (undup (filter (@is_bnode I B L) [:: (subject t); (predicate t); (object t)])). admit.
+                                                                (undup (filter (@is_bnode I B L) [:: (subject t); (predicate t); (object t)])). admit.
         by case h; case=> // x; case=> // y; case=> // z ? ?; rewrite !bnodes_triple_filter !mem_undup_get_bs // mem_undup_get_bs_map.
       Admitted.
-
-      (* Lemma relabeling_get_b g1 g2 (mu : B -> B): *)
-      (*   eqb_rdf (relabeling mu g1) g2 <-> *)
-      (*     is_iso_mapping g1 g2 mu. *)
-      (* Proof. split; last by move=> /andP [_ b]. *)
-      (*        move=> eqb. *)
-      (*        suffices : is_pre_iso g1 g2 mu. by rewrite /is_iso_mapping=> ->. *)
-      (*        move : eqb => /eqb_rdf_get_b=> peq. *)
-
-      (*        have getrel: perm_eq [seq mu i | i <- get_b g1] (get_b (relabeling mu g1)). rewrite -perm_relabel_bnodes. by apply get_b_relabeling_perm. *)
-      (*        apply: perm_trans getrel peq. *)
-      (* Qed. *)
 
       Remark eqiso_mapping g1 g2 : eqb_rdf g1 g2 -> iso_mapping g1 g2.
       Proof. rewrite /is_iso_mapping -{1}(relabeling_id g1). exists id; apply /andP; split=> [|//].
@@ -837,8 +682,6 @@ The term "g1" has type "rdf_graph I B L" while it is expected to have type
       Lemma eqb_rdf_relabeling_inv g1 g2 mu :
         eqb_rdf (relabeling mu g1) g2 -> exists nu, eqb_rdf (relabeling nu g2) g1.
       Proof.
-        (* move: (get_b_relabeling_perm g1 mu). rewrite /eqb_rdf/relabeling/relabeling_seq_triple. *)
-        (*      move=> preq peq. *)
       Admitted.
 
       Definition iso_mapping_sym g1 g2 : iso_mapping g1 g2 <-> iso_mapping g2 g1.
@@ -861,7 +704,7 @@ The term "g1" has type "rdf_graph I B L" while it is expected to have type
         eqb_rdf (relabeling (mu23 \o mu12) g1) g3.
       Proof. rewrite /eqb_rdf/relabeling=> /(perm_map (relabeling_triple mu23)) p12 p23.
              suffices <- : [seq relabeling_triple mu23 i | i <- {| graph := relabeling_seq_triple mu12 g1 |}] =
-                            {| graph := relabeling_seq_triple (mu23 \o mu12) g1 |}.
+                             {| graph := relabeling_seq_triple (mu23 \o mu12) g1 |}.
              by apply: perm_trans p12 p23.
              by rewrite -relabeling_seq_triple_comp/relabeling_seq_triple; case g1.
       Qed.
@@ -874,7 +717,7 @@ The term "g1" has type "rdf_graph I B L" while it is expected to have type
 
       Definition isocanonical_mapping_map (M : rdf_graph I B L -> rdf_graph I B L) :=
         forall g, iso_mapping (M g) g /\
-               (forall g1 g2, eqb_rdf (M g1) (M g2) <-> iso_mapping g1 g2).
+                    (forall g1 g2, eqb_rdf (M g1) (M g2) <-> iso_mapping g1 g2).
 
       Definition mapping_is_iso_mapping (M : rdf_graph I B L -> rdf_graph I B L) := forall g, iso_mapping (M g) g.
 
@@ -918,16 +761,16 @@ The term "g1" has type "rdf_graph I B L" while it is expected to have type
 
     Definition isocanonical_mapping_local (M : rdf_graph I B L -> rdf_graph I B L) :=
       forall g, iso_local (M g) g /\
-             (forall g1 g2, (M g1) == (M g2) <-> iso_local g1 g2).
+                  (forall g1 g2, (M g1) == (M g2) <-> iso_local g1 g2).
 
     Lemma iso_local_refl g : iso_local g g.
     Proof. rewrite /iso_local /is_iso_local; exists id; split; first by exists id.
-                                                                     by rewrite relabeling_id.
+                                                                               by rewrite relabeling_id.
     Qed.
 
     Remark eqiso_local g1 g2 : g1 == g2 -> iso_local g1 g2.
     Proof. exists id. rewrite /is_iso_local; split; first by exists id.
-                                                          by move/eqP: H ->; rewrite relabeling_id.
+                                                                    by move/eqP: H ->; rewrite relabeling_id.
     Qed.
 
     Lemma iso_local_symm g1 g2 : iso_local g1 g2 <-> iso_local g2 g1.
@@ -977,7 +820,7 @@ The term "g1" has type "rdf_graph I B L" while it is expected to have type
       Variables (g' : rdf_graph I B L).
 
       Variables (bns : {set (seq_sub (bnodes g'))}) (b : term I B L).
-      
+
       Search _ seq_sub.
 
       Definition p1 (A : {set (seq_sub (bnodes g'))}) : option (term I B L) :=

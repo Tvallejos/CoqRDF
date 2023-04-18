@@ -212,16 +212,16 @@ Section Rdf.
 
       Lemma terms_relabeled (g : rdf_graph I B1 L) (mu: B1 -> B2) (inj_mu : injective mu):
         forall us,
-        (@terms I B2 L (@relabeling B1 B2 mu g us)) = map (relabeling_term mu) (terms g).
+          (@terms I B2 L (@relabeling B1 B2 mu g us)) = map (relabeling_term mu) (terms g).
       Proof.
         move: (@relabeling_triple_inj I L B1 B2 mu inj_mu) (@relabeling_term_inj I B1 B2 L mu inj_mu) => rts_inj rt_inj.
-        elim g=> g'; elim g'=> [//|t ts IHts] us.
+        elim g=> g'; elim g'=> [//|t ts IHts] us /= x.
         + have /andP[/negPf nin urt]: uniq (relabeling_triple mu t :: relabeling_seq_triple mu ts).
           by rewrite -map_cons map_inj_uniq //.
-          move=> /= x.
           rewrite relabeling_cons terms_graph /= nin terms_cons -(undup_map_inj rt_inj) -undup_cat_r.
-          f_equal; rewrite map_cat; f_equal; first by apply terms_relabeled_triple.
-          have ->: undup (flatten [seq terms_triple i | i <- undup (relabeling_seq_triple mu ts)]) = (terms (relabeling mu {| graph := ts; ugraph := (uniq_tail us) |})). by [].
+          f_equal; rewrite map_cat=> /=. f_equal; first by apply terms_relabeled_triple.
+          have ->: undup (flatten [seq terms_triple i | i <- undup (relabeling_seq_triple mu ts)]) = (terms (@relabeling B1 B2 mu {| graph := ts; ugraph := (uniq_tail us) |} urt)).
+          by rewrite terms_graph /= (undup_id urt).
           by rewrite IHts.
       Qed.
 
@@ -233,13 +233,14 @@ Section Rdf.
     Section BnodeRelabeling.
       Variable B1 B2: eqType.
 
-      Lemma bnodes_relabel_mem (g: rdf_graph I B L) (mu: B -> B) :
-        bnodes (relabeling mu g) =i (map (relabeling_term mu) (bnodes g)).
-      Proof. Admitted.
+      (* Lemma bnodes_relabel_mem (g: rdf_graph I B L) (mu: B -> B) : *)
+      (*   bnodes (relabeling mu g) =i (map (relabeling_term mu) (bnodes g)). *)
+      (* Proof. Admitted. *)
 
       Lemma bnodes_relabel (g: rdf_graph I B L) (mu: B -> B) (inj_mu : injective mu):
-        bnodes (relabeling mu g) = (map (relabeling_term mu) (bnodes g)).
-      Proof. move: (@relabeling_term_inj I B B L mu inj_mu) => inj_rtmu.
+        forall us,
+        bnodes (@relabeling B B mu g us) = (map (relabeling_term mu) (bnodes g)).
+      Proof. move: (@relabeling_term_inj I B B L mu inj_mu) => inj_rtmu us.
              rewrite /bnodes terms_relabeled // -filter_undup undup_map_inj; last by apply inj_rtmu.
              rewrite -filter_undup.
              elim: (undup (terms g))=> [//| a l IHl] /=.
@@ -295,23 +296,32 @@ Section Rdf.
     Proof. by move=> t; rewrite relabeling_triple_comp. Qed.
 
     Lemma bijective_eqb_rdf mu nu g1 g2 :
-      cancel mu nu -> eqb_rdf g1 (relabeling mu g2) -> eqb_rdf g2 (relabeling nu g1).
+      forall us1 us2,
+      cancel mu nu -> eqb_rdf g1 (@relabeling _ _ mu g2 us1) -> eqb_rdf g2 (@relabeling _ _ nu g1 us2).
     Proof.
+      move=> us1 us2.
       rewrite /eqb_rdf=> cancel_mu_nu /perm_map=> /(_ (triple_eqType I B L) (relabeling_triple nu)).
-      suffices : undup [seq relabeling_triple nu i | i <- relabeling mu g2] = g2.
+      suffices : undup [seq relabeling_triple nu i | i <- (@relabeling _ _ mu g2 us1)] = g2.
       rewrite perm_sym=> <- /perm_mem peq.
       apply uniq_perm=> //.
       + apply undup_uniq.
-      + apply ugraph.
-      + by move=> x; rewrite mem_undup peq /= mem_undup.
-        have-> : [seq relabeling_triple nu i | i <- relabeling mu g2] = relabeling_seq_triple (nu \o mu) g2.
-      - rewrite /relabeling_seq_triple; case:  g2=> g2'; elim : g2' => [//| a t IHtl] us.
-        move : (can_inj cancel_mu_nu) => /relabeling_triple_inj mu_inj.
+      + by move=> x; rewrite mem_undup.
+        (* + move=> x; rewrite mem_undup peq /= mem_undup. *)
+        (* move=> urmu. *)
+        have-> : [seq relabeling_triple nu i | i <- (@relabeling _ _ mu g2 us1)] = relabeling_seq_triple (nu \o mu) g2.
+      - rewrite /relabeling_seq_triple. case: g2 us1=> g2'. elim : g2' => [//| a t IHtl] us.
+        move : (can_inj cancel_mu_nu) => /relabeling_triple_inj=> /(_ I L) mu_inj us1.
         have : (relabeling_triple mu a \in relabeling_seq_triple mu t) = false.
-        by rewrite mem_map //; move: us=> /andP[/negPf nin _] //; last by apply mu_inj.
-        by rewrite /= relabeling_triple_comp=> e ; rewrite e /= -IHtl //; apply (uniq_tail us).
-        have /relabeling_seq_triple_ext-> : nu \o mu =1 id by [].
-        by rewrite relabeling_seq_triple_id; apply (undup_id (ugraph g2)).
+        rewrite mem_map //. move: us us1=> /andP[/negPf nin //] //.
+        (* //; last by apply mu_inj. *)
+        rewrite /= relabeling_triple_comp=> e /=. rewrite -IHtl.
+        apply (uniq_tail us).
+        move=> ?. apply (uniq_tail us1).
+        done.
+        have /relabeling_seq_triple_ext numu_id : nu \o mu =1 id by [].
+        rewrite numu_id undup_id.
+        by rewrite relabeling_seq_triple_id.
+        by rewrite relabeling_seq_triple_id; case g2=> ? u //.
     Qed.
 
     Remark id_bij T: bijective (@id T). Proof. by exists id. Qed.

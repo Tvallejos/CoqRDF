@@ -105,56 +105,71 @@ Section Rdf.
 
     Definition relabeling
       (B' B'' : eqType) (μ : B' -> B'')
-      (g : rdf_graph I B' L)  : rdf_graph I B'' L:=
-      mkRdfGraph (undup_uniq (relabeling_seq_triple μ (graph g))).
+      (g : rdf_graph I B' L)  (urel : uniq (relabeling_seq_triple μ (graph g))): rdf_graph I B'' L:=
+      mkRdfGraph urel.
 
     Lemma relabeling_triple_map_comp (B' B'': eqType) (g : seq (triple I B L)) (mu1: B -> B') (mu2 : B' -> B'') :
       [seq relabeling_triple mu2 i | i <- [seq relabeling_triple mu1 i | i <- g]] =
         [seq relabeling_triple (mu2 \o mu1) i | i <- g].
     Proof. by rewrite -map_comp; apply eq_map=> t /=; rewrite -relabeling_triple_comp. Qed.
 
+    Lemma rdf_perm_mem_eq {i b l : eqType} (g1 g2 :rdf_graph i b l) :
+      (perm_eq g1 g2) <-> (g1 =i g2).
+    Proof. split; first by move=> /perm_mem.
+           by move: (ugraph g1) (ugraph g2); apply uniq_perm=> //.
+    Qed.
+
+    Lemma rdf_mem_eq_graph g1 g2 :
+      g1 =i g2 <-> (graph g1) =i (graph g2).
+    Proof. by []. Qed.
+
+
     Lemma relabeling_comp (B' B'': eqType) g (μ1 : B -> B') (μ2: B' -> B'') :
-      perm_eq (relabeling μ2 (relabeling μ1 g)) (relabeling (μ2 \o μ1) g).
-    Proof. case g => g' ug'; apply uniq_perm; rewrite ?undup_uniq //.
-           by move=> x /=; rewrite !mem_undup /relabeling_seq_triple -mem_map_undup relabeling_triple_map_comp.
+      forall u1 u2 u12,
+      perm_eq (@relabeling B' B'' μ2 (@relabeling B B' μ1 g u1) u2) (@relabeling B B'' (μ2 \o μ1) g u12).
+    Proof. case g => g' ug' u1 u2 u12; rewrite rdf_perm_mem_eq /relabeling/relabeling_seq_triple=> x.
+           suffices ->: [seq relabeling_triple μ2 i | i <- [seq relabeling_triple μ1 i | i <- g']] =i [seq relabeling_triple (μ2 \o μ1) i | i <- g'].
+           by [].
+           by move=> ? /=; rewrite relabeling_triple_map_comp.
     Qed.
 
     Section Relabeling_graph.
 
-      Lemma relabeling_id g : relabeling id g = g.
-      Proof. case g => g' ug /=. rewrite /relabeling relabeling_seq_triple_id; apply rdf_inj.
-             by rewrite /= undup_id.
-      Qed.
+      Lemma relabeling_id g : forall us, (@relabeling B B id g us) = g.
+      Proof. by case g => g' ug us ; apply rdf_inj=> /=; rewrite relabeling_seq_triple_id. Qed.
 
       Variable B' : eqType.
 
-      Lemma relabeling_ext  (μ1 μ2 : B -> B') g :  μ1 =1 μ2 -> relabeling μ1 g = relabeling μ2 g.
-      Proof. by move=> μpweq; rewrite /relabeling (relabeling_seq_triple_ext _ μpweq). Qed.
+      Lemma relabeling_ext  (μ1 μ2 : B -> B') g :  μ1 =1 μ2 ->
+                                                  forall u1 u2, @relabeling B B' μ1 g u1 = @relabeling B B' μ2 g u2.
+      Proof. by move=> μpweq u1 u2; apply /rdf_inj; rewrite /= (relabeling_seq_triple_ext _ μpweq). Qed.
 
       Lemma relabeling_nil (B1 B2: eqType) (μ: B1 -> B2) :
-        relabeling μ (empty_rdf_graph I B1 L) = (@empty_rdf_graph I B2 L).
+        (* forall u1 u2, *)
+        @relabeling B1 B2 μ (empty_rdf_graph I B1 L) (eqxx true) = (@empty_rdf_graph I B2 L).
       Proof. by apply rdf_inj. Qed.
 
       Lemma relabeling_cons (B1 B2 : eqType) (μ: B1 -> B2) (trpl : triple I B1 L) (ts : seq (triple I B1 L)) (ucons : uniq (trpl :: ts)) :
-        relabeling μ (mkRdfGraph ucons) =
+        forall us,
+        @relabeling B1 B2 μ (mkRdfGraph ucons) us =
           mkRdfGraph (undup_uniq (relabeling_triple μ trpl :: (relabeling_seq_triple μ ts))).
-      Proof. by apply rdf_inj. Qed.
+      Proof. by move=> us; apply rdf_inj=> /=; move: us=> /andP[/negPf -> /undup_id ->]. Qed.
 
     End Relabeling_graph.
-    Section Relabeling_graph_eq.
+    (* Section Relabeling_graph_eq. *)
 
-      Lemma relabeling_mu_inv (g : rdf_graph I B L) (fs : seq (B -> B))
-        (mapping : rdf_graph I B L -> rdf_graph I B L) :
-        (mapping g) \in (map (fun mu => relabeling mu g) fs) ->
-                        exists (mu : B -> B), relabeling mu g == mapping g.
-      Proof.
-        elim : fs => [| f fs' IHfs]; first by rewrite in_nil.
-        rewrite in_cons; case/orP.
-        + by rewrite eq_sym; exists f.
-        + by move=> /IHfs //.
-      Qed.
+    (*   (* Lemma relabeling_mu_inv (g : rdf_graph I B L) (fs : seq (B -> B)) *) *)
+    (*   (*   (mapping : rdf_graph I B L -> rdf_graph I B L) : *) *)
+    (*   (*   (mapping g) \in (map (fun mu => relabeling mu g) fs) -> *) *)
+    (*   (*                   exists (mu : B -> B), relabeling mu g == mapping g. *) *)
+    (*   (* Proof. *) *)
+    (*   (*   elim : fs => [| f fs' IHfs]; first by rewrite in_nil. *) *)
+    (*   (*   rewrite in_cons; case/orP. *) *)
+    (*   (*   + by rewrite eq_sym; exists f. *) *)
+    (*   (*   + by move=> /IHfs //. *) *)
+    (*   (* Qed. *) *)
 
-    End Relabeling_graph_eq.
+    (* End Relabeling_graph_eq. *)
 
     Definition terms (I' B' L': eqType) (g : rdf_graph I' B' L') : seq (term I' B' L') :=
       undup (flatten (map (@terms_triple I' B' L') (graph g))).
@@ -176,9 +191,9 @@ Section Rdf.
     Section TermRelabeling.
       Variable B1 B2: eqType.
 
-      Lemma terms_relabeled_mem (g : rdf_graph I B1 L) (mu: B1 -> B2) :
-        (@terms I B2 L (relabeling mu g)) =i undup (map (relabeling_term mu) (terms g)).
-      Proof. Admitted.
+      (* Lemma terms_relabeled_mem (g : rdf_graph I B1 L) (mu: B1 -> B2) : *)
+      (*   (@terms I B2 L (relabeling mu g)) =i undup (map (relabeling_term mu) (terms g)). *)
+      (* Proof. Admitted. *)
 
 
       Lemma map_undup_idem (T1 T2: eqType) (f : T1 -> T2) (s : seq T1):
@@ -196,12 +211,14 @@ Section Rdf.
       Qed.
 
       Lemma terms_relabeled (g : rdf_graph I B1 L) (mu: B1 -> B2) (inj_mu : injective mu):
-        (@terms I B2 L (relabeling mu g)) = map (relabeling_term mu) (terms g).
+        forall us,
+        (@terms I B2 L (@relabeling B1 B2 mu g us)) = map (relabeling_term mu) (terms g).
       Proof.
         move: (@relabeling_triple_inj I L B1 B2 mu inj_mu) (@relabeling_term_inj I B1 B2 L mu inj_mu) => rts_inj rt_inj.
         elim g=> g'; elim g'=> [//|t ts IHts] us.
         + have /andP[/negPf nin urt]: uniq (relabeling_triple mu t :: relabeling_seq_triple mu ts).
           by rewrite -map_cons map_inj_uniq //.
+          move=> /= x.
           rewrite relabeling_cons terms_graph /= nin terms_cons -(undup_map_inj rt_inj) -undup_cat_r.
           f_equal; rewrite map_cat; f_equal; first by apply terms_relabeled_triple.
           have ->: undup (flatten [seq terms_triple i | i <- undup (relabeling_seq_triple mu ts)]) = (terms (relabeling mu {| graph := ts; ugraph := (uniq_tail us) |})). by [].

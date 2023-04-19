@@ -733,15 +733,27 @@ Section IsoCan.
         (* the hard one *)
         admit.
 
-        have mem_eq_sym: forall (T: eqType) (d1 d2: {pred T}), d1 =i d2 -> d2 =i d1. by move=> T d1 d2 d12 x;  rewrite d12. 
+        have mem_eq_sym: forall (T: eqType) (d1 d2: {pred T}), d1 =i d2 -> d2 =i d1. by move=> T d1 d2 d12 x;  rewrite d12.
         eapply ext_pred_bij. apply bij_fget. apply mem_eq_sym.
       Admitted.
 
       End experiment.
 
+      (* Lemma k_mapping_perm g mu : perm_eq [seq mu i | i <- get_b (k_mapping g)] (get_b g). *)
+      (*   Proof. rewrite /k_mapping /=. *)
+
+      Lemma eqb_pre_iso (i b l : eqType) (g1 g2 : rdf_graph i b l) :
+        forall mu u, eqb_rdf (@relabeling _ _ _ _ mu g1 u) g2 -> is_pre_iso g1 g2 mu. Admitted.
+
       Lemma k_mapping_iso_output : mapping_is_iso_mapping k_mapping.
-      Proof. rewrite /mapping_is_iso_mapping/k_mapping=> g.
-             Admitted.
+      Proof. rewrite /mapping_is_iso_mapping/iso_mapping/is_iso_mapping=> g.
+             exists todo. exists todo.
+             suffices eqb: eqb_rdf (relabeling todo) g.
+             apply /andP; split; last by apply eqb.
+             eapply (eqb_pre_iso todo).
+             admit.
+      Admitted.
+
 
       Lemma k_mapping_dont_manipulate_names : (dt_names_mapping k_mapping).
       Proof.

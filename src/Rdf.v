@@ -331,42 +331,6 @@ Section Rdf.
     Remark id_bij T: bijective (@id T). Proof. by exists id. Qed.
     Hint Resolve id_bij.
 
-  End EqRdf.
-  Section Relabeling_alt.
-    Variables I B L : choiceType.
-    Implicit Type g : rdf_graph I B L.
-    Definition relabeling_alt {g} (mu : {ffun (seq_sub (bnodes g)) -> B}) g1 : rdf_graph I B L. Admitted.
-
-  End Relabeling_alt.
-
-
-  Definition rdf_canChoiceMixin' (I B L : choiceType) := PcanChoiceMixin (@pcancel_code_decode I B L).
-  Definition rdf_canCountMixin' (I B L : countType):= PcanCountMixin (@pcancel_code_decode I B L).
-
-  Canonical rdf_choiceType (I B L: choiceType):= Eval hnf in ChoiceType (rdf_graph I B L) (@rdf_canChoiceMixin' I B L).
-  Canonical rdf_countType (I B L: countType):= Eval hnf in CountType (rdf_graph I B L) (@rdf_canCountMixin' I B L).
-
-  Definition rdf_canPOrderMixin (I B L: countType):= PcanPOrderMixin (@pickleK (rdf_countType I B L)).
-  Canonical rdf_POrderType (I B L: countType):= Eval hnf in POrderType tt (rdf_graph I B L) (@rdf_canPOrderMixin I B L).
-
-  Section CountRdf.
-    Variables I B L : countType.
-    Implicit Type g : rdf_graph I B L.
-
-    Lemma empty_min g : Order.max g (@empty_rdf_graph I B L) = g.
-    Proof. by case: g=> g'; case: g'=> [//|h t] us; rewrite Order.POrderTheory.maxElt. Qed.
-
-    (* assia : this requires rewriting relabeling function(. cf error message
-The term "g1" has type "rdf_graph I B L" while it is expected to have type
- "rdf_graph I (seq_sub_finType (bnodes g1)) ?L" *)
-
-    Fail Definition is_iso_alt g1 g2  (μ :  {ffun (seq_sub (bnodes g1)) -> B}) :=
-      {in {set (seq_sub (bnodes g1))} , bijective μ} /\ g2 == (relabeling_alt μ g1).
-    (* The term "μ" has type "{ffun seq_sub (bnodes g1) -> B}" while it is expected to have type *)
-    (*   "{set seq_sub (bnodes g1)} -> ?rT". *)
-
-    Fail Definition iso_alt g1 g2:= exists mu, @is_iso_alt g1 g2 mu.
-
     Section IsoMapping.
 
       Section PreIso.
@@ -394,7 +358,7 @@ The term "g1" has type "rdf_graph I B L" while it is expected to have type
 
       Definition is_iso_mapping g1 g2 mu us :=
         is_pre_iso g1 g2 mu &&
-          eqb_rdf (@relabeling _ _ _ _ mu g1 us) g2.
+          eqb_rdf (@relabeling _ _ mu g1 us) g2.
 
       Definition iso_mapping g1 g2 := exists mu us, @is_iso_mapping g1 g2 mu us.
 
@@ -433,8 +397,8 @@ The term "g1" has type "rdf_graph I B L" while it is expected to have type
       Lemma terms_uniq g : uniq (terms g).
       Proof. by apply undup_uniq. Qed.
 
-      Lemma bnode_mem_filter b t : Bnode b \notin t -> (b \notin @get_bs I B L [seq x <- t | is_bnode x]).
-      Proof. elim: t=> [//| h t' IHt].
+      Lemma bnode_mem_filter b trms : Bnode b \notin trms -> (b \notin @get_bs I B L [seq x <- trms | is_bnode x]).
+      Proof. elim: trms=> [//| h t' IHt].
              case: h=> // b'.
              rewrite in_cons negb_or=> /andP [/negP ].
              have hd : ~ Bnode b == Bnode b' -> negb (b == b').
@@ -451,17 +415,15 @@ The term "g1" has type "rdf_graph I B L" while it is expected to have type
         | _,_ => false
         end.
 
-      Lemma eqb_eq t1 t2 : eqb_term t1 t2 = (t1 == t2).
+      Lemma eqb_eq trm1 trm2 : eqb_term trm1 trm2 = (trm1 == trm2).
       Proof. Admitted.
 
-      Lemma bnode_memP b t : Bnode b \in t = (b \in @get_bs I B L t).
-      Proof. elim: t=> [//| h t' IHt].
-             case: h=> // b'.
-             rewrite !in_cons. f_equal; first by rewrite -eqb_eq.
-             by rewrite IHt.
+      Lemma bnode_memP b trms : Bnode b \in trms = (b \in @get_bs I B L trms).
+      Proof. elim: trms=> [//| h t' IHt].
+             by case: h=> // b'; rewrite !in_cons IHt -eqb_eq.
       Qed.
 
-      Lemma bnode_memPn b t : Bnode b \notin t = (b \notin @get_bs I B L t).
+      Lemma bnode_memPn b trms : Bnode b \notin trms = (b \notin @get_bs I B L trms).
       Proof. by rewrite /negb bnode_memP. Qed.
 
       Lemma get_bs_uniq g : uniq (get_bs (bnodes g)).
@@ -618,7 +580,7 @@ The term "g1" has type "rdf_graph I B L" while it is expected to have type
 
       Lemma eqb_rdf_relabeling_inv g1 g2 mu :
         forall us,
-          eqb_rdf (@relabeling _ _ _ _ mu g1 us) g2 -> exists nu us2, eqb_rdf (@relabeling _ _ _ _ nu g2 us2) g1.
+          eqb_rdf (@relabeling _ _ mu g1 us) g2 -> exists nu us2, eqb_rdf (@relabeling _ _ nu g2 us2) g1.
       Proof.
       Admitted.
 
@@ -638,9 +600,9 @@ The term "g1" has type "rdf_graph I B L" while it is expected to have type
 
       Lemma eqb_relabeling_comp g1 g2 g3 mu12 mu23:
         forall u1 u2 u3,
-        eqb_rdf (@relabeling _ _ _ _ mu12 g1 u1) g2 ->
-        eqb_rdf (@relabeling _ _ _ _ mu23 g2 u2) g3 ->
-        eqb_rdf (@relabeling _ _ _ _ (mu23 \o mu12) g1 u3) g3.
+        eqb_rdf (@relabeling _ _ mu12 g1 u1) g2 ->
+        eqb_rdf (@relabeling _ _ mu23 g2 u2) g3 ->
+        eqb_rdf (@relabeling _ _ (mu23 \o mu12) g1 u3) g3.
       Proof. move=> u1 u2 u3; rewrite /eqb_rdf/relabeling=> /(perm_map (relabeling_triple mu23)) p12 p23.
              suffices : [seq relabeling_triple mu23 i | i <- {| graph := relabeling_seq_triple mu12 g1 |}] =
                           {| graph := relabeling_seq_triple (mu23 \o mu12) g1 |}.
@@ -703,6 +665,42 @@ The term "g1" has type "rdf_graph I B L" while it is expected to have type
 
 
     End IsoMapping.
+
+  End EqRdf.
+  Section Relabeling_alt.
+    Variables I B L : choiceType.
+    Implicit Type g : rdf_graph I B L.
+    Definition relabeling_alt {g} (mu : {ffun (seq_sub (bnodes g)) -> B}) g1 : rdf_graph I B L. Admitted.
+
+  End Relabeling_alt.
+
+
+  Definition rdf_canChoiceMixin' (I B L : choiceType) := PcanChoiceMixin (@pcancel_code_decode I B L).
+  Definition rdf_canCountMixin' (I B L : countType):= PcanCountMixin (@pcancel_code_decode I B L).
+
+  Canonical rdf_choiceType (I B L: choiceType):= Eval hnf in ChoiceType (rdf_graph I B L) (@rdf_canChoiceMixin' I B L).
+  Canonical rdf_countType (I B L: countType):= Eval hnf in CountType (rdf_graph I B L) (@rdf_canCountMixin' I B L).
+
+  Definition rdf_canPOrderMixin (I B L: countType):= PcanPOrderMixin (@pickleK (rdf_countType I B L)).
+  Canonical rdf_POrderType (I B L: countType):= Eval hnf in POrderType tt (rdf_graph I B L) (@rdf_canPOrderMixin I B L).
+
+  Section CountRdf.
+    Variables I B L : countType.
+    Implicit Type g : rdf_graph I B L.
+
+    Lemma empty_min g : Order.max g (@empty_rdf_graph I B L) = g.
+    Proof. by case: g=> g'; case: g'=> [//|h t] us; rewrite Order.POrderTheory.maxElt. Qed.
+
+    (* assia : this requires rewriting relabeling function(. cf error message
+The term "g1" has type "rdf_graph I B L" while it is expected to have type
+ "rdf_graph I (seq_sub_finType (bnodes g1)) ?L" *)
+
+    Fail Definition is_iso_alt g1 g2  (μ :  {ffun (seq_sub (bnodes g1)) -> B}) :=
+      {in {set (seq_sub (bnodes g1))} , bijective μ} /\ g2 == (relabeling_alt μ g1).
+    (* The term "μ" has type "{ffun seq_sub (bnodes g1) -> B}" while it is expected to have type *)
+    (*   "{set seq_sub (bnodes g1)} -> ?rT". *)
+
+    Fail Definition iso_alt g1 g2:= exists mu, @is_iso_alt g1 g2 mu.
 
     Section FinTypeRdf.
       Local Notation fbnode g := (seq_sub (bnodes g)).

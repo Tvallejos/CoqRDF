@@ -656,16 +656,15 @@ The term "g1" has type "rdf_graph I B L" while it is expected to have type
       Definition iso_mapping_trans g1 g2 g3 : iso_mapping g1 g2 -> iso_mapping g2 g3 -> iso_mapping g1 g3.
       Proof. rewrite /iso_mapping/is_iso_mapping; move=> [mu12 [us1 /andP[peq12 eqb12]]] [mu23 [us2 /andP[peq23 eqb23]]].
              exists (mu23 \o mu12).
-             have: uniq (relabeling_seq_triple (mu23 \o mu12) g1).
-             rewrite -relabeling_seq_triple_comp.
-             erewrite eq_uniq. apply us2.
-             rewrite /relabeling_seq_triple. rewrite !size_map.
-             apply perm_size in eqb12. by rewrite /relabeling /= /relabeling_seq_triple size_map in eqb12.
-             admit.
-             move=> ucomp. exists ucomp.
-             apply /andP; split; first by apply: is_pre_iso_trans peq12 peq23.
+             suffices ucomp: uniq (relabeling_seq_triple (mu23 \o mu12) g1).
+             exists ucomp; apply /andP; split; first by apply: is_pre_iso_trans peq12 peq23.
              by apply : eqb_relabeling_comp eqb12 eqb23.
-      Admitted.
+             rewrite -relabeling_seq_triple_comp /relabeling_seq_triple.
+             have eqsize : size [seq relabeling_triple mu23 i | i <- [seq relabeling_triple mu12 i | i <- g1]] =
+                             size (relabeling_seq_triple mu23 g2).
+             by move: eqb12=> /perm_size; rewrite /relabeling /= /relabeling_seq_triple !size_map.
+             rewrite (eq_uniq eqsize) //; last by apply eq_mem_map; move: eqb12=> /perm_mem.
+      Qed.
 
       Definition isocanonical_mapping_map (M : rdf_graph I B L -> rdf_graph I B L) :=
         forall g, iso_mapping (M g) g /\
@@ -696,75 +695,14 @@ The term "g1" has type "rdf_graph I B L" while it is expected to have type
       Qed.
 
       Lemma isocanonical_mapping_dt_out_mapping M (iso_out: mapping_is_iso_mapping M) (dt: dt_names_mapping M) : isocanonical_mapping_map M.
-      Proof. rewrite /isocanonical_mapping. split; first by apply iso_out.
-             split.
-             + by apply: same_res_impl_iso_mapping iso_out.
-             + by apply dt.
+      Proof.
+        split; first by apply iso_out.
+        split; last by apply dt.
+        + by apply: same_res_impl_iso_mapping iso_out.
       Qed.
 
 
     End IsoMapping.
-
-    Definition is_iso_local g1 g2  (μ :  B -> B) :=
-      ({in (get_b g2), bijective μ})
-      /\ g1 == (relabeling μ g2).
-
-    Definition iso_local g1 g2:= exists mu, @is_iso_local g1 g2 mu.
-
-    Definition isocanonical_mapping_local (M : rdf_graph I B L -> rdf_graph I B L) :=
-      forall g, iso_local (M g) g /\
-             (forall g1 g2, (M g1) == (M g2) <-> iso_local g1 g2).
-
-    Lemma iso_local_refl g : iso_local g g.
-    Proof. rewrite /iso_local /is_iso_local; exists id; split; first by exists id.
-                                                                     by rewrite relabeling_id.
-    Qed.
-
-    Remark eqiso_local g1 g2 : g1 == g2 -> iso_local g1 g2.
-    Proof. exists id. rewrite /is_iso_local; split; first by exists id.
-                                                          by move/eqP: H ->; rewrite relabeling_id.
-    Qed.
-
-    Lemma iso_local_symm g1 g2 : iso_local g1 g2 <-> iso_local g2 g1.
-    Proof.
-      rewrite /iso_local /is_iso_local.
-      split; case=> mu [mu_bij heqb_rdf]; case: (mu_bij)
-           => [nu h1 h2]; exists nu.
-    Admitted.
-
-    Lemma iso_local_trans g1 g2 g3 : iso_local g1 g2 -> iso_local g2 g3 -> iso_local g1 g3.
-    Proof. rewrite /iso_local/is_iso_local/relabeling => [[μ1 [bij1/eqP eqb1]] [μ2 [bij2/eqP eqb2]]].
-           exists (μ1 \o μ2). split. admit.
-           (* apply bij_comp. *)
-           by rewrite eqb1 eqb2 relabeling_seq_triple_comp.
-    Admitted.
-
-    Definition mapping_is_iso_local (M : rdf_graph I B L -> rdf_graph I B L) := forall g, iso_local (M g) g.
-
-    Definition dt_names_local (M : rdf_graph I B L -> rdf_graph I B L) := forall g μ, {in (get_b g), bijective μ} -> M g == M (relabeling μ g).
-
-    (* Definition dont_manipulate_names_mapping_idem (M : rdf_graph I B L -> rdf_graph I B L) (dnmn : dont_manipulate_names_mapping M) : forall g (μ : B -> B), (bijective μ) -> M (M g) = M g. *)
-
-    Lemma iso_leads_canonical_local M (nmn : dt_names_local M) g1 g2 (iso_g1_g2: iso_local g1 g2) :
-      M g1 == M g2.
-    Proof. case iso_g1_g2=> μ [bijmu /eqP ->].
-           suffices ->: M g2 = M (relabeling μ g2). by [].
-           apply /eqP; apply (nmn g2 μ bijmu).
-    Qed.
-
-    Lemma same_res_impl_iso_local M g1 g2 (iso_output : mapping_is_iso_local M) : M g1 == M g2 -> iso_local g1 g2.
-    Proof.
-      have isog1k1 : iso_local g1 (M g1). rewrite iso_local_symm; apply iso_output.
-      have isog2k2 : iso_local (M g2) g2. by apply iso_output.
-      by move=> /eqP k1_eq_k2; rewrite k1_eq_k2 in isog1k1; apply (iso_local_trans isog1k1 isog2k2).
-    Qed.
-
-    Lemma isocanonical_mapping_dt_out_local M (iso_out: mapping_is_iso_local M) (dt: dt_names_local M) : isocanonical_mapping_local M.
-    Proof. rewrite /isocanonical_mapping. split; first by apply iso_out.
-           split.
-           + by apply: same_res_impl_iso_local iso_out.
-           + by apply: (iso_leads_canonical_local dt).
-    Qed.
 
     Section FinTypeRdf.
       Local Notation fbnode g := (seq_sub (bnodes g)).

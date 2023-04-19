@@ -72,7 +72,7 @@ Section Rdf.
     Implicit Type t : triple I B L.
     Implicit Type ts : seq (triple I B L).
 
-    Definition empty_rdf_graph (i b l : eqType):= @mkRdfGraph i b l [::] (eqxx true) : rdf_graph i b l.
+    Definition empty_rdf_graph {i b l : eqType} := @mkRdfGraph i b l [::] (eqxx true) : rdf_graph i b l.
 
     Definition is_ground g : bool :=
       all (@is_ground_triple _ _ _) g.
@@ -146,7 +146,7 @@ Section Rdf.
 
       Lemma relabeling_nil (B1 B2: eqType) (μ: B1 -> B2) :
         (* forall u1 u2, *)
-        @relabeling B1 B2 μ (empty_rdf_graph I B1 L) (eqxx true) = (@empty_rdf_graph I B2 L).
+        @relabeling B1 B2 μ empty_rdf_graph (eqxx true) = empty_rdf_graph.
       Proof. by apply rdf_inj. Qed.
 
       Lemma relabeling_cons (B1 B2 : eqType) (μ: B1 -> B2) (trpl : triple I B1 L) (ts : seq (triple I B1 L)) (ucons : uniq (trpl :: ts)) :

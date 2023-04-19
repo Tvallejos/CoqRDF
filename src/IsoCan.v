@@ -77,7 +77,7 @@ Section IsoCan.
     Definition init_bnode (b : B) : (hash B) :=
       mkHinput b h0.
 
-    Lemma inj_init_bnode : injective init_bnode.
+    Lemma init_bnode_inj : injective init_bnode.
     Proof. by move=> x y; rewrite /init_bnode=> [[]] ->. Qed.
 
     (* Algorithm 3, line 13
@@ -236,22 +236,26 @@ Section IsoCan.
 
     Section Hgraph.
 
-      Definition hgraph := rdf_graph I (hash B) L.
+      Definition hgraph := rdf_graph I (hash_eqType h B) L.
 
       Definition get t (g : hgraph) : option hterm :=
         let otrs := (map (has_term_triple t) (graph g)) in
         head None (filter is_some otrs).
 
+      Lemma init_hash_uniq {i l : eqType} (g : rdf_graph i B l) :
+        uniq (@relabeling_seq_triple i l _ _ init_bnode (graph g)).
+      Proof. case g=> g' ug; rewrite map_inj_uniq //; apply: relabeling_triple_inj init_bnode_inj. Qed.
+
       (* Algorithm 1, lines 2-8
        initializes every blank node with a known default name *)
       Definition init_hash (g : rdf_graph _ _ _) : hgraph :=
-        relabeling init_bnode g.
+        @relabeling _ _ _ _ init_bnode g (init_hash_uniq g).
 
-      Lemma init_hash_nil : init_hash {| graph := [::] |} = {| graph := [::] |}. by []. Qed.
+      Lemma init_hash_nil : init_hash empty_rdf_graph = empty_rdf_graph. Proof. by apply rdf_inj. Qed.
 
       Lemma init_hash_h0 b g : Bnode b \in bnodes (init_hash g) -> current_hash b = h0.
       Proof. rewrite /bnodes/init_hash -filter_undup mem_filter /=.
-             by rewrite undup_terms (terms_relabeled g inj_init_bnode)=> /map_inv[[] // ?]=> [[]] ->.
+             by rewrite undup_terms (terms_relabeled init_bnode_inj) => /map_inv[[] // ?]=> [[]] ->.
       Qed.
 
       (* todo *)
@@ -313,13 +317,13 @@ Section IsoCan.
         by move/eqP: injH; apply (eq_appn_init_eq_num b1_bns b2_bns).
       Qed.
 
-      Definition label (g : hgraph) : rdf_graph I B L :=
-        relabeling label_bnode g.
+      Definition label (g : hgraph) us : rdf_graph I B L :=
+        @relabeling _ _ _ _ label_bnode g us.
 
       (* updates the current hash of b by b' in all the ocurrences
        in g *)
-      Definition replace_bnode (b b': hash B) (g : hgraph) : hgraph :=
-        relabeling (fun a_hash => if a_hash == b then b' else a_hash) g.
+      Definition replace_bnode (b b': hash B) (g : hgraph) us : hgraph :=
+        @relabeling _ _ _ _ (fun a_hash => if a_hash == b then b' else a_hash) g us.
 
       Definition lookup_bnode_in_graph (g : hgraph) (b : B) : option hterm :=
         let otrms := map (lookup_bnode_in_triple b) g in
@@ -359,8 +363,8 @@ Section IsoCan.
         (seq_sub (bnodes g)) -> (seq_sub (map label_term (bnodes g))).
       Proof. apply map_fintype. Qed.
 
-      Definition relabeling_hgraph (mu : B -> B) (g: hgraph) : hgraph :=
-        relabeling (fun b => (mkHinput (mu (input b)) (current_hash b))) g.
+      Definition relabeling_hgraph (mu : B -> B) (g: hgraph) us : hgraph :=
+        @relabeling _ _ _ _ (fun b => (mkHinput (mu (input b)) (current_hash b))) g us.
 
       Lemma eqb_b_hterm_relabeling b ht (mu : B -> B) :
         eqb_b_hterm b ht ->
@@ -432,56 +436,8 @@ Section IsoCan.
       (* choose canonical graph from sequence of graphs that have fine partitions *)
       Definition choose_graph (gs : seq hgraph) : hgraph :=
         if insub gs : {? x | all (is_fine \o mkPartition) x} is Some _
-        then foldl Order.max (mkRdfGraph [::]) gs
-        else mkRdfGraph [::].
-
-      Lemma no_bnodes_same_partition t ts :
-        bnodes_triple t = [::] ->
-        is_fine (mkPartition {| graph := ts |}) ->
-        is_fine (mkPartition {| graph := t :: ts |}).
-      Proof. by rewrite /mkPartition bnodes_cons /bnodes => -> /=; rewrite undup_idem. Qed.
-
-      Lemma sing_fine (g : hgraph) (b : hterm): bnodes g = [:: b] -> is_fine (mkPartition g).
-      Proof.
-        case: g b=> g'; elim: g'=> [//| t ts IHts].
-        rewrite bnodes_cons.
-        case t=> s p o; case s; case p; case o=>
-               //; rewrite /bnodes_triple/terms_triple
-               => id id0 id1 sib pii b; rewrite filter_undup ?undup_idem /mkPartition
-               => /= singl; try (move: singl; rewrite /undup_idem bnodes_cons /bnodes_triple /terms_triple filter_undup /= undup_bnodes).
-        (* room for improvement *)
-        + apply no_bnodes_same_partition. by rewrite /bnodes_triple filter_undup. apply (IHts b singl).
-        + apply no_bnodes_same_partition. by rewrite /bnodes_triple filter_undup. apply (IHts b singl).
-        (* =============== *)
-        + case e: (Bnode id \in bnodes {| graph := ts |})=> singl.
-        - by apply (IHts b singl).
-        - by case: singl=> _ -> /=; rewrite eq_hash_refl.
-          (* =============== *)
-          + case: (Bnode id1 \in bnodes {| graph := ts |})=> singl.
-        - by apply (IHts b singl).
-        - by case: singl=> _ -> /=; rewrite eq_hash_refl.
-          (* =============== *)
-          + case: (Bnode id1 \in bnodes {| graph := ts |})=> singl.
-        - by apply (IHts b singl).
-        - by case: singl=> _ -> /=; rewrite eq_hash_refl.
-          (* =============== *)
-          + move: singl.
-            have b_def : (bnodes_triple
-                            {|
-                              subject := Bnode id1;
-                              predicate := Iri id0;
-                              object := Bnode id;
-                              subject_in_IB := sib ;
-                              predicate_in_I := pii
-                            |}) =
-                           (if Bnode id1 \in [:: Bnode id] then [:: Bnode id] else [:: Bnode id1; Bnode id]).
-            move=> ? ?. by rewrite /bnodes_triple /terms_triple filter_undup /=.
-            rewrite bnodes_cons /bnodes_triple filter_undup -b_def -bnodes_cons => singl.
-            rewrite /= -b_def -bnodes_cons singl.
-            have isbb: is_bnode b. by apply (b_in_bnode_is_bnode singl).
-            by rewrite /= (eq_hash_refl isbb); case: b isbb singl.
-      Qed.
-
+        then foldl Order.max empty_rdf_graph gs
+        else empty_rdf_graph.
 
     End Partition.
 
@@ -512,6 +468,8 @@ Section IsoCan.
         Definition new_hash_bwd (s p o : hterm) gacc : option ((hash B) * (hash B)) :=
           new_hash o p s gacc hbwd.
 
+        Axiom todo : forall {t}, t.
+
         (* Algorithm 1, lines 12-17
        update the hashes of blank nodes using the neighborhood
        it hashes differently outgoing edges from incoming ones *)
@@ -522,7 +480,7 @@ Section IsoCan.
             | cons t ts => let (s,p,o,_,_) := t : htriple in
                            let newhash := hfun s p o gacc in
                            if newhash is Some (hb,hb')
-                           then let gacc' := replace_bnode hb hb' gacc in
+                           then let gacc' := @replace_bnode hb hb' gacc todo in
                                 help ts gacc' hfun
                            else help ts gacc hfun
             end in
@@ -569,29 +527,29 @@ Section IsoCan.
         (* Algorithm 2, line 2:
        computes the connected components based on definition 4.6 (~G)
          *)
-        Definition blank_node_split (t u v : Type) (g : rdf_graph t u v) : seq (rdf_graph t u v).
-        Proof.
+        (* Definition blank_node_split (t u v : Type) (g : rdf_graph t u v) : seq (rdf_graph t u v). *)
+        (* Proof. *)
         (* compute the graph G,
          where V := g and
          (t,u) : (triple I B L * triple I B L) \in E iff
          [:: t ; u] is graph and bnodes(t) ∩ bnodes(u) ≠ ϕ
 
        Then compute the connected componens using reachability rel*)
-        Admitted.
+        (* Admitted. *)
 
         (* The graph that contains all (and only the) ground triples of G *)
-        Definition ground_split {t u v : Type} (g : rdf_graph t u v) : rdf_graph t u v :=
-          let groundTriples := filter (fun t => is_ground_triple t) g in
-          mkRdfGraph groundTriples.
+        (* Definition ground_split {t u v : Type} (g : rdf_graph t u v) : rdf_graph t u v := *)
+        (*   let groundTriples := filter (fun t => is_ground_triple t) g in *)
+        (*   mkRdfGraph groundTriples. *)
 
-        Lemma merge_split {t u v : Type} (g : rdf_graph t u v) :
-          merge_rdf_graph (merge_seq_rdf_graph (blank_node_split g)) (ground_split g) = g.
-        Admitted.
+        (* Lemma merge_split {t u v : Type} (g : rdf_graph t u v) : *)
+        (*   merge_rdf_graph (merge_seq_rdf_graph (blank_node_split g)) (ground_split g) = g. *)
+        (* Admitted. *)
 
         (* Algorithm 2 *)
-        Definition hashBnodesPerSplit (g : hgraph) : hgraph :=
-          let splitG := blank_node_split g in
-          foldr (@merge_rdf_graph _ _ _) (empty_rdf_graph _ _ _) splitG.
+        (* Definition hashBnodesPerSplit (g : hgraph) : hgraph := *)
+        (*   let splitG := blank_node_split g in *)
+        (*   foldr (@merge_rdf_graph _ _ _) (empty_rdf_graph _ _ _) splitG. *)
 
       End Algorithm2.
 
@@ -601,7 +559,7 @@ Section IsoCan.
        b is_bnode *)
         Definition distinguishBnode g (color_refine : hgraph -> hgraph ) (b : hash B) : hgraph :=
           let b' := mark_hash b in
-          let g' := replace_bnode b b' g in
+          let g' := @replace_bnode b b' g todo in
           color_refine g'.
 
 
@@ -640,22 +598,14 @@ Section IsoCan.
           let g' := color (init_hash g) in
           let P := mkPartition g' in
           let g_iso := if is_fine P then g' else p_refining g' color_refine in
-          label g_iso.
+          @label g_iso todo.
 
         (* first approach *)
         Definition justDistinguish g :=
           isoCanonicalTemplate g id id distinguish.
 
-        Lemma distinguish_preserves_isomorphism g : iso (justDistinguish g) g.
+        Lemma distinguish_preserves_isomorphism g : iso_mapping (justDistinguish g) g.
         Proof.
-          rewrite /iso/justDistinguish/isoCanonicalTemplate/is_iso.
-          case (is_fine (mkPartition (init_hash g))).
-          case g=> g'. elim g'=> [|t ts ihts].
-          - exists id. split.
-            + by exists id.
-                        + by rewrite relabeling_id.
-                        -
-                          (* need to build μ. and μ bij. *)
         Admitted.
 
         Definition isoCanonicalNoIter g :=
@@ -664,8 +614,8 @@ Section IsoCan.
         Definition isoCanonicalIter g :=
           isoCanonicalTemplate g hashNodes_initialized hashNodes_initialized distinguish.
 
-        Definition blabel g :=
-          isoCanonicalTemplate g hashBnodesPerSplit hashNodes_initialized distinguish.
+        (* Definition blabel g := *)
+        (*   isoCanonicalTemplate g hashBnodesPerSplit hashNodes_initialized distinguish. *)
 
       End Isocanonicalise.
     End Blabel.
@@ -684,7 +634,7 @@ Section IsoCan.
         let bns := bnodes (init_hash g) in
         mapi (app_n mark_bnode) bns.
 
-      Lemma empty_ak_mapping : ak_mapping (mkRdfGraph [::]) = [::]. Proof. by []. Qed.
+      Lemma empty_ak_mapping : ak_mapping empty_rdf_graph = [::]. Proof. by []. Qed.
 
       Definition build_kmapping_from_seq (trms : seq hterm) : B -> B :=
         fun b =>
@@ -694,23 +644,23 @@ Section IsoCan.
           else
             b.
 
-      Lemma inv_of_ak_mapping g : exists mu,
-          (relabeling mu g) == (relabeling (build_kmapping_from_seq (ak_mapping g)) g).
-      Proof. by exists (build_kmapping_from_seq (ak_mapping g)). Qed.
+      (* Lemma inv_of_ak_mapping g : exists mu us us2, *)
+      (*     (@relabeling _ _ _ _ mu g us) == (@relabeling _ _ _ _ (build_kmapping_from_seq (ak_mapping g)) g us2). *)
+      (* Proof. exists (build_kmapping_from_seq (ak_mapping g)). Admitted. *)
 
-      Lemma inv_of_perm_ak_mapping g (p : seq hterm) :
-        p \in (permutations (ak_mapping g)) -> (*no need for this*)
-              exists mu, (relabeling mu g) == (relabeling (build_kmapping_from_seq p) g).
-      Proof.
-        by exists (build_kmapping_from_seq p).
-      Qed.
+      (* Lemma inv_of_perm_ak_mapping g (p : seq hterm) : *)
+      (*   p \in (permutations (ak_mapping g)) -> (*no need for this*) *)
+      (*         exists mu, (relabeling mu g) == (relabeling (build_kmapping_from_seq p) g). *)
+      (* Proof. *)
+      (*   by exists (build_kmapping_from_seq p). *)
+      (* Qed. *)
 
       Definition k_mapping (g : rdf_graph I B L) : rdf_graph I B L :=
         let all_maps :=
           map (mapi (app_n mark_bnode)) (permutations (bnodes (init_hash g))) in
         let mus := map build_kmapping_from_seq all_maps in
-        let isocans := map (fun mu => relabeling mu g) mus in
-        foldl Order.max (mkRdfGraph [::]) isocans.
+        let isocans := map (fun mu => (@relabeling _ _ _ _ mu g todo)) mus in
+        foldl Order.max empty_rdf_graph isocans.
 
       Lemma k_mapping_seq_uniq_graph g: uniq (mapi (app_n mark_bnode) (bnodes (init_hash g))).
       Proof.
@@ -804,32 +754,6 @@ Section IsoCan.
       End experiment.
 
       (* TODO *)
-      (* only way of k_mapping g = [::] -> g = [::]*)
-      Lemma inv_of_k_mapping g : exists mu, (relabeling mu g) == (k_mapping g) /\ bijective mu.
-      Proof.
-        (* FIX ME*)
-        (* have step1 : k_mapping g = mkRdfGraph [::] \/ *)
-        (*                (k_mapping g) \in [seq relabeling mu0 g *)
-        (*                                  | mu0 <- [seq build_kmapping_from_seq i *)
-        (*                                           | i <- [seq mapi (app_n mark_bnode) i *)
-        (*                                                  | i <- permutations *)
-        (*                                                           (bnodes (init_hash g))]]]. *)
-        (* rewrite /=. /k_mapping relabeling_id; apply: foldl_op. *)
-        (* case: step1=> [ -> | in_tail ]. *)
-        (* + exists id; split. *)
-        (* - by rewrite relabeling_id. *)
-        (* - exact: id_bij.  *)
-        (*   + have [mu eq_mu_map] : exists mu : B -> B, relabeling mu g == k_mapping g. *)
-        (*     exact: relabeling_mu_inv in_tail. *)
-        (*     exists mu. split; first exact eq_mu_map. *)
-        (*     (* needs mu to have eqType, could be a finfun *) *)
-        (*     have fin_mu : (seq_sub (bnodes g)) -> B. *)
-        (*     Fail move: (finfun (fun b => b)). *)
-        (*     admit. *)
-        (* Fail fin_mu \in in_tail. *)
-      Admitted.
-
-      (* TODO *)
       (* USES inv_of_k_mapping *)
       Lemma k_mapping_iso_output : mapping_is_iso_mapping k_mapping.
       Proof. rewrite /mapping_is_iso_mapping/k_mapping=> g.
@@ -873,62 +797,54 @@ Section IsoCan.
         (* admit. *)
       Admitted.
 
-      Lemma k_mapping_order_agnostic : order_agnostic k_mapping.
-        Proof. Admitted.
-
       (* USES inv_of_k_mapping *)
       Lemma k_mapping_isocan : isocanonical_mapping_map k_mapping.
       Proof. apply: isocanonical_mapping_dt_out_mapping k_mapping_iso_output k_mapping_dont_manipulate_names. Qed.
 
-      Lemma relabeling_mu_inv_bij (g : rdf_graph I B L) (fs : seq (B -> B)) :
-        List.Forall (fun mu => bijective mu) fs ->
-        exists (mu : B->B), relabeling mu g == k_mapping g /\ bijective mu.
-      Proof. move => all_bij.
-             apply inv_of_k_mapping.
-      Qed.
+      (* Lemma relabeling_mu_inv_bij (g : rdf_graph I B L) (fs : seq (B -> B)) : *)
+      (*   List.Forall (fun mu => bijective mu) fs -> *)
+      (*   exists (mu : B->B), relabeling mu g == k_mapping g /\ bijective mu. *)
+      (* Proof. move => all_bij. *)
+      (*        apply inv_of_k_mapping. *)
+      (* Qed. *)
 
-      Lemma k_mapping_iso g : iso (k_mapping g) g.
-      Proof. rewrite /iso/is_iso.
-             have H:exists mu : B -> B, relabeling mu g == k_mapping g /\ bijective mu. apply inv_of_k_mapping.
-             move: H=> [mu [/eq_eqb_rdf eq bij]].
-             exists mu; split; first by exact: bij.
-             by rewrite eqb_rdf_sym.
-      Qed.
+      Lemma k_mapping_iso g : iso_mapping (k_mapping g) g.
+      Proof. rewrite /iso_mapping/is_iso_mapping. Admitted.
 
     End Kmapping.
 
   End IsoCanAlgorithm.
 
-  Section Example.
-    (* From Coq Require Import Strings.String. *)
-    Require Import Strings.Ascii.
-    Variables (b : seq ascii) (p : nat).
-    Definition B_ := (@Bnode nat (seq ascii) nat b).
-    Definition P := (@Iri nat (seq ascii) nat p).
-    Lemma inib : is_in_ib B_.
-    Proof. by []. Qed.
+  (* Section Example. *)
+  (*   (* From Coq Require Import Strings.String. *) *)
+  (*   Require Import Strings.Ascii. *)
+  (*   Variables (b : seq ascii) (p : nat). *)
+  (*   Definition B_ := (@Bnode nat (seq ascii) nat b). *)
+  (*   Definition P := (@Iri nat (seq ascii) nat p). *)
+  (*   Lemma inib : is_in_ib B_. *)
+  (*   Proof. by []. Qed. *)
 
-    Lemma ini : is_in_i P. Proof. by []. Qed.
-    (* Check nat : countType. *)
+  (*   Lemma ini : is_in_i P. Proof. by []. Qed. *)
+  (*   (* Check nat : countType. *) *)
 
-    Definition t := mkTriple B_ inib ini.
-    Definition g := mkRdfGraph [:: t].
-    Variable h:countType.
-    Variable h0 h1 h2 h3 h4: h.
-    Check g.
-    (* Open *)
-    Open Scope char_scope.
-    Check ascii.
-    Definition berror := [:: "e"; "r"; "r"; "o"; "r"] : seq ascii.
-    About Countable.pack.
-    About Countable.mixin_of.
-    Variable ascii_countMixin : Countable.mixin_of ascii.
-    Fail Canonical ascii_countType := Eval hnf in CountType ascii ascii_countMixin.
-    (* CountType ascii ascii_countMixin. *)
+  (*   Definition t := mkTriple B_ inib ini. *)
+  (*   Definition g := @mkRdfGraph _ _ _ [:: t] todo. *)
+  (*   Variable h:countType. *)
+  (*   Variable h0 h1 h2 h3 h4: h. *)
+  (*   Check g. *)
+  (*   (* Open *) *)
+  (*   Open Scope char_scope. *)
+  (*   Check ascii. *)
+  (*   Definition berror := [:: "e"; "r"; "r"; "o"; "r"] : seq ascii. *)
+  (*   About Countable.pack. *)
+  (*   About Countable.mixin_of. *)
+  (*   Variable ascii_countMixin : Countable.mixin_of ascii. *)
+  (*   Fail Canonical ascii_countType := Eval hnf in CountType ascii ascii_countMixin. *)
+  (*   (* CountType ascii ascii_countMixin. *) *)
 
-    Fail Compute isoCanonicalise h0 h1 h2 h3 h4 berror g .
+  (*   Fail Compute isoCanonicalise h0 h1 h2 h3 h4 berror g . *)
 
-  End Example.
+  (* End Example. *)
 
 
 End IsoCan.

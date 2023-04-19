@@ -644,17 +644,6 @@ Section IsoCan.
           else
             b.
 
-      (* Lemma inv_of_ak_mapping g : exists mu us us2, *)
-      (*     (@relabeling _ _ _ _ mu g us) == (@relabeling _ _ _ _ (build_kmapping_from_seq (ak_mapping g)) g us2). *)
-      (* Proof. exists (build_kmapping_from_seq (ak_mapping g)). Admitted. *)
-
-      (* Lemma inv_of_perm_ak_mapping g (p : seq hterm) : *)
-      (*   p \in (permutations (ak_mapping g)) -> (*no need for this*) *)
-      (*         exists mu, (relabeling mu g) == (relabeling (build_kmapping_from_seq p) g). *)
-      (* Proof. *)
-      (*   by exists (build_kmapping_from_seq p). *)
-      (* Qed. *)
-
       Definition k_mapping (g : rdf_graph I B L) : rdf_graph I B L :=
         let all_maps :=
           map (mapi (app_n mark_bnode)) (permutations (bnodes (init_hash g))) in
@@ -724,9 +713,6 @@ Section IsoCan.
 
       Section experiment.
 
-
-        (* Check forget_hashes \o @get_b I (hash B) L _). *)
-
       Lemma all_kmaps_local_bijective g : List.Forall (fun mu => {in (get_b g) , bijective mu}) [seq build_kmapping_from_seq i
                                                                          | i <- [seq mapi (app_n mark_bnode) i
                                                                                 | i <- permutations (bnodes (init_hash g))]].
@@ -753,60 +739,16 @@ Section IsoCan.
 
       End experiment.
 
-      (* TODO *)
-      (* USES inv_of_k_mapping *)
       Lemma k_mapping_iso_output : mapping_is_iso_mapping k_mapping.
       Proof. rewrite /mapping_is_iso_mapping/k_mapping=> g.
              Admitted.
-             (* case (inv_of_k_mapping g)=> μ [/eq_eqb_rdf rel_eq_kmap bijmu]. *)
-             (* exists μ. split. exact: bijmu. by rewrite eqb_rdf_sym.  *)
 
       Lemma k_mapping_dont_manipulate_names : (dt_names_mapping k_mapping).
       Proof.
-        (* rewrite /dt_names=> g μ bijmu. *)
-        (* case g=> g'; rewrite /k_mapping. *)
-        (* suffices ->: *)
-        (*   [seq relabeling mu {| graph := g' |} *)
-        (*   | mu <- [seq build_kmapping_from_seq i *)
-        (*           | i <- [seq mapi (app_n mark_bnode) i *)
-        (*                  | i <- permutations (bnodes (init_hash {| graph := g' |}))]]] = *)
-        (*            [seq relabeling mu (relabeling μ {| graph := g' |}) *)
-        (*            | mu <- [seq build_kmapping_from_seq i *)
-        (*                    | i <- [seq mapi (app_n mark_bnode) i *)
-        (*                           | i <- permutations (bnodes (init_hash (relabeling μ {| graph := g' |})))]]]. *)
-        (* by []. *)
-        (* elim e: [seq build_kmapping_from_seq i *)
-        (*         | i <- [seq mapi (app_n mark_bnode) i *)
-        (*                | i <- permutations (bnodes (init_hash {| graph := g' |}))]]=> [|mu' mus IHmu]. *)
-        (* have ->: [seq build_kmapping_from_seq i *)
-        (*          | i <- [seq mapi (app_n mark_bnode) i *)
-        (*                 | i <- permutations (bnodes (init_hash (relabeling μ {| graph := g' |})))]] = [::]. *)
-        (* admit. *)
-        (* by []. *)
-        (* case e2: [seq build_kmapping_from_seq i *)
-        (*          | i <- [seq mapi (app_n mark_bnode) i *)
-        (*                 | i <- permutations (bnodes (init_hash (relabeling μ {| graph := g' |})))]]=> [|mu'' mus']. *)
-        (* admit. (* this is a contradiction *) *)
-        (* rewrite /= relabeling_comp. *)
-        (* f_equal. *)
-        (* have mu_ext: mu' =1 (mu'' \o μ). *)
-        (* (* using map_kmap *) *)
-        (* admit. *)
-        (* by rewrite (relabeling_ext {| graph := g' |} mu_ext). *)
-        (* (* this should be exactically IHmu *) *)
-        (* admit. *)
       Admitted.
 
-      (* USES inv_of_k_mapping *)
       Lemma k_mapping_isocan : isocanonical_mapping_map k_mapping.
       Proof. apply: isocanonical_mapping_dt_out_mapping k_mapping_iso_output k_mapping_dont_manipulate_names. Qed.
-
-      (* Lemma relabeling_mu_inv_bij (g : rdf_graph I B L) (fs : seq (B -> B)) : *)
-      (*   List.Forall (fun mu => bijective mu) fs -> *)
-      (*   exists (mu : B->B), relabeling mu g == k_mapping g /\ bijective mu. *)
-      (* Proof. move => all_bij. *)
-      (*        apply inv_of_k_mapping. *)
-      (* Qed. *)
 
       Lemma k_mapping_iso g : iso_mapping (k_mapping g) g.
       Proof. rewrite /iso_mapping/is_iso_mapping. Admitted.

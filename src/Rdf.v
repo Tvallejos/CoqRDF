@@ -640,7 +640,10 @@ Section Rdf.
       Proof.
         suffices imp h1 h2 : iso_mapping h1 h2 -> iso_mapping h2 h1 by split; exact: imp.
         case=> mu; case=> us; rewrite /iso_mapping/is_iso_mapping/is_pre_iso=> /andP[peqb eqb].
-      Admitted.
+        move: (@eqb_rdf_relabeling_inv h1 h2 mu us eqb)=> [nu [usnu eqbnu]].
+        exists nu; exists usnu.
+        rewrite eqbnu Bool.andb_true_r -perm_relabel_bnodes. apply (eqb_relabeling_bnodes eqbnu). 
+      Qed.
 
       Lemma relabeling_triple_comp_map (B1 B2 B3 : eqType) (g : rdf_graph I B1 L) (mu12 : B1 -> B2) (mu23 : B2 -> B3) :
         [seq relabeling_triple mu23 i | i <- relabeling_seq_triple mu12 g] =

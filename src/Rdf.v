@@ -395,7 +395,9 @@ Section Rdf.
         Proof. Admitted.
 
         Lemma pre_iso_trans g1 g2 g3 : pre_iso g1 g2 -> pre_iso g2 g3 -> pre_iso g1 g3.
-        Proof. Admitted.
+        Proof. rewrite /pre_iso=> [[mu12 iso12] [mu23 iso23]].
+               by exists (mu23 \o mu12); apply (is_pre_iso_trans iso12 iso23).
+        Qed.
 
       End PreIso.
 
@@ -512,7 +514,9 @@ Section Rdf.
       Lemma map_rel_bnode s mu: all (@is_bnode I B L) s -> all (@is_bnode I B L) (map (relabeling_term mu) s).
       Proof. by elim: s=> [//| [//|//|//] b t IHt]. Qed.
 
-      Lemma perm_relabel_bnodes g1 g2 mu : perm_eq (map (relabeling_term mu) (bnodes g1)) (bnodes g2) = perm_eq (map mu (get_b g1)) (get_b g2).
+      Lemma perm_relabel_bnodes g1 g2 mu :
+        perm_eq (map (relabeling_term mu) (bnodes g1)) (bnodes g2) =
+          perm_eq (map mu (get_b g1)) (get_b g2).
       Proof. rewrite /get_b. move: (uniq_bnodes g1) (uniq_bnodes g2) (all_bnodes g1) (all_bnodes g2)=> unb1 unb2 alb1 alb2.
              rewrite !undup_get_bsC // -get_bs_map //.
              case e : (perm_eq [seq relabeling_term mu i | i <- bnodes g1] (bnodes g2)).
@@ -557,8 +561,8 @@ Section Rdf.
 
       (* MAYBE FIX ?*)
       (* Lemma get_b_relabeling_perm g1 g2 mu : *)
-      (*   forall us, perm_eq (@relabeling _ _ _ _ mu g1 us) g2 -> perm_eq (map mu (get_b g1)) (@get_b I B L g2). *)
-      (* Proof. *)
+      (*   forall us, perm_eq (@relabeling _ _ mu g1 us) g2 -> perm_eq (undup (map mu (get_b g1))) (get_b g2). *)
+      (* Proof. move=> x. rewrite /relabeling /=. *)
       (*   (* rewrite / *) *)
       (*   (* rewrite -perm_relabel_bnodes /relabeling=> /= peq. *) *)
       (*   (* apply uniq_perm. *) *)
@@ -582,7 +586,7 @@ Section Rdf.
       (*   have mem_undup_get_bs_map : forall s f,  map f (get_bs (undup s)) =i map f (get_bs s). *)
       (*   by move=> ? ? ? ? ? ? ?; apply: eq_mem_map; apply mem_undup_get_bs. *)
       (*   rewrite mem_undup_get_bs_map /=. *)
-      (*   have urt : relabeling_triple mu h \in relabeling_seq_triple mu t = false. admit. *)
+      (*   have urt : relabeling_triple mu h \in grelabeling_seq_triple mu t = false. admit. *)
       (*   rewrite terms_graph /= urt !get_bs_cat map_cat !mem_cat. *)
       (*   have ->: forall urts, [seq x <- undup *)
       (*                               (flatten *)
@@ -627,14 +631,42 @@ Section Rdf.
       Proof.
       Admitted.
 
-      Lemma eqb_relabeling_bnodes g1 g2 mu us:
-        eqb_rdf (@relabeling _ _ mu g1 us) g2 -> perm_eq (map (relabeling_term mu) (bnodes g1)) (bnodes g2).
-      Proof. move=> eq. apply uniq_perm.
-             rewrite map_inj_in_uniq. apply uniq_bnodes.
-             admit.
-             apply uniq_bnodes.
-             by move: eq=>  /eqb_rdf_bnodes/perm_mem eq x; rewrite -eq bnodes_relabel_mem.
-      Admitted.
+      Lemma is_pre_iso_inj g1 g2 mu : is_pre_iso g1 g2 mu -> {in get_b g1 &, injective mu}.
+      Proof. Admitted.
+
+      Lemma bnode_inj (i b l : eqType) : injective (fun bn=> @Bnode i b l bn).
+        Proof. by move=> x y; case. Qed.
+
+      Lemma is_pre_iso_bnodes_inj g1 g2 mu : is_pre_iso g1 g2 mu -> {in bnodes g1 &, injective (relabeling_term mu)}.
+      Proof. move=> /is_pre_iso_inj hmu []b // []b' // /=; move: (@bnode_inj I B L)=> binj.
+             rewrite bnodes_map_get_b !mem_map // => {binj} hb1 hb' [].
+             by move=> eq; congr Bnode;  apply hmu.
+      Qed.
+
+      (* Lemma eqb_relabeling_iso (g1 g2 : rdf_graph I B L) (mu : B -> B) (us : uniq (relabeling_seq_triple mu g1)) (eq : eqb_rdf (relabeling us) g2) : *)
+      (*   is_pre_iso g1 g2 mu. *)
+      (* Proof. rewrite /is_pre_iso -perm_relabel_bnodes. *)
+      (*        rewrite /eqb_rdf/relabeling /= /relabeling_seq_triple in eq. *)
+
+      (* Lemma eqb_relabeling_bnodes g1 g2 mu us: *)
+      (*   eqb_rdf (@relabeling _ _ mu g1 us) g2 -> perm_eq (map (relabeling_term mu) (bnodes g1)) (bnodes g2). *)
+      (* Proof. move=> eq. apply uniq_perm. *)
+      (*        rewrite map_inj_in_uniq. apply uniq_bnodes. *)
+      (*        admit. *)
+      (*        apply uniq_bnodes. *)
+      (*        by move: eq=> /eqb_rdf_bnodes/perm_mem eq x; rewrite -eq bnodes_relabel_mem. *)
+      (* Admitted. *)
+
+      Lemma perm_map_cancel (T1 T2: eqType) (s : seq T1) (f: T1 -> T2) (g: T2 -> T1) : cancel f g ->
+                                                                   perm_eq (map (g \o f) s) s.
+      Proof. move=> can. elim: s=>[//| h t IHts] /=. by rewrite can perm_cons IHts. Qed.
+
+      Lemma perm_map_in_cancel (T: eqType) (s : seq T) (f g: T -> T) : {in s, cancel f g} ->
+                                                                   perm_eq (map (g \o f) s) s.
+      Proof. elim: s=>[//| h t IHts] /=.
+             move=> can. rewrite can. rewrite perm_cons IHts //.
+             move=> x y. rewrite can //. by rewrite in_cons y orbT. by rewrite in_cons eqxx.
+      Qed.
 
       Definition iso_mapping_sym g1 g2 : iso_mapping g1 g2 <-> iso_mapping g2 g1.
       Proof.
@@ -642,8 +674,13 @@ Section Rdf.
         case=> mu; case=> us; rewrite /iso_mapping/is_iso_mapping/is_pre_iso=> /andP[peqb eqb].
         move: (@eqb_rdf_relabeling_inv h1 h2 mu us eqb)=> [nu [usnu eqbnu]].
         exists nu; exists usnu.
-        rewrite eqbnu Bool.andb_true_r -perm_relabel_bnodes. apply (eqb_relabeling_bnodes eqbnu). 
-      Qed.
+        rewrite eqbnu Bool.andb_true_r.
+        apply (perm_map nu) in peqb.
+        rewrite perm_sym in peqb.
+        apply (perm_trans peqb).
+        rewrite -map_comp map_id_in. apply perm_refl.
+        admit.
+      Admitted.
 
       Lemma relabeling_triple_comp_map (B1 B2 B3 : eqType) (g : rdf_graph I B1 L) (mu12 : B1 -> B2) (mu23 : B2 -> B3) :
         [seq relabeling_triple mu23 i | i <- relabeling_seq_triple mu12 g] =

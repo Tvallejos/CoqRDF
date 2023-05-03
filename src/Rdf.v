@@ -687,6 +687,8 @@ Section Rdf.
         admit.
         move: (is_pre_iso_inj nuP)=> nu_inj.
         have /(_ B _ _ nu_inj) inj_b_inj_relt : forall g mu, {in (get_b g)&, injective mu} -> {in g&, injective (relabeling_triple mu)}.
+        move=> ?.
+        case; elim=> [//| h t IHts] us' mu'.
         admit.
         have unu: uniq (relabeling_seq_triple nu h2).
         by rewrite map_inj_in_uniq // ugraph.

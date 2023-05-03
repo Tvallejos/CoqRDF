@@ -623,17 +623,59 @@ Section Rdf.
 
       Lemma eqb_rdf_relabeling_inv g1 g2 mu :
         forall us,
-          eqb_rdf (@relabeling _ _ mu g1 us) g2 -> exists nu us2, eqb_rdf (@relabeling _ _ nu g2 us2) g1.
+          eqb_rdf (@relabeling _ _ mu g1 us) g2 -> {in (get_b g1) &, injective mu} -> exists nu us2, eqb_rdf (@relabeling _ _ nu g2 us2) g1.
       Proof.
       Admitted.
 
+      Lemma perm_undup_map_inj (T1 T2: eqType) (f : T1 -> T2) s1 s2 :
+        {in s1 &,injective f} ->  uniq s1 -> perm_eq (undup (map f s1)) s2 -> perm_eq (map f s1) s2.
+      Proof. move=> injf us1 peq.
+             have equ: uniq (undup (map f s1)) = uniq (map f s1).
+             by rewrite map_inj_in_uniq // undup_uniq.
+             have eq: perm_eq (map f s1) (undup (map f s1)).
+             apply uniq_perm.
+             + by rewrite -equ undup_uniq.
+             + by rewrite undup_uniq.
+             + by move=> x; rewrite mem_undup.
+             by apply: perm_trans eq peq.
+      Qed.
+
+      Lemma eqb_rdf_get_b_hom g1 g2 mu us :
+        eqb_rdf (@relabeling _ _ mu g1 us) g2 -> perm_eq (undup (map mu (get_b g1))) (get_b g2).
+      Proof. move=> /eqb_rdf_get_b; rewrite /relabeling/=/relabeling_seq_triple/get_b/==> peq_b.
+             apply uniq_perm. by apply undup_uniq. apply undup_uniq.
+             move: peq_b=> /perm_mem peqb.
+             move=> x. rewrite mem_undup -peqb mem_undup -mem_map_undup.
+             move {peqb g2}.
+             case: g1 us; elim=> [//| h t IHts].
+             move=> ug urg; rewrite /= !bnodes_cons.
+             have undup_get_bs: forall s, (undup (get_bs s)) = (get_bs (undup s)). admit.
+             have get_bs_cat: forall s1 s2, get_bs s1 ++ get_bs s2 = get_bs (s1 ++ s2). admit.
+             rewrite -!undup_get_bs mem_undup -mem_map_undup -!get_bs_cat map_cat !mem_cat /= IHts.
+             by apply uniq_tail in urg.
+             move=> tmp; f_equal; move {tmp ug urg}.
+             case: h; case=> // a; case=> // b; case=> // c ? ?;
+                                                      rewrite /bnodes_triple/terms_triple ?filter_undup //.
+             (* rewrite -filter_undup. *)
+             have ->:  [seq x <- [:: relabeling_term mu (Bnode a); relabeling_term mu (Iri b);
+                            relabeling_term mu (Bnode c)]
+                       | is_bnode x] = [:: (Bnode (mu a)); (Bnode (mu c))].
+             by [].
+             rewrite /= in_cons in_nil.
+             case e: (Bnode a == Bnode c).
+             have eq: a = c. admit.
+             by rewrite eq /= !in_cons !in_nil eqxx /= in_cons in_nil.
+             rewrite /= !in_cons !in_nil.
+             case e2: (Bnode (mu a) == Bnode (mu c)).
+             have ->: (mu a) = (mu c). admit.
+             rewrite in_cons in_nil /=.
+
+
       Lemma eqb_relabeling_bnodes g1 g2 mu us:
-        eqb_rdf (@relabeling _ _ mu g1 us) g2 -> perm_eq (map (relabeling_term mu) (bnodes g1)) (bnodes g2).
-      Proof. move=> eq. apply uniq_perm.
-             rewrite map_inj_in_uniq. apply uniq_bnodes.
-             admit.
-             apply uniq_bnodes.
-             by move: eq=>  /eqb_rdf_bnodes/perm_mem eq x; rewrite -eq bnodes_relabel_mem.
+        perm_eq (map (relabeling_term mu) (bnodes g1)) (bnodes g2) ->
+        eqb_rdf (@relabeling _ _ mu g1 us) g2.
+      Proof. move=> eq. apply uniq_perm. exact: us. apply ugraph.
+             move=> t. rewrite /relabeling /=.
       Admitted.
 
       Definition iso_mapping_sym g1 g2 : iso_mapping g1 g2 <-> iso_mapping g2 g1.
@@ -642,7 +684,7 @@ Section Rdf.
         case=> mu; case=> us; rewrite /iso_mapping/is_iso_mapping/is_pre_iso=> /andP[peqb eqb].
         move: (@eqb_rdf_relabeling_inv h1 h2 mu us eqb)=> [nu [usnu eqbnu]].
         exists nu; exists usnu.
-        rewrite eqbnu Bool.andb_true_r -perm_relabel_bnodes. apply (eqb_relabeling_bnodes eqbnu). 
+        rewrite eqbnu Bool.andb_true_r -perm_relabel_bnodes. rewrite perm_relabel_bnodes. apply (eqb_relabeling_bnodes eqbnu).
       Qed.
 
       Lemma relabeling_triple_comp_map (B1 B2 B3 : eqType) (g : rdf_graph I B1 L) (mu12 : B1 -> B2) (mu23 : B2 -> B3) :

@@ -661,11 +661,50 @@ Section Rdf.
              by rewrite !in_cons in_nil.
       Qed.
 
+      Lemma mem_get_bs_undup (s: seq (term I B L)) : get_bs (undup s) =i get_bs s.
+      Proof. elim: s=> [//| h t IHts] x.
+             rewrite /=.
+             case e: (h \in t).
+             case: h e=> // b /=.
+             by rewrite IHts -(mem_undup (b :: get_bs t)) bnode_memP /==> ->; rewrite mem_undup.
+             case: h e=> // b /=.
+             by rewrite -(mem_undup (b :: get_bs t)) bnode_memP /==> ->; rewrite !in_cons IHts mem_undup.
+      Qed.
+
+      Lemma is_pre_iso_inv g1 g2 mu : is_pre_iso g1 g2 mu -> exists nu, is_pre_iso g2 g1 nu.
+      Proof. move=> ipiso.
+             have /pre_iso_sym [nu nuP]: pre_iso g1 g2. by exists mu.
+                                                             by exists nu.
+      Qed.
+
       Definition iso_mapping_sym g1 g2 : iso_mapping g1 g2 <-> iso_mapping g2 g1.
       Proof.
         suffices imp h1 h2 : iso_mapping h1 h2 -> iso_mapping h2 h1 by split; exact: imp.
-        case=> mu; case=> us; rewrite /iso_mapping/is_iso_mapping/is_pre_iso=> /andP[peqb eqb].
-        Admitted.
+        case=> mu; case=> us; rewrite /iso_mapping/is_iso_mapping=> /andP[peqb eqb].
+        have [nu nuP]: pre_iso h2 h1.
+        by apply (is_pre_iso_inv peqb).
+        have can_munu: {in (get_b h1), cancel mu nu}.
+        admit.
+        move: (is_pre_iso_inj nuP)=> nu_inj.
+        have /(_ B _ _ nu_inj) inj_b_inj_relt : forall g mu, {in (get_b g)&, injective mu} -> {in g&, injective (relabeling_triple mu)}.
+        admit.
+        have unu: uniq (relabeling_seq_triple nu h2).
+        by rewrite map_inj_in_uniq // ugraph.
+        exists nu. exists unu.
+        rewrite nuP /=.
+        move: eqb; rewrite /relabeling/eqb_rdf perm_sym /==> eqb.
+        apply (perm_map (relabeling_triple nu)) in eqb.
+        apply (perm_trans eqb).
+        rewrite -map_comp; move {us peqb nuP eqb}.
+        case: h1 can_munu; elim=> [//| h t IHts] us can_munu.
+        rewrite /= -relabeling_triple_comp.
+        have ->: relabeling_triple (nu \o mu) h = h.
+        by case: h us can_munu; case=> //a; case=> //b; case=> //c /= ? ? us can_munu; apply /triple_inj=> // /=; rewrite can_munu // /get_b mem_undup bnodes_cons mem_get_bs_undup -get_bs_cat /bnodes_triple filter_undup mem_cat mem_get_bs_undup /= ?in_cons ?eqxx ?orbT.
+        move: (uniq_tail us)=> ust.
+        rewrite perm_cons IHts //.
+        move=> x xin ; rewrite can_munu //; move: xin.
+        by rewrite /get_b bnodes_cons !mem_undup mem_get_bs_undup -get_bs_cat mem_cat=> ->; rewrite orbT.
+      Admitted.
 
       Lemma relabeling_triple_comp_map (B1 B2 B3 : eqType) (g : rdf_graph I B1 L) (mu12 : B1 -> B2) (mu23 : B2 -> B3) :
         [seq relabeling_triple mu23 i | i <- relabeling_seq_triple mu12 g] =

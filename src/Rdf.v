@@ -401,22 +401,26 @@ Section Rdf.
 
       End PreIso.
 
-      Definition is_iso_mapping g1 g2 mu us :=
+      Definition is_iso_mapping_old g1 g2 mu us :=
         is_pre_iso g1 g2 mu &&
           eqb_rdf (@relabeling _ _ mu g1 us) g2.
 
-      Definition iso_mapping g1 g2 := exists mu us, @is_iso_mapping g1 g2 mu us.
+      Definition is_iso_mapping g1 g2 mu :=
+        [&& is_pre_iso g1 g2 mu,
+          uniq (relabeling_seq_triple mu g1) & 
+          perm_eq (relabeling_seq_triple mu g1) g2].
 
-      Remark is_iso_is_pre_iso g1 g2 mu us: @is_iso_mapping g1 g2 mu us -> is_pre_iso g1 g2 mu.
-      Proof. by move=> /andP []. Qed.
+      
+      Definition iso_mapping g1 g2 := exists mu, @is_iso_mapping g1 g2 mu.
+
+      Remark is_iso_is_pre_iso g1 g2 mu: @is_iso_mapping g1 g2 mu -> is_pre_iso g1 g2 mu.
+      Proof. by case/and3P. Qed.
 
       Definition iso_mapping_refl g : iso_mapping g g.
-      Proof. exists id; rewrite /is_iso_mapping.
-             case g=> g' ug.
-             have ugid: uniq (relabeling_seq_triple id {| graph := g'; ugraph := ug |}).
-             by rewrite relabeling_seq_triple_id ug.
-             exists ugid. apply /andP; split; last by rewrite relabeling_id eqb_rdf_refl.
-             + by rewrite /is_pre_iso map_id.
+      Proof.
+      exists id; rewrite /is_iso_mapping.
+      case g=> g' ug /=.
+      by rewrite relabeling_seq_triple_id ug  /= /is_pre_iso  map_id !perm_refl.
       Qed.
 
       Lemma eqb_rdf_terms g1 g2 : eqb_rdf g1 g2 -> perm_eq (terms g1) (terms g2).
@@ -560,11 +564,12 @@ Section Rdf.
       Qed.
 
       Remark eqiso_mapping g1 g2 : eqb_rdf g1 g2 -> iso_mapping g1 g2.
-      Proof. exists id. have usid: uniq (relabeling_seq_triple id g1). by rewrite relabeling_seq_triple_id; case g1.
-             exists usid.
-             apply /andP; split=> [|//].
-             by move: H; rewrite /is_pre_iso map_id; apply eqb_rdf_get_b.
-             by rewrite relabeling_id.
+      Proof.
+        exists id.
+        have usid: uniq (relabeling_seq_triple id g1) by rewrite relabeling_seq_triple_id; case g1.
+        rewrite /is_iso_mapping usid /is_pre_iso map_id relabeling_seq_triple_id /=; apply/andP; split.
+        - exact: eqb_rdf_get_b.
+        - exact: H.
       Qed.
 
       Lemma eqb_rdf_relabeling_inv g1 g2 mu :
@@ -677,10 +682,40 @@ Section Rdf.
                                                              by exists nu.
       Qed.
 
+      Lemma uniq_rdf_graph g : uniq g. Proof. exact: ugraph. Qed.
+      Hint Resolve uniq_rdf_graph.
+
       Definition iso_mapping_sym g1 g2 : iso_mapping g1 g2 <-> iso_mapping g2 g1.
       Proof.
         suffices imp h1 h2 : iso_mapping h1 h2 -> iso_mapping h2 h1 by split; exact: imp.
-        case=> mu; case=> us; rewrite /iso_mapping/is_iso_mapping=> /andP[peqb eqb].
+        case=> mu /and3P[] pre_iso_mu uniq_relab perm_relab. 
+        have [nu nuP]: pre_iso h2 h1 by apply: (is_pre_iso_inv pre_iso_mu).
+        exists nu.
+        have inj_nu : {in h2 &, injective (relabeling_triple nu)}.
+          rewrite /is_pre_iso in nuP. move=> x y h2x h2y heq. 
+          (* f : A -> B and suppose: *)
+          (*     - A = A1 |_| A2 *)
+          (*     - f (A1) is disjoint from f (A2) *)
+          (*     - f is inj on A1 and f is injective on A2                  *)
+          (*     => f is injective on A *)
+          have eqs : relabeling_term nu (subject x) = relabeling_term nu (subject y). by admit.
+          have eqo : relabeling_term nu (object x) = relabeling_term nu (object y). by admit.
+          have eqp : relabeling_term nu (predicate x) = relabeling_term nu (predicate y). by admit.
+          case: x h2x heq eqs eqo eqp => sx px ox /= ? ? h2x heq eqs eqo eqp.
+          case: y h2y heq eqs eqo eqp => sy py oy /= ? ? h2y heq eqs eqo eqp.
+          apply: triple_inj => /=; admit.
+        apply/and3P; split=> //.
+        - by rewrite map_inj_in_uniq. 
+        - rewrite /is_pre_iso in nuP.
+          have aux : perm_eq (relabeling_seq_triple nu h2) (relabeling_seq_triple nu (relabeling_seq_triple mu h1)).
+            by apply: perm_map; rewrite perm_sym.
+          apply: perm_trans aux _.
+          rewrite relabeling_seq_triple_comp.
+          apply uniq_perm=> //.
+Search perm_eq uniq.
+          
+          Search _ perm_eq map.
+        case=> us; rewrite /iso_mapping/is_iso_mapping=> /andP[peqb eqb].
         have [nu nuP]: pre_iso h2 h1.
         by apply (is_pre_iso_inv peqb).
         have can_munu: {in (get_b h1), cancel mu nu}.
@@ -719,6 +754,7 @@ Section Rdf.
         forall u1 u2 u3,
         eqb_rdf (@relabeling _ _ mu12 g1 u1) g2 ->
         eqb_rdf (@relabeling _ _ mu23 g2 u2) g3 ->
+
         eqb_rdf (@relabeling _ _ (mu23 \o mu12) g1 u3) g3.
       Proof. move=> u1 u2 u3; rewrite /eqb_rdf/relabeling=> /(perm_map (relabeling_triple mu23)) p12 p23.
              suffices : [seq relabeling_triple mu23 i | i <- {| graph := relabeling_seq_triple mu12 g1 |}] =

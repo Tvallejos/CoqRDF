@@ -741,12 +741,11 @@ Section IsoCan.
 
       Lemma k_mapping_iso_output : mapping_is_iso_mapping k_mapping.
       Proof. rewrite /mapping_is_iso_mapping/iso_mapping/is_iso_mapping=> g.
-             exists todo. exists todo.
+             exists todo.
              suffices eqb: eqb_rdf (relabeling todo) g.
-             apply /andP; split; last by apply eqb.
+             apply /and3P; split; last by apply eqb.
              admit.
       Admitted.
-
 
       Lemma k_mapping_dont_manipulate_names : (dt_names_mapping k_mapping).
       Proof.

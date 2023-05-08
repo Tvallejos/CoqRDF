@@ -705,28 +705,27 @@ Section Rdf.
              by move=> in_tl /= ; case: (is_bnode h); rewrite ?in_cons IHts ?orbT.
       Qed.
 
+      Lemma triple_case t1 t2: t1 = t2 -> [&& (subject t1) == (subject t2),
+            (predicate t1) == (predicate t2) &
+              (object t1) == (object t2)].
+        Proof. by case t1; case t2=> /= ? ? ? ? ? ? ? ? ? ? [] -> -> ->; rewrite !eqxx. Qed.
+
+        Lemma relabeling_term_inj_terms {B2 : eqType} (mu : B -> B2) g sx sy :
+          {in get_b g &, injective mu} ->
+          sx \in terms g -> sy \in terms g ->
+          relabeling_term mu sx = relabeling_term mu sy ->
+          sx = sy.
+        Proof. case sx; case sy=> /= // bx b_y mu_inj memy memx.
+               by move=> [->].
+               by move=> [->].
+               by move=> [/mu_inj]; rewrite /get_b !mem_undup -!bnode_memP !bterms // => ->.
+        Qed.
+
+
       Lemma is_pre_iso_inj_g {B2: eqType} g (mu : B -> B2) : ({in get_b g &, injective mu}) -> {in g &, injective (relabeling_triple mu)}.
-      Proof. move=> mu_inj x y h2x h2y heq.
-          have eqs : relabeling_term mu (subject x) = relabeling_term mu (subject y).
-          by move: heq; case x; case y=> /= sx ? ? ? ? sy ? ? ? ? [].
-          have eqo : relabeling_term mu (object x) = relabeling_term mu (object y).
-          by move: heq; case x; case y=> /= ? px ? ? ? ? py ? ? ? [].
-          have eqp : relabeling_term mu (predicate x) = relabeling_term mu (predicate y).
-          by move: heq; case x; case y=> /= ? ? ox ? ? ? ? oy ? ? [].
-          case: x h2x heq eqs eqo eqp => sx px ox /= ? ? h2x _ eqs eqo eqp.
-          case: y h2y eqs eqo eqp => sy py oy /= ? ? h2y eqs eqo eqp.
-          apply mem_triple_terms in h2x.
-          apply mem_triple_terms in h2y.
-          apply triple_inj=> /=.
-             + move: h2x h2y eqs => /= ; case sx; case sy=> //bx b_y /==> /and3P []memsx mempx memox /and3P []memsy mempy memoy; case; last by move=> /mu_inj; rewrite /get_b !mem_undup -!bnode_memP !bterms // => ->.
-               by move=> ->.
-               by move=> ->.
-             + move: h2x h2y eqp => /= ; case px; case py=> //bx b_y /==> /and3P []memsx mempx memox /and3P []memsy mempy memoy; case; last by move=> /mu_inj; rewrite /get_b !mem_undup -!bnode_memP !bterms // => ->.
-               by move=> ->.
-               by move=> ->.
-             + move: h2x h2y eqo => /= ; case ox; case oy=> //bx b_y /==> /and3P []memsx mempx memox /and3P []memsy mempy memoy; case; last by move=> /mu_inj; rewrite /get_b !mem_undup -!bnode_memP !bterms // => ->.
-               by move=> ->.
-               by move=> ->.
+      Proof.
+        move=> mu_inj; case=> sx ps ox ? ?; case=> sy py oy ? ? /= /mem_triple_terms /= /and3P[memsx mempx memox] /mem_triple_terms /= /and3P[memsy mempy memoy] [] eqs eqp eqo.
+          by apply triple_inj=> /=; apply (relabeling_term_inj_terms mu_inj)=> //.
       Qed.
 
       Definition iso_mapping_sym g1 g2 : iso_mapping g1 g2 <-> iso_mapping g2 g1.
@@ -736,27 +735,7 @@ Section Rdf.
         have [nu nuP]: pre_iso h2 h1 by apply: (is_pre_iso_inv pre_iso_mu).
         exists nu.
         have inj_nu : {in h2 &, injective (relabeling_triple nu)}.
-          rewrite /is_pre_iso in nuP. move=> x y h2x h2y heq.
-          (* f : A -> B and suppose: *)
-          (*     - A = A1 |_| A2 *)
-          (*     - f (A1) is disjoint from f (A2) *)
-          (*     - f is inj on A1 and f is injective on A2                  *)
-          (*     => f is injective on A *)
-          move: (is_pre_iso_bnodes_inj nuP) (is_pre_iso_inj nuP)=> rtmu_inj mu_inj.
-          have eqs : relabeling_term nu (subject x) = relabeling_term nu (subject y).
-          by move: heq; case x; case y=> /= sx ? ? ? ? sy ? ? ? ? [].
-          have eqo : relabeling_term nu (object x) = relabeling_term nu (object y).
-          by move: heq; case x; case y=> /= ? px ? ? ? ? py ? ? ? [].
-          have eqp : relabeling_term nu (predicate x) = relabeling_term nu (predicate y).
-          by move: heq; case x; case y=> /= ? ? ox ? ? ? ? oy ? ? [].
-          case: x h2x heq eqs eqo eqp => sx px ox /= ? ? h2x _ eqs eqo eqp.
-          case: y h2y eqs eqo eqp => sy py oy /= ? ? h2y eqs eqo eqp.
-          apply mem_triple_terms in h2x.
-          apply mem_triple_terms in h2y.
-          apply triple_inj=> /=.
-          + by move: h2x h2y eqs => /= ; case sx; case sy=> //bx b_y /==> /and3P []memsx mempx memox /and3P []memsy mempy memoy; case=> /mu_inj; rewrite /get_b !mem_undup -!bnode_memP !bterms // => ->.
-          + by move: h2x h2y eqp => /= ; case px; case py=> //bx b_y /==> /and3P []memsx mempx memox /and3P []memsy mempy memoy; case=> /mu_inj; rewrite /get_b !mem_undup -!bnode_memP !bterms // => ->.
-          + by move: h2x h2y eqo => /= ; case ox; case oy=> //bx b_y /==> /and3P []memsx mempx memox /and3P []memsy mempy memoy; case=> /mu_inj; rewrite /get_b !mem_undup -!bnode_memP !bterms // => ->.
+        apply: is_pre_iso_inj_g (is_pre_iso_inj nuP).
         apply/and3P; split=> //.
         - by rewrite map_inj_in_uniq.
         - rewrite /is_pre_iso in nuP.

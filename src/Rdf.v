@@ -685,62 +685,88 @@ Section Rdf.
       Lemma uniq_rdf_graph g : uniq g. Proof. exact: ugraph. Qed.
       Hint Resolve uniq_rdf_graph.
 
+      Lemma mem_triple_terms t g: t \in g -> [&& (subject t) \in (terms g),
+              ((predicate t) \in (terms g)) & ((object t) \in terms g)].
+      Proof. case t=> s p o ? ? /=; case g; elim=> [//|hd tl IHts] /= us t_mem.
+             apply /and3P; rewrite !terms_cons !mem_undup; move: t_mem; rewrite !in_cons /terms_triple !mem_cat; case/orP.
+             + by move=> /eqP H; rewrite -{1}H -{2}H -{3}H !mem_undup !in_cons !eqxx /= !orbT.
+             + move: (uniq_tail us)=> utl mem_tl.
+               have /and3P[-> -> ->]: [&& s \in terms {| graph := tl; ugraph := utl |},
+             p \in terms {| graph := tl; ugraph := utl |}
+                   & o \in terms {| graph := tl; ugraph := utl |}] by apply IHts.
+               by rewrite !orbT.
+      Qed.
+
+      Lemma bterms b g: Bnode b \in (terms g) -> Bnode b \in (bnodes g).
+      Proof. move=> mem_term; rewrite /bnodes mem_undup; move: mem_term.
+             elim: (terms g)=> [|h t IHts]; first by rewrite in_nil.
+             rewrite in_cons; case/orP.
+             by move=> /eqP <-; rewrite in_cons eqxx.
+             by move=> in_tl /= ; case: (is_bnode h); rewrite ?in_cons IHts ?orbT.
+      Qed.
+
+      Lemma is_pre_iso_inj_g {B2: eqType} g (mu : B -> B2) : ({in get_b g &, injective mu}) -> {in g &, injective (relabeling_triple mu)}.
+      Proof. move=> mu_inj x y h2x h2y heq.
+          have eqs : relabeling_term mu (subject x) = relabeling_term mu (subject y).
+          by move: heq; case x; case y=> /= sx ? ? ? ? sy ? ? ? ? [].
+          have eqo : relabeling_term mu (object x) = relabeling_term mu (object y).
+          by move: heq; case x; case y=> /= ? px ? ? ? ? py ? ? ? [].
+          have eqp : relabeling_term mu (predicate x) = relabeling_term mu (predicate y).
+          by move: heq; case x; case y=> /= ? ? ox ? ? ? ? oy ? ? [].
+          case: x h2x heq eqs eqo eqp => sx px ox /= ? ? h2x _ eqs eqo eqp.
+          case: y h2y eqs eqo eqp => sy py oy /= ? ? h2y eqs eqo eqp.
+          apply mem_triple_terms in h2x.
+          apply mem_triple_terms in h2y.
+          apply triple_inj=> /=.
+             + move: h2x h2y eqs => /= ; case sx; case sy=> //bx b_y /==> /and3P []memsx mempx memox /and3P []memsy mempy memoy; case; last by move=> /mu_inj; rewrite /get_b !mem_undup -!bnode_memP !bterms // => ->.
+               by move=> ->.
+               by move=> ->.
+             + move: h2x h2y eqp => /= ; case px; case py=> //bx b_y /==> /and3P []memsx mempx memox /and3P []memsy mempy memoy; case; last by move=> /mu_inj; rewrite /get_b !mem_undup -!bnode_memP !bterms // => ->.
+               by move=> ->.
+               by move=> ->.
+             + move: h2x h2y eqo => /= ; case ox; case oy=> //bx b_y /==> /and3P []memsx mempx memox /and3P []memsy mempy memoy; case; last by move=> /mu_inj; rewrite /get_b !mem_undup -!bnode_memP !bterms // => ->.
+               by move=> ->.
+               by move=> ->.
+      Qed.
+
       Definition iso_mapping_sym g1 g2 : iso_mapping g1 g2 <-> iso_mapping g2 g1.
       Proof.
         suffices imp h1 h2 : iso_mapping h1 h2 -> iso_mapping h2 h1 by split; exact: imp.
-        case=> mu /and3P[] pre_iso_mu uniq_relab perm_relab. 
+        case=> mu /and3P[] pre_iso_mu uniq_relab perm_relab.
         have [nu nuP]: pre_iso h2 h1 by apply: (is_pre_iso_inv pre_iso_mu).
         exists nu.
         have inj_nu : {in h2 &, injective (relabeling_triple nu)}.
-          rewrite /is_pre_iso in nuP. move=> x y h2x h2y heq. 
+          rewrite /is_pre_iso in nuP. move=> x y h2x h2y heq.
           (* f : A -> B and suppose: *)
           (*     - A = A1 |_| A2 *)
           (*     - f (A1) is disjoint from f (A2) *)
           (*     - f is inj on A1 and f is injective on A2                  *)
           (*     => f is injective on A *)
-          have eqs : relabeling_term nu (subject x) = relabeling_term nu (subject y). by admit.
-          have eqo : relabeling_term nu (object x) = relabeling_term nu (object y). by admit.
-          have eqp : relabeling_term nu (predicate x) = relabeling_term nu (predicate y). by admit.
-          case: x h2x heq eqs eqo eqp => sx px ox /= ? ? h2x heq eqs eqo eqp.
-          case: y h2y heq eqs eqo eqp => sy py oy /= ? ? h2y heq eqs eqo eqp.
-          apply: triple_inj => /=; admit.
+          move: (is_pre_iso_bnodes_inj nuP) (is_pre_iso_inj nuP)=> rtmu_inj mu_inj.
+          have eqs : relabeling_term nu (subject x) = relabeling_term nu (subject y).
+          by move: heq; case x; case y=> /= sx ? ? ? ? sy ? ? ? ? [].
+          have eqo : relabeling_term nu (object x) = relabeling_term nu (object y).
+          by move: heq; case x; case y=> /= ? px ? ? ? ? py ? ? ? [].
+          have eqp : relabeling_term nu (predicate x) = relabeling_term nu (predicate y).
+          by move: heq; case x; case y=> /= ? ? ox ? ? ? ? oy ? ? [].
+          case: x h2x heq eqs eqo eqp => sx px ox /= ? ? h2x _ eqs eqo eqp.
+          case: y h2y eqs eqo eqp => sy py oy /= ? ? h2y eqs eqo eqp.
+          apply mem_triple_terms in h2x.
+          apply mem_triple_terms in h2y.
+          apply triple_inj=> /=.
+          + by move: h2x h2y eqs => /= ; case sx; case sy=> //bx b_y /==> /and3P []memsx mempx memox /and3P []memsy mempy memoy; case=> /mu_inj; rewrite /get_b !mem_undup -!bnode_memP !bterms // => ->.
+          + by move: h2x h2y eqp => /= ; case px; case py=> //bx b_y /==> /and3P []memsx mempx memox /and3P []memsy mempy memoy; case=> /mu_inj; rewrite /get_b !mem_undup -!bnode_memP !bterms // => ->.
+          + by move: h2x h2y eqo => /= ; case ox; case oy=> //bx b_y /==> /and3P []memsx mempx memox /and3P []memsy mempy memoy; case=> /mu_inj; rewrite /get_b !mem_undup -!bnode_memP !bterms // => ->.
         apply/and3P; split=> //.
-        - by rewrite map_inj_in_uniq. 
+        - by rewrite map_inj_in_uniq.
         - rewrite /is_pre_iso in nuP.
           have aux : perm_eq (relabeling_seq_triple nu h2) (relabeling_seq_triple nu (relabeling_seq_triple mu h1)).
             by apply: perm_map; rewrite perm_sym.
           apply: perm_trans aux _.
           rewrite relabeling_seq_triple_comp.
           apply uniq_perm=> //.
-Search perm_eq uniq.
-          
+          Search perm_eq uniq.
           Search _ perm_eq map.
-        case=> us; rewrite /iso_mapping/is_iso_mapping=> /andP[peqb eqb].
-        have [nu nuP]: pre_iso h2 h1.
-        by apply (is_pre_iso_inv peqb).
-        have can_munu: {in (get_b h1), cancel mu nu}.
-        admit.
-        move: (is_pre_iso_inj nuP)=> nu_inj.
-        have /(_ B _ _ nu_inj) inj_b_inj_relt : forall g mu, {in (get_b g)&, injective mu} -> {in g&, injective (relabeling_triple mu)}.
-        move=> ?.
-        case; elim=> [//| h t IHts] us' mu'.
-        admit.
-        have unu: uniq (relabeling_seq_triple nu h2).
-        by rewrite map_inj_in_uniq // ugraph.
-        exists nu. exists unu.
-        rewrite nuP /=.
-        move: eqb; rewrite /relabeling/eqb_rdf perm_sym /==> eqb.
-        apply (perm_map (relabeling_triple nu)) in eqb.
-        apply (perm_trans eqb).
-        rewrite -map_comp; move {us peqb nuP eqb}.
-        case: h1 can_munu; elim=> [//| h t IHts] us can_munu.
-        rewrite /= -relabeling_triple_comp.
-        have ->: relabeling_triple (nu \o mu) h = h.
-        by case: h us can_munu; case=> //a; case=> //b; case=> //c /= ? ? us can_munu; apply /triple_inj=> // /=; rewrite can_munu // /get_b mem_undup bnodes_cons mem_get_bs_undup -get_bs_cat /bnodes_triple filter_undup mem_cat mem_get_bs_undup /= ?in_cons ?eqxx ?orbT.
-        move: (uniq_tail us)=> ust.
-        rewrite perm_cons IHts //.
-        move=> x xin ; rewrite can_munu //; move: xin.
-        by rewrite /get_b bnodes_cons !mem_undup mem_get_bs_undup -get_bs_cat mem_cat=> ->; rewrite orbT.
       Admitted.
 
       Lemma relabeling_triple_comp_map (B1 B2 B3 : eqType) (g : rdf_graph I B1 L) (mu12 : B1 -> B2) (mu23 : B2 -> B3) :
@@ -769,16 +795,17 @@ Search perm_eq uniq.
       Qed.
 
       Definition iso_mapping_trans g1 g2 g3 : iso_mapping g1 g2 -> iso_mapping g2 g3 -> iso_mapping g1 g3.
-      Proof. rewrite /iso_mapping/is_iso_mapping; move=> [mu12 [us1 /andP[peq12 eqb12]]] [mu23 [us2 /andP[peq23 eqb23]]].
+      Proof. rewrite /iso_mapping/is_iso_mapping; move=> [mu12 /and3P[pre_iso12 urel12 perm12]] [mu23 /and3P[pre_iso23 urel23 perm23]].
              exists (mu23 \o mu12).
              suffices ucomp: uniq (relabeling_seq_triple (mu23 \o mu12) g1).
-             exists ucomp; apply /andP; split; first by apply: is_pre_iso_trans peq12 peq23.
-             by apply : eqb_relabeling_comp eqb12 eqb23.
-             rewrite -relabeling_seq_triple_comp /relabeling_seq_triple.
-             have eqsize : size [seq relabeling_triple mu23 i | i <- [seq relabeling_triple mu12 i | i <- g1]] =
+             apply /and3P; split=> //.
+             + by apply: is_pre_iso_trans pre_iso12 pre_iso23.
+             + apply : eqb_relabeling_comp perm12 perm23=> //.
+             + rewrite -relabeling_seq_triple_comp /relabeling_seq_triple.
+               have /eq_uniq -> //: size [seq relabeling_triple mu23 i | i <- [seq relabeling_triple mu12 i | i <- g1]] =
                              size (relabeling_seq_triple mu23 g2).
-             by move: eqb12=> /perm_size; rewrite /relabeling /= /relabeling_seq_triple !size_map.
-             rewrite (eq_uniq eqsize) //; last by apply eq_mem_map; move: eqb12=> /perm_mem.
+               by move: perm12=> /perm_size; rewrite /relabeling /= /relabeling_seq_triple !size_map.
+               by apply eq_mem_map; move: perm12=> /perm_mem.
       Qed.
 
       Definition isocanonical_mapping_map (M : rdf_graph I B L -> rdf_graph I B L) :=

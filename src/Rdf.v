@@ -79,7 +79,7 @@ Section Rdf.
 
     Definition relabeling_seq_triple
       (B' B'': Type) (μ : B' -> B'')
-      (ts : seq (triple I B' L)) : seq (triple _ B'' _) :=
+      (ts : seq (triple I B' L)) : seq (triple I B'' L) :=
       map (relabeling_triple μ) ts.
 
     Section Relabeling_seq_triple.
@@ -378,7 +378,8 @@ Section Rdf.
 
       Section PreIso.
 
-        Definition is_pre_iso g1 g2 (μ : B -> B) := perm_eq (map μ (get_b g1)) (get_b g2).
+        Definition is_pre_iso g1 g2 (μ : B -> B) :=
+          perm_eq (map μ (get_b g1)) (get_b g2).
 
         Lemma is_pre_iso_trans g1 g2 g3 m12 m23 :
           is_pre_iso g1 g2 m12 -> is_pre_iso g2 g3 m23 -> is_pre_iso g1 g3 (m23 \o m12).
@@ -407,10 +408,9 @@ Section Rdf.
 
       Definition is_iso_mapping g1 g2 mu :=
         [&& is_pre_iso g1 g2 mu,
-          uniq (relabeling_seq_triple mu g1) & 
+          uniq (relabeling_seq_triple mu g1) &
           perm_eq (relabeling_seq_triple mu g1) g2].
 
-      
       Definition iso_mapping g1 g2 := exists mu, @is_iso_mapping g1 g2 mu.
 
       Remark is_iso_is_pre_iso g1 g2 mu: @is_iso_mapping g1 g2 mu -> is_pre_iso g1 g2 mu.
@@ -728,11 +728,20 @@ Section Rdf.
           by apply triple_inj=> /=; apply (relabeling_term_inj_terms mu_inj)=> //.
       Qed.
 
+      Lemma eq_relabeling_triple (i l B1 B2 : eqType) (mu nu : B1 -> B2) : mu =1 nu -> (@relabeling_triple i l _ _ mu) =1 (relabeling_triple nu).
+      Proof. by move=> feq [[]? []? []? ? ?]; apply /triple_inj=> //=; rewrite feq. Qed.
+
+      Lemma eq_relabeling_seq_triple (B1 B2 : eqType) (mu nu : B1 -> B2) : mu =1 nu -> (relabeling_seq_triple mu) =1 (relabeling_seq_triple nu).
+      Proof. move=> feq; elim=> [//| h t IHtl].
+             by rewrite /= (eq_relabeling_triple feq) IHtl.
+      Qed.
+
       Definition iso_mapping_sym g1 g2 : iso_mapping g1 g2 <-> iso_mapping g2 g1.
       Proof.
         suffices imp h1 h2 : iso_mapping h1 h2 -> iso_mapping h2 h1 by split; exact: imp.
         case=> mu /and3P[pre_iso_mu uniq_relab perm_relab].
         have [nu nuP]: pre_iso h2 h1 by apply: (is_pre_iso_inv pre_iso_mu).
+        rewrite /iso_mapping/is_iso_mapping.
         exists nu.
         have inj_nu : {in h2 &, injective (relabeling_triple nu)}.
         apply: is_pre_iso_inj_g (is_pre_iso_inj nuP).
@@ -740,14 +749,10 @@ Section Rdf.
         - by rewrite map_inj_in_uniq.
         - rewrite /is_pre_iso in nuP.
           have aux : perm_eq (relabeling_seq_triple nu h2) (relabeling_seq_triple nu (relabeling_seq_triple mu h1)).
-            by apply: perm_map; rewrite perm_sym.
-          apply: perm_trans aux _.
-          (* rewrite relabeling_seq_triple_comp. *)
-          move: (is_pre_iso_inj pre_iso_mu)=> /is_pre_iso_inj_g inj_mu.
-          apply uniq_perm=> //.
-          rewrite map_inj_in_uniq //.
-          apply perm_mem in perm_relab.
-          move=> x y. rewrite !perm_relab. apply inj_nu.
+          by apply: perm_map; rewrite perm_sym.
+          have [f fP]: exists f, perm_eq (relabeling_seq_triple f h2) h1. admit.
+          have /eq_relabeling_seq_triple -> : nu =1 f. admit.
+          apply fP.
       Admitted.
 
       Lemma relabeling_triple_comp_map (B1 B2 B3 : eqType) (g : rdf_graph I B1 L) (mu12 : B1 -> B2) (mu23 : B2 -> B3) :

@@ -731,7 +731,7 @@ Section Rdf.
       Definition iso_mapping_sym g1 g2 : iso_mapping g1 g2 <-> iso_mapping g2 g1.
       Proof.
         suffices imp h1 h2 : iso_mapping h1 h2 -> iso_mapping h2 h1 by split; exact: imp.
-        case=> mu /and3P[] pre_iso_mu uniq_relab perm_relab.
+        case=> mu /and3P[pre_iso_mu uniq_relab perm_relab].
         have [nu nuP]: pre_iso h2 h1 by apply: (is_pre_iso_inv pre_iso_mu).
         exists nu.
         have inj_nu : {in h2 &, injective (relabeling_triple nu)}.
@@ -742,10 +742,12 @@ Section Rdf.
           have aux : perm_eq (relabeling_seq_triple nu h2) (relabeling_seq_triple nu (relabeling_seq_triple mu h1)).
             by apply: perm_map; rewrite perm_sym.
           apply: perm_trans aux _.
-          rewrite relabeling_seq_triple_comp.
+          (* rewrite relabeling_seq_triple_comp. *)
+          move: (is_pre_iso_inj pre_iso_mu)=> /is_pre_iso_inj_g inj_mu.
           apply uniq_perm=> //.
-          Search perm_eq uniq.
-          Search _ perm_eq map.
+          rewrite map_inj_in_uniq //.
+          apply perm_mem in perm_relab.
+          move=> x y. rewrite !perm_relab. apply inj_nu.
       Admitted.
 
       Lemma relabeling_triple_comp_map (B1 B2 B3 : eqType) (g : rdf_graph I B1 L) (mu12 : B1 -> B2) (mu23 : B2 -> B3) :

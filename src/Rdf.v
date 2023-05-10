@@ -740,19 +740,13 @@ Section Rdf.
       Proof.
         suffices imp h1 h2 : iso_mapping h1 h2 -> iso_mapping h2 h1 by split; exact: imp.
         case=> mu /and3P[pre_iso_mu uniq_relab perm_relab].
-        have [nu nuP]: pre_iso h2 h1 by apply: (is_pre_iso_inv pre_iso_mu).
-        rewrite /iso_mapping/is_iso_mapping.
+        have [nu [nuP1 nuP2]]:exists nu, perm_eq (relabeling_seq_triple nu h2) h1 /\ {in (get_b h2) &, injective nu}. admit.
         exists nu.
-        have inj_nu : {in h2 &, injective (relabeling_triple nu)}.
-        apply: is_pre_iso_inj_g (is_pre_iso_inj nuP).
-        apply/and3P; split=> //.
-        - by rewrite map_inj_in_uniq.
-        - rewrite /is_pre_iso in nuP.
-          have aux : perm_eq (relabeling_seq_triple nu h2) (relabeling_seq_triple nu (relabeling_seq_triple mu h1)).
-          by apply: perm_map; rewrite perm_sym.
-          have [f fP]: exists f, perm_eq (relabeling_seq_triple f h2) h1. admit.
-          have /eq_relabeling_seq_triple -> : nu =1 f. admit.
-          apply fP.
+        have usrel_nu: uniq (relabeling_seq_triple nu h2). by rewrite (perm_uniq nuP1).
+        rewrite /is_iso_mapping usrel_nu nuP1 !andbT.
+        apply perm_undup_map_inj=> //.
+        apply undup_uniq.
+        move: nuP1=> /eqb_rdf_get_b_hom -> //.
       Admitted.
 
       Lemma relabeling_triple_comp_map (B1 B2 B3 : eqType) (g : rdf_graph I B1 L) (mu12 : B1 -> B2) (mu23 : B2 -> B3) :

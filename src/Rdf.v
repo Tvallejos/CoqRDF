@@ -372,6 +372,7 @@ Section Rdf.
     Qed.
 
     Remark id_bij T: bijective (@id T). Proof. by exists id. Qed.
+
     Hint Resolve id_bij.
 
     Section IsoMapping.
@@ -386,6 +387,10 @@ Section Rdf.
         Proof. rewrite /is_pre_iso=> /(perm_map m23); rewrite -map_comp=> pe12 pe23.
                by apply: perm_trans pe12 pe23.
         Qed.
+
+        Remark is_pre_iso_trans_sym g1 g2 m12 m23 :
+          is_pre_iso g1 g2 m12 -> is_pre_iso g2 g1 m23 -> is_pre_iso g1 g1 (m23 \o m12).
+        Proof. by apply is_pre_iso_trans. Qed.
 
         Definition pre_iso g1 g2 := exists (μ : B -> B), is_pre_iso g1 g2 μ.
 
@@ -736,17 +741,21 @@ Section Rdf.
              by rewrite /= (eq_relabeling_triple feq) IHtl.
       Qed.
 
+      Lemma uniq_get_b g : uniq (get_b g).
+        Proof. by apply undup_uniq. Qed.
+      Hint Resolve uniq_get_b.
+
+      Lemma perm_eq_relab_uniq g1 g2 mu : perm_eq (relabeling_seq_triple mu g1) g2 -> perm_eq (relabeling_seq_triple mu g1) g2 /\ uniq (relabeling_seq_triple mu g1).
+      Proof. by move=> peq; rewrite (perm_uniq peq) peq. Qed.
+
       Definition iso_mapping_sym g1 g2 : iso_mapping g1 g2 <-> iso_mapping g2 g1.
       Proof.
         suffices imp h1 h2 : iso_mapping h1 h2 -> iso_mapping h2 h1 by split; exact: imp.
         case=> mu /and3P[pre_iso_mu uniq_relab perm_relab].
-        have [nu [nuP1 nuP2]]:exists nu, perm_eq (relabeling_seq_triple nu h2) h1 /\ {in (get_b h2) &, injective nu}. admit.
+        have [nu [/perm_eq_relab_uniq[nuP1 urelab_nu] nuP2]]:exists nu, perm_eq (relabeling_seq_triple nu h2) h1 /\ {in (get_b h2) &, injective nu}. admit.
         exists nu.
-        have usrel_nu: uniq (relabeling_seq_triple nu h2). by rewrite (perm_uniq nuP1).
-        rewrite /is_iso_mapping usrel_nu nuP1 !andbT.
-        apply perm_undup_map_inj=> //.
-        apply undup_uniq.
-        move: nuP1=> /eqb_rdf_get_b_hom -> //.
+        rewrite /is_iso_mapping urelab_nu nuP1 !andbT /is_pre_iso.
+        by move: nuP1=> /eqb_rdf_get_b_hom /= /(_ urelab_nu) /perm_undup_map_inj ->.
       Admitted.
 
       Lemma relabeling_triple_comp_map (B1 B2 B3 : eqType) (g : rdf_graph I B1 L) (mu12 : B1 -> B2) (mu23 : B2 -> B3) :

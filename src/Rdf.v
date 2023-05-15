@@ -577,10 +577,27 @@ Section Rdf.
         - exact: H.
       Qed.
 
-      Lemma eqb_rdf_relabeling_inv g1 g2 mu :
-        forall us,
-          eqb_rdf (@relabeling _ _ mu g1 us) g2 -> {in (get_b g1) &, injective mu} -> exists nu us2, eqb_rdf (@relabeling _ _ nu g2 us2) g1.
+      Lemma map_of_triples t1 ft (f : B -> B): relabeling_term f (subject t1) = (subject ft) ->
+                                                relabeling_term f (predicate t1) = predicate ft ->
+                                                relabeling_term f (object t1) = object ft
+                                                -> relabeling_triple f t1 = ft.
+      Proof. by move=> rts rtp rto; apply triple_inj; rewrite -?rts -?rtp -?rto; case t1. Qed.
+
+      Lemma eqb_rdf_relabeling_inv g1 g2 mu us :
+          eqb_rdf (@relabeling _ _ mu g1 us) g2 -> {in (get_b g1) &, injective mu} -> exists nu, perm_eq (relabeling_seq_triple nu g2) g1.
       Proof.
+             wlog dflt :/ (triple I B L).
+             rewrite /eqb_rdf ; move=> hwlow; case_eq g2=> g2'; case_eq g2' => [e usnil g2g /perm_nilP/eqP | dflt l eq ustl ].
+             rewrite map_nil_is_nil=> /eqP ->. by exists id.
+             move=> g2g peq mu_inj.
+             rewrite -g2g in peq.
+             move: hwlow=> /(_ dflt peq mu_inj) [nu nuP].
+             rewrite g2g /= in nuP.
+             exists nu. apply nuP.
+             rewrite /eqb_rdf /=.
+             have [nu nuP] := map_of_seq (relabeling_seq_triple mu g1) g2 dflt.
+             move => peq mu_inj. 
+
       Admitted.
 
       Lemma is_pre_iso_inj g1 g2 mu : is_pre_iso g1 g2 mu -> {in get_b g1 &, injective mu}.

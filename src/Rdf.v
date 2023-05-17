@@ -335,6 +335,10 @@ Section Rdf.
     Definition get_b g : seq B :=
       undup (get_bs (bnodes g)).
 
+   Lemma uniq_get_b g : uniq (get_b g).
+   Proof. exact: undup_uniq. Qed.
+   Hint Resolve uniq_get_b.
+
     Lemma relabeling_triple_of_comp (B1 B2 B3: eqType)(mu : B2 -> B3) (nu : B1 -> B2):
       ((@relabeling_triple I L _ _ mu) \o (@relabeling_triple I L _ _ nu)) =1 (relabeling_triple (mu \o nu)).
     Proof. by move=> t; rewrite relabeling_triple_comp. Qed.
@@ -397,8 +401,33 @@ Section Rdf.
         Lemma pre_iso_refl g : pre_iso g g.
         Proof. by rewrite /pre_iso /is_pre_iso; exists id; rewrite map_id perm_refl. Qed.
 
-        Lemma pre_iso_sym gg1 gg2 : pre_iso gg1 gg2 <-> pre_iso gg2 gg1.
-        Proof. Admitted.
+        Lemma is_pre_iso_inv g1 g2 mu : is_pre_iso g1 g2 mu ->
+                              exists nu, is_pre_iso g2 g1 nu /\
+                               map (nu \o mu) (get_b g1) = get_b g1.
+        Proof.
+        wlog dflt :/ B.
+          move=> hwlog; rewrite /is_pre_iso.
+          case_eq (get_b g2) => [e |dflt l <-]; last by apply: hwlog.
+          by move/perm_nilP/eqP; rewrite -size_eq0 size_map size_eq0; move/eqP->; exists id.
+        rewrite /is_pre_iso => mu_pre_iso.
+        wlog map_mu:  mu {mu_pre_iso} / [seq mu i | i <- get_b g1] = get_b g2.
+          move=> hwlog.
+          have [rho rhoP] := map_of_seq [seq mu i | i <- get_b g1] (get_b g2) dflt.
+          have {rhoP} rhoP : [seq (rho \o mu) i | i <- get_b g1] = get_b g2.
+          rewrite -map_comp in rhoP; apply: rhoP; first by rewrite (perm_uniq mu_pre_iso).
+            by rewrite (perm_size mu_pre_iso).
+          have {hwlog} [tau [tauP1 tauP2]] := hwlog _ rhoP.
+          exists (tau \o rho); split=> //.
+          rewrite -tauP2 perm_sym.  
+          have:=  (perm_map (tau \o rho) mu_pre_iso).
+          by rewrite -map_comp.
+        have [nu nuP] := map_of_seq (get_b g2) (get_b g1) dflt.
+        have  {nuP} nuP : [seq nu i | i <- get_b g2] = get_b g1. 
+          by apply: nuP=> //; rewrite -map_mu size_map.
+        exists nu; split=> //. 
+        - rewrite nuP; exact: perm_refl.
+        by rewrite map_comp map_mu.
+        Qed.
 
         Lemma pre_iso_trans g1 g2 g3 : pre_iso g1 g2 -> pre_iso g2 g3 -> pre_iso g1 g3.
         Proof. rewrite /pre_iso=> [[mu12 iso12] [mu23 iso23]].
@@ -698,11 +727,11 @@ Section Rdf.
              by rewrite -(mem_undup (b :: get_bs t)) bnode_memP /==> ->; rewrite !in_cons IHts mem_undup.
       Qed.
 
-      Lemma is_pre_iso_inv g1 g2 mu : is_pre_iso g1 g2 mu -> exists nu, is_pre_iso g2 g1 nu.
-      Proof. move=> ipiso.
-             have /pre_iso_sym [nu nuP]: pre_iso g1 g2. by exists mu.
-                                                             by exists nu.
-      Qed.
+      (* Lemma is_pre_iso_inv g1 g2 mu : is_pre_iso g1 g2 mu -> exists nu, is_pre_iso g2 g1 nu. *)
+      (* Proof. move=> ipiso. *)
+      (*        have /pre_iso_sym [nu nuP]: pre_iso g1 g2. by exists mu. *)
+      (*                                                        by exists nu. *)
+      (* Qed. *)
 
       Lemma uniq_rdf_graph g : uniq g. Proof. exact: ugraph. Qed.
       Hint Resolve uniq_rdf_graph.
@@ -758,9 +787,6 @@ Section Rdf.
              by rewrite /= (eq_relabeling_triple feq) IHtl.
       Qed.
 
-      Lemma uniq_get_b g : uniq (get_b g).
-        Proof. by apply undup_uniq. Qed.
-      Hint Resolve uniq_get_b.
 
       Lemma perm_eq_relab_uniq g1 g2 mu : perm_eq (relabeling_seq_triple mu g1) g2 -> perm_eq (relabeling_seq_triple mu g1) g2 /\ uniq (relabeling_seq_triple mu g1).
       Proof. by move=> peq; rewrite (perm_uniq peq) peq. Qed.

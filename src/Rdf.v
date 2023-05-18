@@ -803,11 +803,34 @@ Section Rdf.
         Proof. by move=> binterms; rewrite /bnodes mem_undup mem_filter //. Qed.
 
       Lemma mem_g_mem_triple_b t g b : t \in g -> Bnode b \in bnodes_triple t -> b \in get_b g.
-      Proof. move=> /mem_triple_terms; case t=> [[]]s []p []o ? ? //= /and3P[sint pint oint].
-             + rewrite /bnodes_triple filter_undup mem_undup /= in_nil //.
-             + rewrite /bnodes_triple filter_undup mem_undup /= in_nil //.
-             + apply b_term_bnode in oint. rewrite bnodes_map_get_b mem_map in oint.
-      Abort.
+      Proof. move=> /mem_triple_terms; case t=> [[]]s []p []o ? ? //= /and3P[sint pint oint];
+             rewrite /bnodes_triple filter_undup mem_undup.
+             + by rewrite /= in_nil.
+             + by rewrite /= in_nil.
+             + rewrite /= in_cons in_nil Bool.orb_false_r=> /eqP [] ->.
+               apply b_term_bnode in oint. rewrite bnodes_map_get_b mem_map in oint.
+               done.
+               apply bnode_inj.
+             + rewrite /= in_cons in_nil Bool.orb_false_r=> /eqP [] ->.
+               apply b_term_bnode in sint. rewrite bnodes_map_get_b mem_map in sint.
+               done.
+               apply bnode_inj.
+             + rewrite /= in_cons in_nil Bool.orb_false_r=> /eqP [] ->.
+               apply b_term_bnode in sint. rewrite bnodes_map_get_b mem_map in sint.
+               done.
+               apply bnode_inj.
+             + rewrite /= !in_cons in_nil Bool.orb_false_r. case/orP.
+               move=> /eqP [] ->.
+               apply b_term_bnode in sint.
+               rewrite bnodes_map_get_b mem_map in sint.
+               done.
+               apply bnode_inj.
+               move=> /eqP [] ->.
+               apply b_term_bnode in oint.
+               rewrite bnodes_map_get_b mem_map in oint.
+               done.
+               apply bnode_inj.
+      Qed.
 
       Lemma can_b_can_rtb g (mu nu: B -> B) : {in get_b g, nu \o mu =1 id} ->
                             {in g, [eta relabeling_triple (nu \o mu)] =1 id}.

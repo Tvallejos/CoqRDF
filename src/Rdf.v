@@ -633,10 +633,11 @@ Section Rdf.
       Proof. Admitted.
 
       Lemma bnode_inj (i b l : eqType) : injective (fun bn=> @Bnode i b l bn).
-        Proof. by move=> x y; case. Qed.
+      Proof. by move=> x y; case. Qed.
+      Hint Resolve bnode_inj.
 
       Lemma is_pre_iso_bnodes_inj g1 g2 mu : is_pre_iso g1 g2 mu -> {in bnodes g1 &, injective (relabeling_term mu)}.
-      Proof. move=> /is_pre_iso_inj hmu []b // []b' // /=; move: (@bnode_inj I B L)=> binj.
+      Proof. move=> /is_pre_iso_inj hmu []b // []b' //= ; move: (@bnode_inj I B L)=> binj.
              rewrite bnodes_map_get_b !mem_map // => {binj} hb1 hb' [].
              by move=> eq; congr Bnode;  apply hmu.
       Qed.
@@ -802,66 +803,47 @@ Section Rdf.
       Lemma b_term_bnode b g: Bnode b \in terms g -> Bnode b \in bnodes g.
         Proof. by move=> binterms; rewrite /bnodes mem_undup mem_filter //. Qed.
 
+      Lemma bterm_eq_mem_get_b (o b: B) g :
+        (@Bnode I B L o) \in terms g ->
+                             (@Bnode I B L b) == Bnode o ->
+                             b \in get_b g.
+      Proof. by move=> /b_term_bnode; rewrite bnodes_map_get_b (mem_map (@bnode_inj I B L))=> H /eqP [->]. Qed.
+
       Lemma mem_g_mem_triple_b t g b : t \in g -> Bnode b \in bnodes_triple t -> b \in get_b g.
       Proof. move=> /mem_triple_terms; case t=> [[]]s []p []o ? ? //= /and3P[sint pint oint];
-             rewrite /bnodes_triple filter_undup mem_undup.
-             + by rewrite /= in_nil.
-             + by rewrite /= in_nil.
-             + rewrite /= in_cons in_nil Bool.orb_false_r=> /eqP [] ->.
-               apply b_term_bnode in oint. rewrite bnodes_map_get_b mem_map in oint.
-               done.
-               apply bnode_inj.
-             + rewrite /= in_cons in_nil Bool.orb_false_r=> /eqP [] ->.
-               apply b_term_bnode in sint. rewrite bnodes_map_get_b mem_map in sint.
-               done.
-               apply bnode_inj.
-             + rewrite /= in_cons in_nil Bool.orb_false_r=> /eqP [] ->.
-               apply b_term_bnode in sint. rewrite bnodes_map_get_b mem_map in sint.
-               done.
-               apply bnode_inj.
-             + rewrite /= !in_cons in_nil Bool.orb_false_r. case/orP.
-               move=> /eqP [] ->.
-               apply b_term_bnode in sint.
-               rewrite bnodes_map_get_b mem_map in sint.
-               done.
-               apply bnode_inj.
-               move=> /eqP [] ->.
-               apply b_term_bnode in oint.
-               rewrite bnodes_map_get_b mem_map in oint.
-               done.
-               apply bnode_inj.
+             rewrite /bnodes_triple filter_undup mem_undup ?in_cons in_nil // Bool.orb_false_r=> H.
+             apply (bterm_eq_mem_get_b oint H).
+             apply (bterm_eq_mem_get_b sint H).
+             apply (bterm_eq_mem_get_b sint H).
+             case/orP: H=> H.
+             apply (bterm_eq_mem_get_b sint H).
+             apply (bterm_eq_mem_get_b oint H).
       Qed.
 
       Lemma can_b_can_rtb g (mu nu: B -> B) : {in get_b g, nu \o mu =1 id} ->
                             {in g, [eta relabeling_triple (nu \o mu)] =1 id}.
-      Proof. move=> in_getb [s p o sib pii] ing /=.
-             apply triple_inj=> /=.
-             case: s sib ing  => // b sib /mem_g_mem_triple_b inb /=.
-             rewrite /= in in_getb.
-             rewrite in_getb=> //. apply inb.
-             by rewrite /bnodes_triple filter_undup mem_undup in_cons eqxx.
-             by case: p pii ing  => // b sib /mem_g_mem_triple_b inb /=.
-             case: o ing  => // b /mem_g_mem_triple_b inb /=.
-             rewrite /= in in_getb.
-             rewrite in_getb=> //. apply inb.
-             rewrite /bnodes_triple filter_undup mem_undup /=.
-             by case: (is_bnode s); case: (is_bnode p); rewrite !in_cons in_nil eqxx ?orbT.
+      Proof. move=> /= in_getb [s p o sib pii] ing /=; apply triple_inj=> /=.
+             + case: s sib ing  => // b sib /mem_g_mem_triple_b inb /=.
+               rewrite in_getb=> //; apply inb.
+               by rewrite /bnodes_triple filter_undup mem_undup in_cons eqxx.
+             + by case: p pii ing  => // b sib /mem_g_mem_triple_b inb /=.
+             + case: o ing  => // b /mem_g_mem_triple_b inb /=.
+               rewrite in_getb=> //; apply inb.
+               rewrite /bnodes_triple filter_undup mem_undup /=.
+               by case: (is_bnode s); case: (is_bnode p); rewrite !in_cons in_nil eqxx ?orbT.
       Qed.
 
       Definition iso_mapping_sym g1 g2 : iso_mapping g1 g2 <-> iso_mapping g2 g1.
       Proof.
-   suffices imp h1 h2 : iso_mapping h1 h2 -> iso_mapping h2 h1 by split; exact: imp.
+        suffices imp h1 h2 : iso_mapping h1 h2 -> iso_mapping h2 h1 by split; exact: imp.
         case=> mu /and3P[pre_iso_mu uniq_relab perm_relab].
         move:(is_pre_iso_inv pre_iso_mu)=> [nu [pre_iso_nu nuP]].
         exists nu.
         rewrite /is_iso_mapping pre_iso_nu.
-        have canmunu : {in (get_b h1), nu \o mu =1 id}. apply: map_comp_in_id nuP.
+        have /can_b_can_rtb canmunu : {in (get_b h1), nu \o mu =1 id}. apply: map_comp_in_id nuP.
         have /perm_eq_relab_uniq [-> ->] : perm_eq (relabeling_seq_triple nu h2) h1.
-        apply (perm_map (relabeling_triple nu)) in perm_relab.
-        rewrite perm_sym in perm_relab.
-        apply: perm_trans perm_relab _.
-        rewrite relabeling_triple_map_comp. rewrite map_id_in //.
-        by apply can_b_can_rtb.
+        move: perm_relab; rewrite perm_sym=> /(perm_map (relabeling_triple nu))=> perm_relab.
+        apply: perm_trans perm_relab _. rewrite relabeling_triple_map_comp map_id_in //.
         done.
       Qed.
 

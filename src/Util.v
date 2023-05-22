@@ -12,7 +12,7 @@ Qed.
 Lemma inweak (T: eqType) (l:seq T) t u : t \in l -> t \in (u::l).
 Proof. by rewrite -!has_pred1 /has; case (pred1 t u)=> [//| -> ]. Qed.
 
-Definition undup_in (T : eqType) (t : T) (s : seq T) :
+Lemma undup_in (T : eqType) (t : T) (s : seq T) :
   t \in s -> t \in undup s.
 Proof. elim: s=> [//| h hs IHts].
        + rewrite /= in_cons. case/orP.
@@ -22,21 +22,28 @@ Proof. elim: s=> [//| h hs IHts].
          move=> /IHts tin_hs; apply: inweak tin_hs.
 Qed.
 
-Definition undup_idem (T : eqType) (s : seq T) :
+Lemma undup_idem (T : eqType) (s : seq T) :
   undup (undup s) = undup s.
 Proof.
   elim: s=> [//| t ts IHts] /=.
   by case e: (t \in ts); rewrite // /= mem_undup e IHts.
 Qed.
 
-Definition undup_cat_r (T: eqType) (s q : seq T) :
+Lemma map_undup_idem (T1 T2: eqType) (f : T1 -> T2) (s : seq T1):
+  map f (undup (undup s)) = map f (undup s).
+Proof. elim: s=> [//|h t IHts] /=.
+       case e: (h \in t); first by rewrite IHts.
+       by move: e; rewrite -mem_undup /= -IHts=> ->.
+Qed.
+
+Lemma undup_cat_r (T: eqType) (s q : seq T) :
   undup (s ++ undup q) = undup (s ++ q).
 Proof.
   elim: s=> [//| aq qs IHqs] /=; first exact: undup_idem.
   by rewrite !mem_cat mem_undup IHqs.
 Qed.
 
-Definition undup_cat_l (T: eqType) (s q : seq T) :
+Lemma undup_cat_l (T: eqType) (s q : seq T) :
   undup (undup s ++ q) = undup (s ++ q).
 Proof.
   by rewrite !undup_cat undup_idem.

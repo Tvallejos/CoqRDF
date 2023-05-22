@@ -130,6 +130,28 @@ Definition term_canEqMixin (I B L : eqType) := PcanEqMixin (@pcancel_code_decode
 Canonical term_eqType (I B L : eqType) :=
   Eval hnf in EqType (term I B L) (term_canEqMixin I B L).
 
+Section EqTerm.
+  Variables I B L : eqType.
+  Definition eqb_term (t1 t2: term I B L) : bool :=
+    match t1, t2 with
+    | Lit l1,Lit l2 => l1 == l2
+    | Bnode b1, Bnode b2=> b1 == b2
+    | Iri i1, Iri i2 => i1 == i2
+    | _,_ => false
+    end.
+
+  Lemma eqb_eq trm1 trm2 : (trm1 == trm2) = eqb_term trm1 trm2.
+  Proof. rewrite /eq_op /Equality.op /= /code_term. case e: (eqb_term trm1 trm2); move: e; case trm1; case trm2=> //x y /=.
+         by move=> /eqP ->; rewrite eqxx.
+         by move=> /eqP ->; rewrite eqxx.
+         by move=> /eqP ->; rewrite eqxx.
+         by move=> H; apply /eqP; move=> []z; rewrite z eqxx in H.
+         by move=> H; apply /eqP; move=> []z; rewrite z eqxx in H.
+         by move=> H; apply /eqP; move=> []z; rewrite z eqxx in H.
+  Qed.
+
+End EqTerm.
+
 Definition get_b_term (I B L :eqType) (t : (term I B L)) : option B :=
   if t is Bnode b then Some b else None.
 

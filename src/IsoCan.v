@@ -254,22 +254,7 @@ Section IsoCan.
       Lemma init_hash_nil : init_hash empty_rdf_graph = empty_rdf_graph. Proof. by apply rdf_inj. Qed.
 
       Lemma init_hash_h0 b g : Bnode b \in bnodes (init_hash g) -> current_hash b = h0.
-      Proof. rewrite /bnodes/init_hash -filter_undup mem_filter /=.
-             by rewrite undup_terms (terms_relabeled init_bnode_inj) => /map_inv[[] // ?]=> [[]] ->.
-      Qed.
-
-      (* todo *)
-      (* Lemma bnodes_init_hash g : bnodes (init_hash g) = (map (relabeling_term init_bnode) (bnodes g)). *)
-      (* Proof. elim g=> g'; elim: g'=> [//| [s p o sib pii] ts IHts]. *)
-      (*        rewrite !bnodes_cons. *)
-      (*        rewrite !undup_cat. *)
-      (*        rewrite map_cat. *)
-      (*        f_equal. admit. *)
-      (*        by rewrite !undup_bnodes IHts. *)
-      (* Admitted. *)
-
-      (* Lemma bnodes_init_hash_relabel g (mu: B -> B): bnodes (init_hash (relabeling mu g)) = (map (relabeling_term init_bnode) (bnodes (relabeling mu g))). *)
-      (* Proof. Admitted. *)
+      Proof. by rewrite bnodes_relabel_mem=> /map_inv [[]//t []->]. Qed.
 
       Lemma mark_bnode_init_hash_mark_hash g b n:
         Bnode b \in bnodes (init_hash g) ->
@@ -604,7 +589,7 @@ Section IsoCan.
         Definition justDistinguish g :=
           isoCanonicalTemplate g id id distinguish.
 
-        Lemma distinguish_preserves_isomorphism g : iso_mapping (justDistinguish g) g.
+        Lemma distinguish_preserves_isomorphism g : iso (justDistinguish g) g.
         Proof.
         Admitted.
 
@@ -740,7 +725,7 @@ Section IsoCan.
       End experiment.
 
       Lemma k_mapping_iso_output : mapping_is_iso_mapping k_mapping.
-      Proof. rewrite /mapping_is_iso_mapping/iso_mapping/is_iso_mapping=> g.
+      Proof. rewrite /mapping_is_iso_mapping/iso/is_iso=> g.
              exists todo.
              suffices eqb: eqb_rdf (relabeling todo) g.
              apply /and3P; split; last by apply eqb.
@@ -751,11 +736,11 @@ Section IsoCan.
       Proof.
       Admitted.
 
-      Lemma k_mapping_isocan : isocanonical_mapping_map k_mapping.
+      Lemma k_mapping_isocan : isocanonical_mapping k_mapping.
       Proof. apply: isocanonical_mapping_dt_out_mapping k_mapping_iso_output k_mapping_dont_manipulate_names. Qed.
 
-      Lemma k_mapping_iso g : iso_mapping (k_mapping g) g.
-      Proof. rewrite /iso_mapping/is_iso_mapping. Admitted.
+      Lemma k_mapping_iso g : iso (k_mapping g) g.
+      Proof. rewrite /iso/is_iso. Admitted.
 
     End Kmapping.
 

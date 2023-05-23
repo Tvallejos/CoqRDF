@@ -321,38 +321,59 @@ Section Rdf.
       by case: (is_bnode b) binb.
     Qed.
 
+    Lemma uniq_bnodes_ts ts : uniq (bnodes_ts ts).
+    Proof. exact: undup_uniq. Qed.
+    Hint Resolve uniq_bnodes_ts.
+
     Lemma uniq_bnodes g : uniq (bnodes g).
     Proof. exact: undup_uniq. Qed.
+    Hint Resolve uniq_bnodes.
 
     Lemma in_bnodes b g: b \in bnodes g -> is_bnode b.
     Proof. apply /allP. apply all_bnodes. Qed.
 
+    Lemma i_in_bnodes_ts id ts: Iri id \in bnodes_ts ts = false.
+    Proof. by rewrite /bnodes_ts -filter_undup mem_filter. Qed.
+
+    Lemma l_in_bnodes_ts l ts: Lit l \in bnodes_ts ts = false.
+    Proof. by rewrite /bnodes_ts -filter_undup mem_filter. Qed.
+
     Lemma i_in_bnodes id g: Iri id \in bnodes g = false.
-    Proof. by rewrite /bnodes/bnodes_ts -filter_undup mem_filter. Qed.
+    Proof. by rewrite /bnodes i_in_bnodes_ts. Qed.
 
     Lemma l_in_bnodes l g: Lit l \in bnodes g = false.
-    Proof. by rewrite /bnodes/bnodes_ts -filter_undup mem_filter. Qed.
+    Proof. by rewrite /bnodes l_in_bnodes_ts. Qed.
 
     Definition get_b g : seq B :=
       (* undup (get_bs (bnodes g)). *)
       get_bs (bnodes g).
 
-    Lemma bnode_memP b trms : Bnode b \in trms = (b \in @get_bs I B L trms).
+    Lemma bnode_memP (i b' l: eqType) (b : b') trms : Bnode b \in trms = (b \in @get_bs i b' l trms).
     Proof. elim: trms=> [//| h t' IHt].
-           by case: h=> // b'; rewrite !in_cons IHt eqb_eq.
+           by case: h=> // ?; rewrite !in_cons IHt eqb_eq.
     Qed.
 
-    Lemma bnode_memPn b trms : Bnode b \notin trms = (b \notin @get_bs I B L trms).
+    Lemma bnode_memPn (i b' l: eqType) (b : b') trms : Bnode b \notin trms = (b \notin @get_bs i b' l trms).
     Proof. by rewrite /negb bnode_memP. Qed.
 
-   Lemma uniq_get_b g : uniq (get_b g).
-   Proof. rewrite /get_b/get_bs.
-          have all_b := all_bnodes g.
-          have uniq_b := uniq_bnodes g.
-          elim: (bnodes g) all_b uniq_b => [//| h t IHt] /= /andP[hb all_bt] /andP [nin ut].
-          by case: h hb nin=> //= b _; rewrite IHt // bnode_memPn=> ->.
-   Qed.
-   Hint Resolve uniq_get_b.
+    Lemma get_bs_of_uniq (s : seq (term I B L)) : uniq s -> get_bs (undup s) = get_bs s.
+    Proof. rewrite /get_bs. elim: s=> [//| h t IHl]; rewrite cons_uniq=> /andP[/eqP nin unt] /=.
+           by case: (h \in t) nin => //; case: h=> x /= _; rewrite IHl.
+      Qed.
+
+    Lemma undup_get_bsC (s : seq (term I B L)) : uniq s -> (undup (get_bs s)) = get_bs s.
+    Proof. elim: s=> [//| h t IHt].
+           move=> /andP[nin unt] /=; case: h nin=> //= b; rewrite ?IHt //.
+           by rewrite bnode_memPn /negb; case: (b \in get_bs t)=> //; by rewrite IHt.
+    Qed.
+
+    Lemma uniq_get_bs ts : uniq (get_bs (bnodes_ts ts)).
+    Proof. by rewrite -(undup_get_bsC (uniq_bnodes_ts ts)) undup_uniq. Qed.
+    Hint Resolve uniq_get_bs.
+
+    Lemma uniq_get_b g : uniq (get_b g).
+    Proof. by rewrite /get_b uniq_get_bs. Qed.
+    Hint Resolve uniq_get_b.
 
     Lemma relabeling_triple_of_comp (B1 B2 B3: eqType)(mu : B2 -> B3) (nu : B1 -> B2):
       ((@relabeling_triple I L _ _ mu) \o (@relabeling_triple I L _ _ nu)) =1 (relabeling_triple (mu \o nu)).
@@ -465,28 +486,20 @@ Section Rdf.
       Lemma eqb_rdf_get_b g1 g2 : eqb_rdf g1 g2 -> perm_eq (get_b g1) (get_b g2).
       Proof. by move=> /eqb_rdf_bnodes eqb ; rewrite /get_b/get_bs; apply: perm_pmap eqb. Qed.
 
-      Lemma get_bs_of_uniq (s : seq (term I B L)) : uniq s -> get_bs (undup s) = get_bs s.
-      Proof. rewrite /get_bs. elim: s=> [//| h t IHl]; rewrite cons_uniq=> /andP[/eqP nin unt] /=.
-             by case: (h \in t) nin => //; case: h=> x /= _; rewrite IHl.
-      Qed.
-
       Lemma terms_uniq g : uniq (terms g).
       Proof. by apply undup_uniq. Qed.
 
-      Lemma undup_get_bsC (s : seq (term I B L)) : uniq s -> (undup (get_bs s)) = get_bs s.
-      Proof. elim: s=> [//| h t IHt].
-             move=> /andP[nin unt] /=; case: h nin=> //= b; rewrite ?IHt //.
-             by rewrite bnode_memPn /negb; case: (b \in get_bs t)=> //; by rewrite IHt.
+      Lemma bnodes_map_get_bs ts : bnodes_ts ts = map (fun b=> Bnode b) (get_bs (bnodes_ts ts)).
+      Proof.
+        have taut := (undup_uniq [seq x <- flatten [seq terms_triple i | i <- ts] | is_bnode x]).
+        move: (all_bnodes_ts ts).
+        rewrite /get_b/bnodes/bnodes_ts get_bs_of_uniq filter_undup // undup_idem -filter_undup.
+        elim: [seq x <- undup (flatten [seq terms_triple i | i <- ts]) | is_bnode x]=> [//| h t IHt].
+        by move=> /=; case h=> //=b al; rewrite {1}IHt.
       Qed.
 
       Lemma bnodes_map_get_b g : bnodes g = map (fun b=> Bnode b) (get_b g).
-      Proof.
-        have taut := (undup_uniq [seq x <- flatten [seq terms_triple i | i <- g] | is_bnode x]).
-        move: (all_bnodes g).
-        rewrite /get_b/bnodes/bnodes_ts get_bs_of_uniq filter_undup // undup_idem -filter_undup.
-        elim: [seq x <- undup (flatten [seq terms_triple i | i <- g]) | is_bnode x]=> [//| h t IHt].
-        by move=> /=; case h=> //=b al; rewrite {1}IHt.
-      Qed.
+      Proof. by rewrite /get_b/bnodes {1}bnodes_map_get_bs. Qed.
 
       Lemma count_mem_bnodes b l: all (@is_bnode I B L) l -> count_mem b (get_bs l) = count_mem (Bnode b) l.
       Proof. elim: l=> [//|[//|//|//]b' t IHt] albn.
@@ -502,53 +515,41 @@ Section Rdf.
       Lemma map_rel_bnode s mu: all (@is_bnode I B L) s -> all (@is_bnode I B L) (map (relabeling_term mu) s).
       Proof. by elim: s=> [//| [//|//|//] b t IHt]. Qed.
 
-      (* not refactored from below *)
+      Lemma all_bnodes_uniq_bs (i b l : eqType) s: all (@is_bnode i b l) s -> uniq (get_bs s) = uniq s.
+      Proof. by elim: s=> [//| [//|//|//]ab t IHt] alb; rewrite /= IHt // bnode_memPn. Qed.
+
+      Lemma perm_relabel_bnodes_ts ts1 ts2 mu :
+      perm_eq [seq relabeling_term mu i | i <- bnodes_ts ts1] (bnodes_ts ts2) =
+        perm_eq [seq mu i | i <- get_bs (bnodes_ts ts1)] (get_bs (bnodes_ts ts2)).
+      Proof. rewrite -(get_bs_map mu (all_bnodes_ts ts1)).
+             case e : (perm_eq [seq relabeling_term mu i | i <- bnodes_ts ts1] (bnodes_ts ts2)).
+             +  have urt_l : uniq [seq relabeling_term mu i | i <- bnodes_ts ts1] by rewrite (perm_uniq e) //.
+                have urtbs : uniq (get_bs [seq relabeling_term [eta mu] i | i <- bnodes_ts ts1]).
+                by rewrite -undup_get_bsC // undup_uniq.
+                have mem_eq_rt : get_bs [seq relabeling_term [eta mu] i | i <- bnodes_ts ts1] =i get_bs (bnodes_ts ts2).
+                by move=> x; rewrite -!bnode_memP; apply perm_mem.
+                by rewrite uniq_perm //.
+             + apply /eqP; rewrite eq_sym; apply /eqP.
+               suffices contra:  perm_eq (get_bs [seq relabeling_term mu i | i <- bnodes_ts ts1]) (get_bs (bnodes_ts ts2)) -> perm_eq [seq relabeling_term mu i | i <- bnodes_ts ts1] (bnodes_ts ts2).
+               by apply (contra_notF contra); rewrite e.
+
+               move=> contr; apply uniq_perm=> //.
+               by rewrite -(all_bnodes_uniq_bs (map_rel_bnode mu (all_bnodes_ts ts1))) // (perm_uniq contr).
+               have alb := map_rel_bnode mu (all_bnodes_ts ts1).
+               move=> [] //= b ; rewrite ?i_in_bnodes_ts ?l_in_bnodes_ts.
+               have F: Iri b \in [seq relabeling_term mu i | i <- bnodes_ts ts1] -> negb (all (is_bnode (L:=L)) [seq relabeling_term mu i | i <- bnodes_ts ts1]).
+               by move=> contra2; apply /allPn; exists (Iri b).
+               by apply (contra_notF F); rewrite alb.
+               have F: Lit b \in [seq relabeling_term mu i | i <- bnodes_ts ts1] -> negb (all (is_bnode (L:=L)) [seq relabeling_term mu i | i <- bnodes_ts ts1]).
+               by move=> contra2; apply /allPn; exists (Lit b).
+               apply (contra_notF F); rewrite alb //.
+               by rewrite !bnode_memP (perm_mem contr).
+      Qed.
 
       Lemma perm_relabel_bnodes g1 g2 mu :
         perm_eq (map (relabeling_term mu) (bnodes g1)) (bnodes g2) =
           perm_eq (map mu (get_b g1)) (get_b g2).
-      Proof. rewrite /get_b. move: (uniq_bnodes g1) (uniq_bnodes g2) (all_bnodes g1) (all_bnodes g2)=> unb1 unb2 alb1 alb2.
-             rewrite /bnodes.
-             rewrite -get_bs_map //.
-             case e : (perm_eq [seq relabeling_term mu i | i <- bnodes g1] (bnodes g2)).
-             have H: uniq [seq relabeling_term mu i | i <- bnodes g1] = uniq (bnodes g2).
-             by apply perm_uniq; rewrite e.
-             rewrite !uniq_perm //.
-             rewrite -undup_get_bsC. rewrite undup_uniq //.
-             by rewrite H.
-             apply uniq_get_b.
-             move=> x.
-             rewrite -!bnode_memP.
-             by apply perm_mem.
-             apply /eqP; rewrite eq_sym; apply /eqP.
-             eapply contra_notF.
-             have P :  perm_eq (get_bs [seq relabeling_term mu i | i <- bnodes g1]) (get_bs (bnodes g2)) ->perm_eq [seq relabeling_term mu i | i <- bnodes g1] (bnodes g2).
-             move=> contr.
-             have H: uniq (get_bs [seq relabeling_term mu i | i <- bnodes g1]) = uniq (get_bs (bnodes g2)).
-             by apply perm_uniq.
-             apply uniq_perm=> //.
-             have H2 : forall s, all (@is_bnode I B L) s -> uniq (get_bs s) = uniq s.
-             elim => [//| [//|//|//]b t IHt] alb; by rewrite /= IHt // bnode_memPn.
-             rewrite -H2 //. by rewrite H -undup_get_bsC undup_uniq.
-             by apply map_rel_bnode.
-             move=> x. case x=> // b /=.
-             rewrite i_in_bnodes.
-             apply (map_rel_bnode mu) in alb1.
-             have F: Iri b \in [seq relabeling_term mu i | i <- bnodes g1] -> negb (all (is_bnode (L:=L)) [seq relabeling_term mu i | i <- bnodes g1]).
-             move=> contra2.
-             apply /allPn; exists (Iri b)=> //.
-             apply (contra_notF F). rewrite alb1 //.
-             rewrite l_in_bnodes.
-             apply (map_rel_bnode mu) in alb1.
-             have F: Lit b \in [seq relabeling_term mu i | i <- bnodes g1] -> negb (all (is_bnode (L:=L)) [seq relabeling_term mu i | i <- bnodes g1]).
-             move=> contra2.
-             apply /allPn; exists (Lit b)=> //.
-             apply (contra_notF F). rewrite alb1 //.
-             rewrite !bnode_memP.
-             by apply perm_mem in contr.
-             apply P.
-             by rewrite e.
-      Qed.
+      Proof. by rewrite /get_b/bnodes perm_relabel_bnodes_ts. Qed.
 
       Remark eqiso g1 g2 : eqb_rdf g1 g2 -> iso g1 g2.
       Proof.
@@ -573,9 +574,9 @@ Section Rdf.
       Hint Resolve bnode_inj.
 
       Lemma is_pre_iso_bnodes_inj g1 g2 mu : is_pre_iso g1 g2 mu -> {in bnodes g1 &, injective (relabeling_term mu)}.
-      Proof. move=> /is_pre_iso_inj hmu []b // []b' //= ; move: (@bnode_inj I B L)=> binj.
-             rewrite bnodes_map_get_b !mem_map // => {binj} hb1 hb' [].
-             by move=> eq; congr Bnode;  apply hmu.
+      Proof. move=> /is_pre_iso_inj hmu []b // []b' //=;
+             rewrite bnodes_map_get_b !mem_map // => hb1 hb' []=> eq; rewrite ?eq //.
+             by congr Bnode; apply hmu.
       Qed.
 
       Lemma perm_map_cancel (T1 T2: eqType) (s : seq T1) (f: T1 -> T2) (g: T2 -> T1) :
@@ -591,15 +592,15 @@ Section Rdf.
 
       Lemma perm_undup_map_inj (T1 T2: eqType) (f : T1 -> T2) s1 s2 :
         {in s1 &,injective f} ->  uniq s1 -> perm_eq (undup (map f s1)) s2 -> perm_eq (map f s1) s2.
-      Proof. move=> injf us1 peq.
+      Proof. move=> injf ? peq.
              have equ: uniq (undup (map f s1)) = uniq (map f s1).
              by rewrite map_inj_in_uniq // undup_uniq.
-             have eq: perm_eq (map f s1) (undup (map f s1)).
+             suffices eq : perm_eq (map f s1) (undup (map f s1)).
+             by apply: perm_trans eq peq.
              apply uniq_perm.
              + by rewrite -equ undup_uniq.
              + by rewrite undup_uniq.
              + by move=> x; rewrite mem_undup.
-             by apply: perm_trans eq peq.
       Qed.
 
       Lemma undup_get_bs (s : seq (term I B L)) : (undup (get_bs s)) = (get_bs (undup s)).
@@ -609,100 +610,73 @@ Section Rdf.
       Qed.
 
       Lemma get_bs_cat (s1 s2: seq (term I B L)): get_bs s1 ++ get_bs s2 = get_bs (s1 ++ s2).
-      Proof. elim: s1 s2=> [//| h t IHts] s2.
-             by case h=> //b /=; rewrite IHts.
-      Qed.
+      Proof. by elim: s1 s2=> [//| []//=b t IHts] s2; rewrite IHts. Qed.
 
-      Lemma eqb_rdf_get_b_hom g1 g2 mu us :
-        eqb_rdf (@relabeling _ _ mu g1 us) g2 -> perm_eq (undup (map mu (get_b g1))) (get_b g2).
-      Proof. move=> /eqb_rdf_get_b; rewrite /relabeling/=/relabeling_seq_triple/get_b/==> peq_b.
-             apply uniq_perm. by apply undup_uniq. apply uniq_get_b.
-             move: peq_b=> /perm_mem peqb.
-             move=> x. rewrite mem_undup -peqb.
-             move {peqb g2}.
-             case: g1 us; elim=> [//| h t IHts].
-             move=> ug urg; rewrite /= !bnodes_cons.
-             rewrite -!undup_get_bs mem_undup -mem_map_undup -!get_bs_cat map_cat !mem_cat /= IHts.
-             by apply uniq_tail in urg.
-             move=> tmp; f_equal; move {tmp ug urg}.
-             case: h; case=> // a; case=> // b; case=> // c ? ?;
-                                                      rewrite /bnodes_triple/terms_triple ?filter_undup //.
+      Lemma perm_eq_bnodes_relabel ts1 ts2 mu :
+        perm_eq (get_bs (bnodes_ts (relabeling_seq_triple mu ts1))) (get_bs (bnodes_ts ts2)) ->
+        perm_eq (undup [seq mu i | i <- get_bs (bnodes_ts ts1)]) (get_bs (bnodes_ts ts2)).
+      Proof. move=> /perm_mem peqb; apply (uniq_perm (undup_uniq _))=> // x; rewrite -peqb{peqb ts2} mem_undup.
+             elim: ts1=> [//| h t IHts].
+             rewrite !bnodes_ts_cons -!undup_get_bs mem_undup -mem_map_undup -!get_bs_cat map_cat !mem_cat /= IHts; f_equal.
+             case: h=> [[]]// a []// b []// c ? ?; rewrite /bnodes_triple/terms_triple ?filter_undup //.
              have ->:  [seq x <- [:: relabeling_term mu (Bnode a); relabeling_term mu (Iri b);
                             relabeling_term mu (Bnode c)]
                        | is_bnode x] = [:: (Bnode (mu a)); (Bnode (mu c))].
              by [].
-             rewrite /= in_cons in_nil.
-             case e: (a == c).
-             have ->: (Bnode a) = (Bnode c).
-             by move=> ? ?; congr Bnode; apply /eqP.
-             rewrite /= !in_cons !in_nil.
-             have ->: (Bnode (mu a)) = (Bnode (mu c)).
-             by move=> ? ?; congr Bnode; congr mu; apply /eqP.
-             by rewrite !eqxx.
+             by rewrite -!undup_get_bs -mem_map_undup mem_undup.
+      Qed.
 
-             rewrite in_cons in_nil /=.
-             case e2: ((mu a) == (mu c)).
-             have eq: (mu a) = (mu c). by apply /eqP.
-             have ->: Bnode a == Bnode c = false.
-             by move=> ? ?; rewrite /eq_op /= /eq_op /= /eq_op /= /eq_op /= /eq_op /= /eq_op /= e.
-             rewrite eq !eqxx /= eq !in_cons !in_nil.
-             by case: (x == mu c).
-             have ->: Bnode a == Bnode c = false.
-             by move=> ? ?; rewrite /eq_op /= /eq_op /= /eq_op /= /eq_op /= /eq_op /= /eq_op /= e.
-             have ->: Bnode (mu a) == Bnode (mu c) = false.
-             by move=> ? ?; rewrite /eq_op /= /eq_op /= /eq_op /= /eq_op /= /eq_op /= /eq_op /= e2.
-             by rewrite !in_cons in_nil.
+      Lemma eqb_rdf_get_b_hom g1 g2 mu us :
+        eqb_rdf (@relabeling _ _ mu g1 us) g2 -> perm_eq (undup (map mu (get_b g1))) (get_b g2).
+      Proof.
+        by move=> /eqb_rdf_get_b eqb ; rewrite /get_b/bnodes/relabeling (perm_eq_bnodes_relabel eqb).
       Qed.
 
       Lemma mem_get_bs_undup (s: seq (term I B L)) : get_bs (undup s) =i get_bs s.
-      Proof. elim: s=> [//| h t IHts] x.
-             rewrite /=.
+      Proof. elim: s=> [//| h t IHts] x /=.
              case e: (h \in t).
-             case: h e=> // b /=.
+             case: h e=> //= b.
              by rewrite IHts -(mem_undup (b :: get_bs t)) bnode_memP /==> ->; rewrite mem_undup.
-             case: h e=> // b /=.
+             case: h e=> //= b.
              by rewrite -(mem_undup (b :: get_bs t)) bnode_memP /==> ->; rewrite !in_cons IHts mem_undup.
       Qed.
 
       Lemma uniq_rdf_graph g : uniq g. Proof. exact: ugraph. Qed.
       Hint Resolve uniq_rdf_graph.
 
-      Lemma mem_triple_terms t g: t \in g -> [&& (subject t) \in (terms g),
-              ((predicate t) \in (terms g)) & ((object t) \in terms g)].
-      Proof. case t=> s p o ? ? /=; case g; elim=> [//|hd tl IHts] /= us t_mem.
-             apply /and3P; rewrite !terms_cons !mem_undup; move: t_mem; rewrite !in_cons /terms_triple !mem_cat; case/orP.
-             + by move=> /eqP H; rewrite -{1}H -{2}H -{3}H !mem_undup !in_cons !eqxx /= !orbT.
-             + move: (uniq_tail us)=> utl mem_tl.
-               have /and3P[-> -> ->]: [&& s \in terms {| graph := tl; ugraph := utl |},
-             p \in terms {| graph := tl; ugraph := utl |}
-                   & o \in terms {| graph := tl; ugraph := utl |}] by apply IHts.
-               by rewrite !orbT.
+      Lemma mem_triple_terms_ts t ts: t \in ts -> [&& (subject t) \in (terms_ts ts),
+              ((predicate t) \in (terms_ts ts)) & ((object t) \in terms_ts ts)].
+      Proof. case t=> s p o ? ? /=; elim: ts=> [//|hd tl IHts] /= t_mem.
+             apply /and3P; rewrite !terms_ts_cons !mem_undup; move: t_mem; rewrite !in_cons /terms_triple !mem_cat; case/orP.
+             + by move=> /eqP <-; rewrite !mem_undup !in_cons !eqxx /= !orbT.
+             + by move=> /IHts /and3P[-> -> ->]; rewrite !orbT.
       Qed.
 
+      Lemma mem_triple_terms t g: t \in g -> [&& (subject t) \in (terms g),
+              ((predicate t) \in (terms g)) & ((object t) \in terms g)].
+      Proof. by rewrite terms_graph; apply mem_triple_terms_ts. Qed.
+
+      Lemma bterms_ts b ts : Bnode b \in (terms_ts ts) -> Bnode b \in (bnodes_ts ts).
+      Proof. by move=> mem_term; rewrite mem_undup mem_filter. Qed.
+
       Lemma bterms b g: Bnode b \in (terms g) -> Bnode b \in (bnodes g).
-      Proof. rewrite /bnodes terms_graph=> mem_term; rewrite mem_undup; move: mem_term.
-             elim: (terms_ts g)=> [|h t IHts]; first by rewrite in_nil.
-             rewrite in_cons; case/orP.
-             by move=> /eqP <-; rewrite in_cons eqxx.
-             by move=> in_tl /= ; case: (is_bnode h); rewrite ?in_cons IHts ?orbT.
-      Qed.
+      Proof. by rewrite /bnodes terms_graph; apply bterms_ts. Qed.
 
       Lemma triple_case t1 t2: t1 = t2 -> [&& (subject t1) == (subject t2),
             (predicate t1) == (predicate t2) &
               (object t1) == (object t2)].
-        Proof. by case t1; case t2=> /= ? ? ? ? ? ? ? ? ? ? [] -> -> ->; rewrite !eqxx. Qed.
+      Proof. by case t1; case t2=> /= ? ? ? ? ? ? ? ? ? ? [] -> -> ->; rewrite !eqxx. Qed.
 
-        Lemma relabeling_term_inj_terms {B2 : eqType} (mu : B -> B2) g sx sy :
-          {in get_b g &, injective mu} ->
-          sx \in terms g -> sy \in terms g ->
-          relabeling_term mu sx = relabeling_term mu sy ->
-          sx = sy.
-        Proof. case sx; case sy=> /= // bx b_y mu_inj memy memx.
-               by move=> [->].
-               by move=> [->].
-               by move=> [/mu_inj]; rewrite /get_b -!bnode_memP !bterms // => ->.
-        Qed.
-
+      Lemma relabeling_term_inj_terms {B2 : eqType} (mu : B -> B2) g sx sy :
+        {in get_b g &, injective mu} ->
+        sx \in terms g -> sy \in terms g ->
+                                relabeling_term mu sx = relabeling_term mu sy ->
+                                sx = sy.
+      Proof. case sx; case sy=> /= // bx b_y mu_inj memy memx.
+             by move=> [->].
+             by move=> [->].
+             by move=> [/mu_inj]; rewrite /get_b -!bnode_memP !bterms // => ->.
+      Qed.
 
       Lemma is_pre_iso_inj_g {B2: eqType} g (mu : B -> B2) : ({in get_b g &, injective mu}) -> {in g &, injective (relabeling_triple mu)}.
       Proof.
@@ -714,10 +688,7 @@ Section Rdf.
       Proof. by move=> feq [[]? []? []? ? ?]; apply /triple_inj=> //=; rewrite feq. Qed.
 
       Lemma eq_relabeling_seq_triple (B1 B2 : eqType) (mu nu : B1 -> B2) : mu =1 nu -> (relabeling_seq_triple mu) =1 (relabeling_seq_triple nu).
-      Proof. move=> feq; elim=> [//| h t IHtl].
-             by rewrite /= (eq_relabeling_triple feq) IHtl.
-      Qed.
-
+      Proof. by move=> feq; elim=> [//| h t IHtl]; rewrite /= (eq_relabeling_triple feq) IHtl. Qed.
 
       Lemma perm_eq_relab_uniq g1 g2 mu : perm_eq (relabeling_seq_triple mu g1) g2 -> perm_eq (relabeling_seq_triple mu g1) g2 /\ uniq (relabeling_seq_triple mu g1).
       Proof. by move=> peq; rewrite (perm_uniq peq) peq. Qed.
@@ -725,43 +696,43 @@ Section Rdf.
       Lemma map_comp_in_id g (mu nu: B -> B) : [seq (nu \o mu) i | i <- get_b g] = get_b g ->
                                               {in (get_b g), nu \o mu =1 id}.
       Proof. elim: (get_b g)=> [| h t IHtl]; first by move=> _ x; rewrite in_nil //.
-             case=> heq teq x; rewrite in_cons.
-             case e: (x == h)=> //=. by move: e=> /eqP ->; rewrite heq.
-             apply IHtl; apply teq.
+             move=> [heq teq] x; rewrite in_cons; case e: (x == h)=> /=.
+             + by move: e=> /eqP ->; rewrite heq.
+             + apply IHtl; apply teq.
       Qed.
 
-      Lemma b_term_bnode b g: Bnode b \in terms g -> Bnode b \in bnodes g.
-        Proof. by move=> binterms; rewrite /bnodes mem_undup mem_filter //. Qed.
+      Lemma bterm_eq_mem_get_bs (b: B) ts :
+        (@Bnode I B L b) \in terms_ts ts ->
+                             b \in get_bs (bnodes_ts ts).
+      Proof. by move=> /bterms_ts; rewrite {1}bnodes_map_get_bs (mem_map  (@bnode_inj I B L)). Qed.
 
-      Lemma bterm_eq_mem_get_b (o b: B) g :
-        (@Bnode I B L o) \in terms g ->
-                             (@Bnode I B L b) == Bnode o ->
+      Lemma bterm_eq_mem_get_b (b: B) g :
+        (@Bnode I B L b) \in terms g ->
                              b \in get_b g.
-      Proof. by move=> /b_term_bnode; rewrite bnodes_map_get_b (mem_map (@bnode_inj I B L))=> H /eqP [->]. Qed.
+      Proof. by rewrite terms_graph/get_b; apply bterm_eq_mem_get_bs. Qed.
+
+      Lemma mem_ts_mem_triple_bs t ts b : t \in ts -> Bnode b \in bnodes_triple t -> b \in get_bs (bnodes_ts ts).
+      Proof. move=> /mem_triple_terms_ts; case t=> [[]]s []p []o ? ? //= /and3P[sint pint oint];
+                                              rewrite /bnodes_triple filter_undup mem_undup ?in_cons in_nil // Bool.orb_false_r=> /eqP[eq]; move: sint oint; rewrite ?eq=> sint oint; rewrite bterm_eq_mem_get_bs //.
+             by move: eq=> /eqP; case/orP=> /eqP[->].
+      Qed.
 
       Lemma mem_g_mem_triple_b t g b : t \in g -> Bnode b \in bnodes_triple t -> b \in get_b g.
-      Proof. move=> /mem_triple_terms; case t=> [[]]s []p []o ? ? //= /and3P[sint pint oint];
-             rewrite /bnodes_triple filter_undup mem_undup ?in_cons in_nil // Bool.orb_false_r=> H.
-             apply (bterm_eq_mem_get_b oint H).
-             apply (bterm_eq_mem_get_b sint H).
-             apply (bterm_eq_mem_get_b sint H).
-             case/orP: H=> H.
-             apply (bterm_eq_mem_get_b sint H).
-             apply (bterm_eq_mem_get_b oint H).
+      Proof. by apply mem_ts_mem_triple_bs. Qed.
+
+      Lemma can_b_can_rtbs ts (mu nu: B -> B) : {in get_bs (bnodes_ts ts), nu \o mu =1 id} ->
+                                             {in ts, [eta relabeling_triple (nu \o mu)] =1 id}.
+      Proof. move=> /= in_getb [s p o sib pii] /mem_ts_mem_triple_bs ing /=; apply triple_inj=> /=.
+             + case: s sib ing  => // b sib ing.
+               by rewrite /= in_getb // ing // /bnodes_triple filter_undup mem_undup in_cons eqxx.
+             + by case: p pii ing  => // b sib /mem_g_mem_triple_b inb /=.
+             + case: o ing  => // b ing /=.
+               by rewrite /= in_getb // ing // /bnodes_triple filter_undup mem_undup mem_filter -mem_rev in_cons eqxx.
       Qed.
 
       Lemma can_b_can_rtb g (mu nu: B -> B) : {in get_b g, nu \o mu =1 id} ->
                             {in g, [eta relabeling_triple (nu \o mu)] =1 id}.
-      Proof. move=> /= in_getb [s p o sib pii] ing /=; apply triple_inj=> /=.
-             + case: s sib ing  => // b sib /mem_g_mem_triple_b inb /=.
-               rewrite in_getb=> //; apply inb.
-               by rewrite /bnodes_triple filter_undup mem_undup in_cons eqxx.
-             + by case: p pii ing  => // b sib /mem_g_mem_triple_b inb /=.
-             + case: o ing  => // b /mem_g_mem_triple_b inb /=.
-               rewrite in_getb=> //; apply inb.
-               rewrite /bnodes_triple filter_undup mem_undup /=.
-               by case: (is_bnode s); case: (is_bnode p); rewrite !in_cons in_nil eqxx ?orbT.
-      Qed.
+      Proof. by apply can_b_can_rtbs. Qed.
 
       Definition iso_sym g1 g2 : iso g1 g2 <-> iso g2 g1.
       Proof.
@@ -784,23 +755,19 @@ Section Rdf.
                by elim g'=> [//| h t IHts] /=; last by rewrite relabeling_triple_comp -IHts.
         Qed.
 
+        Lemma perm_eq_comp ts1 ts2 ts3 mu12 mu23:
+          perm_eq (relabeling_seq_triple mu12 ts1) ts2 ->
+          perm_eq (relabeling_seq_triple mu23 ts2) ts3 ->
+          perm_eq (relabeling_seq_triple (mu23 \o mu12) ts1) ts3.
+        Proof. by move=> /(perm_map (relabeling_triple mu23)); rewrite relabeling_triple_map_comp; apply perm_trans. Qed.
+
       Lemma eqb_relabeling_comp g1 g2 g3 mu12 mu23:
         forall u1 u2 u3,
         eqb_rdf (@relabeling _ _ mu12 g1 u1) g2 ->
         eqb_rdf (@relabeling _ _ mu23 g2 u2) g3 ->
 
         eqb_rdf (@relabeling _ _ (mu23 \o mu12) g1 u3) g3.
-      Proof. move=> u1 u2 u3; rewrite /eqb_rdf/relabeling=> /(perm_map (relabeling_triple mu23)) p12 p23.
-             suffices : [seq relabeling_triple mu23 i | i <- {| graph := relabeling_seq_triple mu12 g1 |}] =
-                          {| graph := relabeling_seq_triple (mu23 \o mu12) g1 |}.
-
-             move=> a. eapply (perm_trans _ p23). Unshelve. move=> i1 i2 /=.
-             apply relabeling_triple_comp_map.
-             rewrite /=. rewrite /= in p12.
-             apply uniq_perm=> //.
-             apply perm_mem in p12.
-             by rewrite -relabeling_triple_comp_map.
-      Qed.
+      Proof. move=> u1 u2 u3; rewrite /eqb_rdf/relabeling; apply perm_eq_comp. Qed.
 
       Definition iso_trans g1 g2 g3 : iso g1 g2 -> iso g2 g3 -> iso g1 g3.
       Proof. rewrite /iso/is_iso; move=> [mu12 /and3P[pre_iso12 urel12 perm12]] [mu23 /and3P[pre_iso23 urel23 perm23]].
@@ -808,12 +775,12 @@ Section Rdf.
              suffices ucomp: uniq (relabeling_seq_triple (mu23 \o mu12) g1).
              apply /and3P; split=> //.
              + by apply: is_pre_iso_trans pre_iso12 pre_iso23.
-             + apply : eqb_relabeling_comp perm12 perm23=> //.
+             + by apply : eqb_relabeling_comp perm12 perm23=> //.
              + rewrite -relabeling_seq_triple_comp /relabeling_seq_triple.
                have /eq_uniq -> //: size [seq relabeling_triple mu23 i | i <- [seq relabeling_triple mu12 i | i <- g1]] =
                              size (relabeling_seq_triple mu23 g2).
-               by move: perm12=> /perm_size; rewrite /relabeling /= /relabeling_seq_triple !size_map.
-               by apply eq_mem_map; move: perm12=> /perm_mem.
+               by move: perm12=> /perm_size; rewrite !size_map.
+               by apply eq_mem_map; apply perm_mem.
       Qed.
 
       Definition isocanonical_mapping (M : rdf_graph I B L -> rdf_graph I B L) :=

@@ -445,6 +445,11 @@ Section Rdf.
         by rewrite map_comp map_mu.
         Qed.
 
+        Lemma pre_iso_sym g1 g2 : pre_iso g1 g2 <-> pre_iso g2 g1.
+        Proof. suffices imp h1 h2 : pre_iso h1 h2 -> pre_iso h2 h1 by split; exact: imp.
+               by rewrite /pre_iso=> [[mu /is_pre_iso_inv [nu [inv _]]]]; exists nu.
+        Qed.
+
         Lemma pre_iso_trans g1 g2 g3 : pre_iso g1 g2 -> pre_iso g2 g3 -> pre_iso g1 g3.
         Proof. rewrite /pre_iso=> [[mu12 iso12] [mu23 iso23]].
                by exists (mu23 \o mu12); apply (is_pre_iso_trans iso12 iso23).
@@ -562,7 +567,21 @@ Section Rdf.
       Proof. by move=> rts rtp rto; apply triple_inj; rewrite -?rts -?rtp -?rto; case t1. Qed.
 
       Lemma is_pre_iso_inj g1 g2 mu : is_pre_iso g1 g2 mu -> {in get_b g1 &, injective mu}.
-      Proof. Admitted.
+      Proof.
+      move=> hmu b b' hb1 hb'.
+      apply: contra_eq => neqb.
+      apply/negP=> eqmu.
+      have test : perm_eq (get_b g1)  (b' :: rem b' (get_b g1)).
+        by apply: perm_to_rem.
+      have {test} /(perm_map mu) /= test : perm_eq (get_b g1)  (b' :: b :: rem b (rem b' (get_b g1))).
+        apply: perm_trans test _. rewrite perm_cons. apply: perm_to_rem.
+        by rewrite mem_rem_uniq // inE neqb.
+      have hcount : 2 <= count_mem (mu b) (map mu (get_b g1)).
+        by move/permP: test->; rewrite /= (eqP eqmu) !eqxx.
+      have {hcount} : 2 <= count_mem (mu b) (get_b g2).
+        by move/permP: hmu<-.
+      by rewrite count_uniq_mem //; case: (mu b \in get_b g2).
+      Qed.
 
       Lemma bnode_inj (i b l : eqType) : injective (fun bn=> @Bnode i b l bn).
       Proof. by move=> x y; case. Qed.

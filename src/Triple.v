@@ -136,9 +136,6 @@ Section OperationsOnTriples.
   Definition bnodes_triple (t : triple I B L) : seq (term I B L) :=
     filter (@is_bnode I B L) (terms_triple t).
 
-  Lemma sizeO_filter T (s : seq T) p: size (filter p s) == 0 = all (negb \o p) s.
-  Proof. by elim s=> //= h t <-; case (p h). Qed.
-
   Lemma is_ground_not_bnode t :
     is_ground_triple t =
       ~~ is_bnode (subject t) && ~~ is_bnode (predicate t) &&  ~~ is_bnode (object t).

@@ -86,6 +86,9 @@ Proof. elim: l x0 => [ | t ts IHts] x0; first by left.
        - by right; rewrite intail orbT.
 Qed.
 
+Lemma sizeO_filter T (s : seq T) p: size (filter p s) == 0 = all (negb \o p) s.
+Proof. by elim s=> //= h t <-; case (p h). Qed.
+
 Definition build_finfun (T : choiceType) (f : T -> T) (s : seq T) : (seq_sub s) -> T :=
   fun ssub => f (ssval ssub).
 

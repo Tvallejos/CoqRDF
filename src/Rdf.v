@@ -676,8 +676,6 @@ Section Rdf.
       Lemma bterms b g: Bnode b \in (terms g) -> Bnode b \in (bnodes g).
       Proof. by rewrite terms_graph; apply bterms_ts. Qed.
 
-      (* remove extra unfoldings below *)
-
       Lemma triple_case t1 t2: t1 = t2 -> [&& (subject t1) == (subject t2),
             (predicate t1) == (predicate t2) &
               (object t1) == (object t2)].
@@ -754,36 +752,33 @@ Section Rdf.
       Proof.
         suffices imp h1 h2 : iso h1 h2 -> iso h2 h1 by split; exact: imp.
         case=> mu /and3P[pre_iso_mu uniq_relab perm_relab].
-        move:(is_pre_iso_inv pre_iso_mu)=> [nu [pre_iso_nu nuP]].
+        move:(is_pre_iso_inv pre_iso_mu)=> [nu [pre_iso_nu /map_comp_in_id/can_b_can_rtb nuP]].
         exists nu.
         rewrite /is_iso pre_iso_nu.
-        have /can_b_can_rtb canmunu : {in (get_b h1), nu \o mu =1 id}. apply: map_comp_in_id nuP.
-        have /perm_eq_relab_uniq [-> ->] : perm_eq (relabeling_seq_triple nu h2) h1.
+        have /perm_eq_relab_uniq [-> ->] //: perm_eq (relabeling_seq_triple nu h2) h1.
         move: perm_relab; rewrite perm_sym=> /(perm_map (relabeling_triple nu))=> perm_relab.
         apply: perm_trans perm_relab _; rewrite relabeling_triple_map_comp map_id_in //.
-        done.
       Qed.
 
       Lemma relabeling_triple_comp_map (B1 B2 B3 : eqType) (g : rdf_graph I B1 L) (mu12 : B1 -> B2) (mu23 : B2 -> B3) :
         [seq relabeling_triple mu23 i | i <- relabeling_seq_triple mu12 g] =
           relabeling_seq_triple (mu23 \o mu12) g.
-        Proof. case g=> g' us=> /=; rewrite -map_comp /= /relabeling_seq_triple.
-               by elim g'=> [//| h t IHts] /=; last by rewrite relabeling_triple_comp -IHts.
-        Qed.
+      Proof. case g=> g' us=> /=; rewrite -map_comp.
+             by elim g'=> [//| h t IHts] /=; last by rewrite relabeling_triple_comp -IHts.
+      Qed.
 
-        Lemma perm_eq_comp ts1 ts2 ts3 mu12 mu23:
-          perm_eq (relabeling_seq_triple mu12 ts1) ts2 ->
-          perm_eq (relabeling_seq_triple mu23 ts2) ts3 ->
-          perm_eq (relabeling_seq_triple (mu23 \o mu12) ts1) ts3.
-        Proof. by move=> /(perm_map (relabeling_triple mu23)); rewrite relabeling_triple_map_comp; apply perm_trans. Qed.
+      Lemma perm_eq_comp ts1 ts2 ts3 mu12 mu23:
+        perm_eq (relabeling_seq_triple mu12 ts1) ts2 ->
+        perm_eq (relabeling_seq_triple mu23 ts2) ts3 ->
+        perm_eq (relabeling_seq_triple (mu23 \o mu12) ts1) ts3.
+      Proof. by move=> /(perm_map (relabeling_triple mu23)); rewrite relabeling_triple_map_comp; apply perm_trans. Qed.
 
       Lemma eqb_relabeling_comp g1 g2 g3 mu12 mu23:
         forall u1 u2 u3,
-        eqb_rdf (@relabeling _ _ mu12 g1 u1) g2 ->
-        eqb_rdf (@relabeling _ _ mu23 g2 u2) g3 ->
-
-        eqb_rdf (@relabeling _ _ (mu23 \o mu12) g1 u3) g3.
-      Proof. move=> u1 u2 u3; rewrite /eqb_rdf/relabeling; apply perm_eq_comp. Qed.
+          eqb_rdf (@relabeling _ _ mu12 g1 u1) g2 ->
+          eqb_rdf (@relabeling _ _ mu23 g2 u2) g3 ->
+          eqb_rdf (@relabeling _ _ (mu23 \o mu12) g1 u3) g3.
+      Proof. by move=> u1 u2 u3; apply perm_eq_comp. Qed.
 
       Definition iso_trans g1 g2 g3 : iso g1 g2 -> iso g2 g3 -> iso g1 g3.
       Proof. rewrite /iso/is_iso; move=> [mu12 /and3P[pre_iso12 urel12 perm12]] [mu23 /and3P[pre_iso23 urel23 perm23]].
@@ -791,7 +786,7 @@ Section Rdf.
              suffices ucomp: uniq (relabeling_seq_triple (mu23 \o mu12) g1).
              apply /and3P; split=> //.
              + by apply: is_pre_iso_trans pre_iso12 pre_iso23.
-             + by apply : eqb_relabeling_comp perm12 perm23=> //.
+             + by apply : eqb_relabeling_comp perm12 perm23.
              + rewrite -relabeling_seq_triple_comp /relabeling_seq_triple.
                have /eq_uniq -> //: size [seq relabeling_triple mu23 i | i <- [seq relabeling_triple mu12 i | i <- g1]] =
                              size (relabeling_seq_triple mu23 g2).

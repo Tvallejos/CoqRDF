@@ -4,6 +4,7 @@ Unset Strict Implicit.
 Unset Printing Implicit Defensive.
 From RDF Require Export Rdf Triple Term Util.
 
+
 Section HashedData.
 
   (* A type for a data (t : T) paired with its current hash (h : H) *)
@@ -657,11 +658,7 @@ Section IsoCan.
         foldl Order.max [::] isocans.
 
       Definition k_mapping (g : rdf_graph I B L) : rdf_graph I B L :=
-        let all_maps :=
-          map (mapi (app_n mark_bnode)) (permutations (bnodes (init_hash g))) in
-        let mus := map build_kmapping_from_seq all_maps in
-        let isocans := map (fun mu => (@relabeling _ _ _ _ mu g todo)) mus in
-        foldl Order.max empty_rdf_graph isocans.
+        @mkRdfGraph I B L (k_mapping_ts (graph g)) todo.
 
       Lemma k_mapping_seq_uniq_ts ts: uniq (mapi (app_n mark_bnode) (bnodes_ts (init_hash_ts ts))).
       Proof.

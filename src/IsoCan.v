@@ -657,9 +657,6 @@ Section IsoCan.
         let isocans := map (fun mu => (relabeling_seq_triple mu ts)) mus in
         foldl Order.max [::] isocans.
 
-      Definition k_mapping (g : rdf_graph I B L) : rdf_graph I B L :=
-        @mkRdfGraph I B L (k_mapping_ts (graph g)) todo.
-
       Lemma k_mapping_seq_uniq_ts ts: uniq (mapi (app_n mark_bnode) (bnodes_ts (init_hash_ts ts))).
       Proof.
         rewrite /mapi; pose ts' := init_hash_ts ts.
@@ -673,22 +670,44 @@ Section IsoCan.
       Lemma k_mapping_seq_uniq_graph g: uniq (mapi (app_n mark_bnode) (bnodes (init_hash g))).
       Proof. by apply k_mapping_seq_uniq_ts. Qed.
 
-      Lemma k_mapping_seq_uniq_perm_eq g s: perm_eq s (bnodes (init_hash g)) -> uniq (mapi (app_n mark_bnode) s).
+      Lemma all_bnodes_perm {i b l: eqType} (ts : seq (triple i b l)) s:
+        perm_eq (bnodes_ts ts) s -> forall x, x \in s -> is_bnode x.
+      Proof. by move=> peq x xin; apply (in_all xin); rewrite -(perm_all _ peq) all_bnodes_ts. Qed.
+
+      Lemma k_mapping_seq_uniq_perm_eq_ts ts s: perm_eq s (bnodes_ts (init_hash_ts ts)) -> uniq (mapi (app_n mark_bnode) s).
       Proof. rewrite /mapi perm_sym=> perm_eq. rewrite map_inj_in_uniq. apply uniq_zip_iota.
              move=> [x1 n] [y1 m] /in_zip/andP [x1_ins n_iniota] /in_zip/andP [y1_ins m_iniota] /=.
-             have : is_bnode x1. apply (in_all x1_ins); rewrite -(perm_all _ perm_eq); apply all_bnodes.
-             have : is_bnode y1. apply (in_all y1_ins); rewrite -(perm_all _ perm_eq); apply all_bnodes.
-             case :y1 x1_ins y1_ins; case x1=> // namey namex y_ins x_ins _ _.
-             have y1_init: Bnode namey \in (bnodes (init_hash g)). by rewrite (perm_mem perm_eq).
-             have x1_init: Bnode namex \in (bnodes (init_hash g)). by rewrite (perm_mem perm_eq).
-             by move=> ?; apply /eqP; rewrite xpair_eqE; apply (can_app_n_mb_init y1_init).
+             have := all_bnodes_perm perm_eq x1_ins.
+             have := all_bnodes_perm perm_eq y1_ins.
+             case :y1 x1_ins y1_ins; case x1=> // namey namex; rewrite -!(perm_mem perm_eq)=> y_ins x_ins _ _.
+             by move=> ?; apply /eqP; rewrite xpair_eqE; apply (can_app_n_mb_init_ts y_ins).
       Qed.
+
+      Lemma k_mapping_seq_uniq_perm_eq g s: perm_eq s (bnodes (init_hash g)) -> uniq (mapi (app_n mark_bnode) s).
+      Proof. by apply k_mapping_seq_uniq_perm_eq_ts. Qed.
+
+      (* to prove *)
+      Lemma uniq_k_mapping_res ts: uniq (k_mapping_ts ts).
+      Proof. rewrite /k_mapping_ts.
+             case: (foldl_max  [seq relabeling_seq_triple mu ts
+                               | mu <- [seq build_kmapping_from_seq i
+                                      | i <- [seq mapi (app_n mark_bnode) i | i <- permutations (bnodes_ts (init_hash_ts ts))]]] [::]).
+             by move=> ->.
+             pose s:= foldl Order.max [::]
+                        [seq relabeling_seq_triple mu ts
+                        | mu <- [seq build_kmapping_from_seq i
+                               | i <- [seq mapi (app_n mark_bnode) i | i <- permutations (bnodes_ts (init_hash_ts ts))]]].
+             rewrite -/s.
+             Abort.
+
+
+      Definition k_mapping (g : rdf_graph I B L) : rdf_graph I B L :=
+        @mkRdfGraph I B L (k_mapping_ts (graph g)) todo.
 
       Lemma injection_kmap b b' ht s (eb: eqb_b_hterm b ht) (eb': eqb_b_hterm b' ht):
         (build_kmapping_from_seq (mapi (app_n mark_bnode) s) b) =
           (build_kmapping_from_seq (mapi (app_n mark_bnode) s) b').
-      Proof. suffices : b = b'. by move=> ->.
-             by apply (eqb_b_hterm_trans eb eb'). Qed.
+      Proof. by rewrite (eqb_b_hterm_trans eb eb'). Qed.
 
       Lemma map_kmap b n s :
         (build_kmapping_from_seq s b) = n ->

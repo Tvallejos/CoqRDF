@@ -345,48 +345,20 @@ Section IsoCan.
       (* updates the current hash of b by b' in all the ocurrences
        in g *)
       Definition replace_bnode (b b': hash B) (g : hgraph) us : hgraph :=
-        @relabeling _ _ _ _ (fun a_hash => if a_hash == b then b' else a_hash) g us.
+        @mkRdfGraph _ _ _ (replace_bnode_ts b b' (graph g)) us.
 
-      Definition lookup_bnode_in_graph (g : hgraph) (b : B) : option hterm :=
-        let otrms := map (lookup_bnode_in_triple b) g in
+      Definition lookup_bnode_in_ts (ts : seq htriple) (b : B) : option hterm :=
+        let otrms := map (lookup_bnode_in_triple b) ts in
         head None (filter is_some otrms).
 
-      (* Definition lookup_bnode_in_graph' (g : hgraph) (b : B) : option hterm := *)
-      (*   match (filter (cmp_bnode b) (bnodes g)) with *)
-      (*   | nil => None *)
-      (*   | hb :: _ => Some hb *)
-      (*   end. *)
+      Definition lookup_bnode_in_graph (g : hgraph) (b : B) : option hterm :=
+        lookup_bnode_in_ts (graph g) b.
 
       Definition lookup_bnode_in_graph_default (g : hgraph) (b : B) : h :=
         if lookup_bnode_in_graph g b is Some trm then term_hash trm else herror.
 
-      (* FIXME replace by padding function
-     if ht in g then lookup in a finfun else
-     just the input of the hterm *)
-      Definition build_mapping_from_graph (g : hgraph) : B -> B :=
-        let f := fun ht mapping =>
-                   (fun b =>
-                      if (input ht) == b
-                      then (to_string (current_hash ht))
-                      else mapping b) in
-        foldr f id (get_b g).
-
-      Definition build_mapping_from_graph' (g : hgraph) : B -> B :=
-        let bns := bnodes g in
-        fun b =>
-          let p := eqb_b_hterm b in
-          let default := (Bnode (mkHinput b herror)) in
-          if has p bns then
-            let the_bnode := nth default bns (find p bns) in
-            to_string (lookup_hash_default the_bnode)
-          else b.
-
-      Definition build_finfun_from_graph (g : hgraph) :
-        (seq_sub (bnodes g)) -> (seq_sub (map label_term (bnodes g))).
-      Proof. apply map_fintype. Qed.
-
       Definition relabeling_hgraph (mu : B -> B) (g: hgraph) us : hgraph :=
-        @relabeling _ _ _ _ (fun b => (mkHinput (mu (input b)) (current_hash b))) g us.
+        @relabeling _ _ _ _ (mu_ext mu) g us.
 
       Lemma eqb_b_hterm_relabeling b ht (mu : B -> B) :
         eqb_b_hterm b ht ->
@@ -405,20 +377,26 @@ Section IsoCan.
                      if f x then (x::g,d) else (g,x::d)
         end.
 
-      (* should be parameterized by a hgraph
+      Definition partitionate' (f : hterm -> bool) (s : seq hterm) : seq hterm * seq hterm :=
+        (filter f s, filter (negb \o f) s).
+
+      (* should be parameterized by an hgraph
          part shoud be the finset of (hash B) that shares hash in g *)
       Definition part := seq (hash B).
 
       (* the finset of parts in g *)
       Definition partition := seq part.
 
-      Definition mkPartition (g : hgraph) : partition :=
-        let bnodes := (bnodes g) in
+      Definition mkPartition_ts (ts : hts) : partition :=
+        let bnodes := (bnodes_ts ts) in
         let equiv := (fun b => (fun t=> eq_hash b t)) in
         (* undup up to permutation *)
         let P := undup (map (fun b=> (partitionate (equiv b) bnodes).1 ) bnodes) in
         let ohs := map (fun bs => map lookup_hash bs) P in
         map someT_to_T ohs.
+
+      Definition mkPartition (g : hgraph) : partition :=
+        mkPartition_ts (graph g).
 
       Definition is_trivial (p : part) : bool :=
         size p == 1%N.
@@ -441,10 +419,13 @@ Section IsoCan.
 
       (* assumes order and no dup in partition *)
       (* answers true if every part in the partition of g is equal to the respective part in h *)
-      Definition cmp_partition (g h: hgraph) : bool :=
-        let Pg := mkPartition g in
-        let Ph := mkPartition h in
+      Definition cmp_partition_ts (g h: hts) : bool :=
+        let Pg := mkPartition_ts g in
+        let Ph := mkPartition_ts h in
         all2 (fun p1 p2 => cmp_part p1 p2) Pg Ph.
+
+      Definition cmp_partition (g h: hgraph) : bool :=
+        cmp_partition_ts (graph g) (graph h).
 
       (* algorithm 3, lines 9-10
        chooses the canonical part which is not trivial *)
@@ -668,13 +649,12 @@ Section IsoCan.
           else
             b.
 
-      (* Definition k_mapping_ts (ts : seq (triple I B L)) : seq (triple I B L) := *)
-      (*   let all_maps := *)
-      (*     map (mapi (app_n mark_bnode)) (permutations (bnodes_ts (init_hash_ts ts))) in *)
-      (*   let mus := map build_kmapping_from_seq all_maps in *)
-      (*   let isocans := map (fun mu => (relabeling_seq_triple mu ts)) mus in *)
-      (*   foldl Order.max [::] isocans. *)
-      (* The term "[::]" has type "seq ?T0" while it is expected to have type "Order.POrder.sort ?T". *)
+      Definition k_mapping_ts (ts : seq (triple I B L)) : seq (triple I B L) :=
+        let all_maps :=
+          map (mapi (app_n mark_bnode)) (permutations (bnodes_ts (init_hash_ts ts))) in
+        let mus := map build_kmapping_from_seq all_maps in
+        let isocans := map (fun mu => (relabeling_seq_triple mu ts)) mus in
+        foldl Order.max [::] isocans.
 
       Definition k_mapping (g : rdf_graph I B L) : rdf_graph I B L :=
         let all_maps :=

@@ -89,7 +89,7 @@ Section Rdf.
       Proof.
         by rewrite /relabeling_seq_triple -map_comp; apply: eq_map=> x; rewrite relabeling_triple_comp.
       Qed.
-
+      
       Lemma relabeling_seq_triple_nil (B1 B2: Type) (μ: B1 -> B2) :
         relabeling_seq_triple μ [::] = [::].
       Proof. by []. Qed.
@@ -111,7 +111,7 @@ Section Rdf.
     Lemma rdf_perm_mem_eq {i b l : eqType} (g1 g2 :rdf_graph i b l) :
       (perm_eq g1 g2) <-> (g1 =i g2).
     Proof. split; first by move=> /perm_mem.
-           by move: (ugraph g1) (ugraph g2); apply uniq_perm=> //.
+           by move: (ugraph g1) (ugraph g2); apply uniq_perm.
     Qed.
 
     Lemma rdf_mem_eq_graph g1 g2 :
@@ -840,6 +840,24 @@ Section Rdf.
 
   End Relabeling_alt.
 
+
+  Definition code_ts (I B L : eqType) ts : (seq (triple I B L))%type :=
+    ts.
+
+  Definition decode_ts (I B L : eqType) (s: seq (triple I B L)) : option (seq (triple I B L)) :=
+    Some s.
+
+  Lemma pcancel_code_decode_ts (I B L : eqType): pcancel (@code_ts I B L) (@decode_ts I B L).
+  Proof. by case. Qed.
+
+  Definition ts_canChoiceMixin' (I B L : choiceType) := PcanChoiceMixin (@pcancel_code_decode_ts I B L).
+  Definition ts_canCountMixin' (I B L : countType):= PcanCountMixin (@pcancel_code_decode_ts I B L).
+
+  Canonical ts_choiceType (I B L: choiceType):= Eval hnf in ChoiceType (seq (triple I B L)) (@ts_canChoiceMixin' I B L).
+  Canonical ts_countType (I B L: countType):= Eval hnf in CountType (seq (triple I B L)) (@ts_canCountMixin' I B L).
+
+  Definition ts_canPOrderMixin (I B L: countType):= PcanPOrderMixin (@pickleK (ts_countType I B L)).
+  Canonical ts_POrderType (I B L: countType):= Eval hnf in POrderType tt (seq (triple I B L)) (@ts_canPOrderMixin I B L).
 
   Definition rdf_canChoiceMixin' (I B L : choiceType) := PcanChoiceMixin (@pcancel_code_decode I B L).
   Definition rdf_canCountMixin' (I B L : countType):= PcanCountMixin (@pcancel_code_decode I B L).

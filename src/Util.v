@@ -86,6 +86,30 @@ Proof. elim: l x0 => [ | t ts IHts] x0; first by left.
        - by right; rewrite intail orbT.
 Qed.
 
+Lemma perm_map_cancel (T1 T2: eqType) (s : seq T1) (f: T1 -> T2) (g: T2 -> T1) :
+  cancel f g -> perm_eq (map (g \o f) s) s.
+Proof. move=> can. elim: s=>[//| h t IHts] /=. by rewrite can perm_cons IHts. Qed.
+
+Lemma perm_map_in_cancel (T: eqType) (s : seq T) (f g: T -> T) :
+  {in s, cancel f g} -> perm_eq (map (g \o f) s) s.
+Proof. elim: s=>[//| h t IHts] /=.
+       move=> can. rewrite can. rewrite perm_cons IHts //.
+       move=> x y. rewrite can //. by rewrite in_cons y orbT. by rewrite in_cons eqxx.
+Qed.
+
+Lemma perm_undup_map_inj (T1 T2: eqType) (f : T1 -> T2) s1 s2 :
+  {in s1 &,injective f} ->  uniq s1 -> perm_eq (undup (map f s1)) s2 -> perm_eq (map f s1) s2.
+Proof. move=> injf ? peq.
+       have equ: uniq (undup (map f s1)) = uniq (map f s1).
+       by rewrite map_inj_in_uniq // undup_uniq.
+       suffices eq : perm_eq (map f s1) (undup (map f s1)).
+       by apply: perm_trans eq peq.
+       apply uniq_perm.
+       + by rewrite -equ undup_uniq.
+       + by rewrite undup_uniq.
+       + by move=> x; rewrite mem_undup.
+Qed.
+
 Open Scope order_scope.
 
 Lemma max_foldlP:

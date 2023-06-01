@@ -89,7 +89,7 @@ Section Rdf.
       Proof.
         by rewrite /relabeling_seq_triple -map_comp; apply: eq_map=> x; rewrite relabeling_triple_comp.
       Qed.
-      
+
       Lemma relabeling_seq_triple_nil (B1 B2: Type) (μ: B1 -> B2) :
         relabeling_seq_triple μ [::] = [::].
       Proof. by []. Qed.
@@ -340,8 +340,11 @@ Section Rdf.
     Lemma l_in_bnodes l g: Lit l \in bnodes g = false.
     Proof. by rewrite /bnodes l_in_bnodes_ts. Qed.
 
+    Definition get_bts ts : seq B :=
+      get_bs (bnodes_ts ts).
+
     Definition get_b g : seq B :=
-      get_bs (bnodes g).
+      get_bts g.
 
     Lemma bnode_memP (i b' l: eqType) (b : b') trms : Bnode b \in trms = (b \in @get_bs i b' l trms).
     Proof. elim: trms=> [//| h t' IHt].
@@ -365,6 +368,10 @@ Section Rdf.
     Lemma uniq_get_bs ts : uniq (get_bs (bnodes_ts ts)).
     Proof. by rewrite -(undup_get_bsC (uniq_bnodes_ts ts)) undup_uniq. Qed.
     Hint Resolve uniq_get_bs.
+
+    Lemma uniq_get_bts ts : uniq (get_bts ts).
+    Proof. by rewrite /get_b uniq_get_bs. Qed.
+    Hint Resolve uniq_get_bts.
 
     Lemma uniq_get_b g : uniq (get_b g).
     Proof. by rewrite /get_b uniq_get_bs. Qed.
@@ -399,37 +406,52 @@ Section Rdf.
 
       Section PreIsomorphism.
 
-        Definition is_pre_iso g1 g2 (μ : B -> B) :=
-          perm_eq (map μ (get_b g1)) (get_b g2).
+        Definition is_pre_iso_ts ts1 ts2 (μ : B -> B) :=
+          perm_eq (map μ (get_bts ts1)) (get_bts ts2).
 
-        Lemma is_pre_iso_trans g1 g2 g3 m12 m23 :
-          is_pre_iso g1 g2 m12 -> is_pre_iso g2 g3 m23 -> is_pre_iso g1 g3 (m23 \o m12).
+        Definition is_pre_iso g1 g2 (μ : B -> B) :=
+          is_pre_iso_ts g1 g2 μ.
+
+        Lemma is_pre_iso_ts_trans ts1 ts2 ts3 m12 m23 :
+          is_pre_iso_ts ts1 ts2 m12 -> is_pre_iso_ts ts2 ts3 m23 -> is_pre_iso_ts ts1 ts3 (m23 \o m12).
         Proof. rewrite /is_pre_iso=> /(perm_map m23); rewrite -map_comp=> pe12 pe23.
                by apply: perm_trans pe12 pe23.
         Qed.
 
+        Lemma is_pre_iso_trans g1 g2 g3 m12 m23 :
+          is_pre_iso g1 g2 m12 -> is_pre_iso g2 g3 m23 -> is_pre_iso g1 g3 (m23 \o m12).
+        Proof. by apply is_pre_iso_ts_trans. Qed.
+
+        Remark is_pre_iso_ts_trans_sym ts1 ts2 m12 m23 :
+          is_pre_iso_ts ts1 ts2 m12 -> is_pre_iso_ts ts2 ts1 m23 -> is_pre_iso_ts ts1 ts1 (m23 \o m12).
+        Proof. by apply is_pre_iso_ts_trans. Qed.
+
         Remark is_pre_iso_trans_sym g1 g2 m12 m23 :
           is_pre_iso g1 g2 m12 -> is_pre_iso g2 g1 m23 -> is_pre_iso g1 g1 (m23 \o m12).
-        Proof. by apply is_pre_iso_trans. Qed.
+        Proof. by apply is_pre_iso_ts_trans_sym. Qed.
 
-        Definition pre_iso g1 g2 := exists (μ : B -> B), is_pre_iso g1 g2 μ.
+        Definition pre_iso_ts ts1 ts2 := exists (μ : B -> B), is_pre_iso_ts ts1 ts2 μ.
+        Definition pre_iso g1 g2 := exists (μ : B -> B), is_pre_iso_ts g1 g2 μ.
+
+        Lemma pre_iso_ts_refl ts : pre_iso_ts ts ts.
+        Proof. by rewrite /pre_iso_ts /is_pre_iso_ts; exists id; rewrite map_id perm_refl. Qed.
 
         Lemma pre_iso_refl g : pre_iso g g.
-        Proof. by rewrite /pre_iso /is_pre_iso; exists id; rewrite map_id perm_refl. Qed.
+        Proof. by apply pre_iso_ts_refl; rewrite /pre_iso_ts /is_pre_iso_ts; exists id; rewrite map_id perm_refl. Qed.
 
-        Lemma is_pre_iso_inv g1 g2 mu : is_pre_iso g1 g2 mu ->
-                              exists nu, is_pre_iso g2 g1 nu /\
-                               map (nu \o mu) (get_b g1) = get_b g1.
+        Lemma is_pre_iso_ts_inv ts1 ts2 mu : is_pre_iso_ts ts1 ts2 mu ->
+                              exists nu, is_pre_iso_ts ts2 ts1 nu /\
+                               map (nu \o mu) (get_bts ts1) = get_bts ts1.
         Proof.
         wlog dflt :/ B.
-          move=> hwlog; rewrite /is_pre_iso.
-          case_eq (get_b g2) => [e |dflt l <-]; last by apply: hwlog.
+          move=> hwlog; rewrite /is_pre_iso_ts/get_b.
+          case_eq (get_bts ts2) => [e |dflt l <-]; last by apply: hwlog.
           by move/perm_nilP/eqP; rewrite -size_eq0 size_map size_eq0; move/eqP->; exists id.
-        rewrite /is_pre_iso => mu_pre_iso.
-        wlog map_mu:  mu {mu_pre_iso} / [seq mu i | i <- get_b g1] = get_b g2.
+        rewrite /is_pre_iso_ts => mu_pre_iso.
+        wlog map_mu:  mu {mu_pre_iso} / [seq mu i | i <- get_bts ts1] = get_bts ts2.
           move=> hwlog.
-          have [rho rhoP] := map_of_seq [seq mu i | i <- get_b g1] (get_b g2) dflt.
-          have {rhoP} rhoP : [seq (rho \o mu) i | i <- get_b g1] = get_b g2.
+          have [rho rhoP] := map_of_seq [seq mu i | i <- get_bts ts1] (get_bts ts2) dflt.
+          have {rhoP} rhoP : [seq (rho \o mu) i | i <- get_bts ts1] = get_bts ts2.
           rewrite -map_comp in rhoP; apply: rhoP; first by rewrite (perm_uniq mu_pre_iso).
             by rewrite (perm_size mu_pre_iso).
           have {hwlog} [tau [tauP1 tauP2]] := hwlog _ rhoP.
@@ -437,23 +459,34 @@ Section Rdf.
           rewrite -tauP2 perm_sym.
           have:=  (perm_map (tau \o rho) mu_pre_iso).
           by rewrite -map_comp.
-        have [nu nuP] := map_of_seq (get_b g2) (get_b g1) dflt.
-        have  {nuP} nuP : [seq nu i | i <- get_b g2] = get_b g1.
+        have [nu nuP] := map_of_seq (get_bts ts2) (get_bts ts1) dflt.
+        have  {nuP} nuP : [seq nu i | i <- get_bts ts2] = get_bts ts1.
           by apply: nuP=> //; rewrite -map_mu size_map.
         exists nu; split=> //.
         - rewrite nuP; exact: perm_refl.
         by rewrite map_comp map_mu.
         Qed.
 
+        Lemma is_pre_iso_inv g1 g2 mu : is_pre_iso g1 g2 mu ->
+                              exists nu, is_pre_iso g2 g1 nu /\
+                               map (nu \o mu) (get_bts g1) = get_bts g1.
+        Proof. by apply is_pre_iso_ts_inv. Qed.
+
+        Lemma pre_iso_ts_sym ts1 ts2 : pre_iso_ts ts1 ts2 <-> pre_iso_ts ts2 ts1.
+        Proof. suffices imp h1 h2 : pre_iso_ts h1 h2 -> pre_iso_ts h2 h1 by split; exact: imp.
+               by rewrite /pre_iso=> [[mu /is_pre_iso_ts_inv [nu [inv _]]]]; exists nu.
+        Qed.
+
         Lemma pre_iso_sym g1 g2 : pre_iso g1 g2 <-> pre_iso g2 g1.
-        Proof. suffices imp h1 h2 : pre_iso h1 h2 -> pre_iso h2 h1 by split; exact: imp.
-               by rewrite /pre_iso=> [[mu /is_pre_iso_inv [nu [inv _]]]]; exists nu.
+        Proof. by apply pre_iso_ts_sym. Qed.
+
+        Lemma pre_iso_ts_trans ts1 ts2 ts3 : pre_iso_ts ts1 ts2 -> pre_iso_ts ts2 ts3 -> pre_iso_ts ts1 ts3.
+        Proof. rewrite /pre_iso=> [[mu12 iso12] [mu23 iso23]].
+               by exists (mu23 \o mu12); apply (is_pre_iso_ts_trans iso12 iso23).
         Qed.
 
         Lemma pre_iso_trans g1 g2 g3 : pre_iso g1 g2 -> pre_iso g2 g3 -> pre_iso g1 g3.
-        Proof. rewrite /pre_iso=> [[mu12 iso12] [mu23 iso23]].
-               by exists (mu23 \o mu12); apply (is_pre_iso_trans iso12 iso23).
-        Qed.
+        Proof. by apply pre_iso_ts_trans. Qed.
 
       End PreIsomorphism.
 
@@ -470,7 +503,7 @@ Section Rdf.
       Definition iso_refl g : iso g g.
       Proof. exists id; rewrite /is_iso.
              case g=> g' ug /=.
-             by rewrite relabeling_seq_triple_id ug  /= /is_pre_iso  map_id !perm_refl.
+             by rewrite relabeling_seq_triple_id ug  /= /is_pre_iso/is_pre_iso_ts map_id !perm_refl.
       Qed.
 
       Lemma eqb_rdf_terms g1 g2 : eqb_rdf g1 g2 -> perm_eq (terms g1) (terms g2).
@@ -555,9 +588,8 @@ Section Rdf.
       Proof.
         exists id.
         have usid: uniq (relabeling_seq_triple id g1) by rewrite relabeling_seq_triple_id; case g1.
-        rewrite /is_iso usid /is_pre_iso map_id relabeling_seq_triple_id /=; apply/andP; split.
+        rewrite /is_iso usid /is_pre_iso/is_pre_iso_ts map_id relabeling_seq_triple_id /=; apply/andP; split=> //.
         - exact: eqb_rdf_get_b.
-        - exact: H.
       Qed.
 
       Lemma map_of_triples t1 ft (f : B -> B): relabeling_term f (subject t1) = (subject ft) ->
@@ -566,56 +598,38 @@ Section Rdf.
                                                 -> relabeling_triple f t1 = ft.
       Proof. by move=> rts rtp rto; apply triple_inj; rewrite -?rts -?rtp -?rto; case t1. Qed.
 
-      Lemma is_pre_iso_inj g1 g2 mu : is_pre_iso g1 g2 mu -> {in get_b g1 &, injective mu}.
+      Lemma is_pre_iso_ts_inj ts1 ts2 mu : is_pre_iso_ts ts1 ts2 mu -> {in get_bts ts1 &, injective mu}.
       Proof.
       move=> hmu b b' hb1 hb'.
       apply: contra_eq => neqb.
       apply/negP=> eqmu.
-      have test : perm_eq (get_b g1)  (b' :: rem b' (get_b g1)).
+      have test : perm_eq (get_bts ts1)  (b' :: rem b' (get_bts ts1)).
         by apply: perm_to_rem.
-      have {test} /(perm_map mu) /= test : perm_eq (get_b g1)  (b' :: b :: rem b (rem b' (get_b g1))).
+      have {test} /(perm_map mu) /= test : perm_eq (get_bts ts1)  (b' :: b :: rem b (rem b' (get_bts ts1))).
         apply: perm_trans test _. rewrite perm_cons. apply: perm_to_rem.
         by rewrite mem_rem_uniq // inE neqb.
-      have hcount : 2 <= count_mem (mu b) (map mu (get_b g1)).
+      have hcount : 2 <= count_mem (mu b) (map mu (get_bts ts1)).
         by move/permP: test->; rewrite /= (eqP eqmu) !eqxx.
-      have {hcount} : 2 <= count_mem (mu b) (get_b g2).
+      have {hcount} : 2 <= count_mem (mu b) (get_bts ts2).
         by move/permP: hmu<-.
-      by rewrite count_uniq_mem //; case: (mu b \in get_b g2).
+      by rewrite count_uniq_mem //; case: (mu b \in get_bts ts2).
       Qed.
+
+      Lemma is_pre_iso_inj g1 g2 mu : is_pre_iso g1 g2 mu -> {in get_b g1 &, injective mu}.
+      Proof. by apply is_pre_iso_ts_inj. Qed.
 
       Lemma bnode_inj (i b l : eqType) : injective (fun bn=> @Bnode i b l bn).
       Proof. by move=> x y; case. Qed.
       Hint Resolve bnode_inj.
 
-      Lemma is_pre_iso_bnodes_inj g1 g2 mu : is_pre_iso g1 g2 mu -> {in bnodes g1 &, injective (relabeling_term mu)}.
-      Proof. move=> /is_pre_iso_inj hmu []b // []b' //=;
-             rewrite bnodes_map_get_b !mem_map // => hb1 hb' []=> eq; rewrite ?eq //.
+      Lemma is_pre_iso_ts_bnodes_inj ts1 ts2 mu : is_pre_iso_ts ts1 ts2 mu -> {in bnodes_ts ts1 &, injective (relabeling_term mu)}.
+      Proof. move=> /is_pre_iso_ts_inj hmu []b // []b' //=;
+             rewrite bnodes_map_get_bs !mem_map // => hb1 hb' []=> eq; rewrite ?eq //.
              by congr Bnode; apply hmu.
       Qed.
 
-      Lemma perm_map_cancel (T1 T2: eqType) (s : seq T1) (f: T1 -> T2) (g: T2 -> T1) :
-        cancel f g -> perm_eq (map (g \o f) s) s.
-      Proof. move=> can. elim: s=>[//| h t IHts] /=. by rewrite can perm_cons IHts. Qed.
-
-      Lemma perm_map_in_cancel (T: eqType) (s : seq T) (f g: T -> T) :
-        {in s, cancel f g} -> perm_eq (map (g \o f) s) s.
-      Proof. elim: s=>[//| h t IHts] /=.
-             move=> can. rewrite can. rewrite perm_cons IHts //.
-             move=> x y. rewrite can //. by rewrite in_cons y orbT. by rewrite in_cons eqxx.
-      Qed.
-
-      Lemma perm_undup_map_inj (T1 T2: eqType) (f : T1 -> T2) s1 s2 :
-        {in s1 &,injective f} ->  uniq s1 -> perm_eq (undup (map f s1)) s2 -> perm_eq (map f s1) s2.
-      Proof. move=> injf ? peq.
-             have equ: uniq (undup (map f s1)) = uniq (map f s1).
-             by rewrite map_inj_in_uniq // undup_uniq.
-             suffices eq : perm_eq (map f s1) (undup (map f s1)).
-             by apply: perm_trans eq peq.
-             apply uniq_perm.
-             + by rewrite -equ undup_uniq.
-             + by rewrite undup_uniq.
-             + by move=> x; rewrite mem_undup.
-      Qed.
+      Lemma is_pre_iso_bnodes_inj g1 g2 mu : is_pre_iso g1 g2 mu -> {in bnodes g1 &, injective (relabeling_term mu)}.
+      Proof. by apply is_pre_iso_ts_bnodes_inj. Qed.
 
       Lemma undup_get_bs (s : seq (term I B L)) : (undup (get_bs s)) = (get_bs (undup s)).
       Proof. elim: s=> [//|h t IHts] /=.

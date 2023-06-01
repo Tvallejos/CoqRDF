@@ -687,9 +687,24 @@ Section IsoCan.
       Proof. by apply k_mapping_seq_uniq_perm_eq_ts. Qed.
 
       (* to prove *)
-      Lemma uniq_k_mapping_res ts: uniq (k_mapping_ts ts).
-      Proof. rewrite /k_mapping_ts.
-             case: (foldl_max  [seq relabeling_seq_triple mu ts
+      Lemma uniq_k_mapping_res (ts : rdf_graph I B L) : uniq (k_mapping_ts ts).
+      Proof.
+      case: ts => ts uniq_ts /=.
+      rewrite /k_mapping_ts.
+      set perm_bs := permutations _.
+      set map_mu_on_bs := [seq mapi (app_n mark_bnode) i | i <- perm_bs].
+      set build_kmap := [seq build_kmapping_from_seq i | i <- map_mu_on_bs].
+      set relab := [seq relabeling_seq_triple mu ts | mu <- build_kmap].
+      suffices relab_uniq : all uniq relab. 
+        suffices in_relab : (foldl Order.max [::] relab) \in relab by apply: (allP relab_uniq).
+        case: (foldl_max relab [::])=> [-> | //].
+        admit. (* should only happen when ts is empty *) Print is_pre_iso.
+Print is_pre_iso.
+(* prouve something like      have test : forall mu, forall ts, uniq ts -> is_pre_iso mu ts (relabeling_seq_triple mu ts) -> uniq (relabeling_seq_triple mu ts). May be as
+an external lemma *)
+      Search _ foldl.
+
+      case: (foldl_max  [seq relabeling_seq_triple mu ts
                                | mu <- [seq build_kmapping_from_seq i
                                       | i <- [seq mapi (app_n mark_bnode) i | i <- permutations (bnodes_ts (init_hash_ts ts))]]] [::]).
              by move=> ->.

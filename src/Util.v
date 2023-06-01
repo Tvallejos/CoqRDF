@@ -86,6 +86,31 @@ Proof. elim: l x0 => [ | t ts IHts] x0; first by left.
        - by right; rewrite intail orbT.
 Qed.
 
+Open Scope order_scope.
+
+Lemma max_foldlP:
+  forall [disp : unit] [T : orderType disp] (l : seq T) (x y : T),
+    (foldl Order.max x l) = y -> (x <= y) && all (fun z=> z <= y) l.
+Proof. move=> d T l x y.
+       elim: l x=> [z /= -> //| hd t IHt]; first by rewrite Order.POrderTheory.lexx.
+       move=> x. rewrite /= Order.POrderTheory.maxEle.
+       case e: (x <= hd); move=> /IHt/andP[hdmax ->]; rewrite hdmax !andbT /=.
+       + by apply (Order.POrderTheory.le_le_trans e hdmax (Order.POrderTheory.lexx _)).
+       + rewrite Order.TotalTheory.leNgt /= Bool.negb_false_iff in e.
+         by apply (Order.POrderTheory.le_le_trans (Order.POrderTheory.ltW e) hdmax (Order.POrderTheory.lexx _)).
+Qed.
+
+Lemma max_foldl_minimum:
+  forall [disp : unit] [T : porderType disp] (l : seq T) (x : T),
+    (forall y, x <= y) -> foldl Order.max x l = x -> ((l == [::]) || (x \in l)).
+Proof. move=> d T l x minimum.
+       elim: l=> [//| hd t IHt].
+       rewrite /= Order.POrderTheory.maxEle minimum.
+       case: (foldl_max t hd).
+       by move=> -> ->; rewrite in_cons eqxx.
+       by move=> H <-; rewrite in_cons H orbT.
+Qed.
+
 Lemma sizeO_filter T (s : seq T) p: size (filter p s) == 0 = all (negb \o p) s.
 Proof. by elim s=> //= h t <-; case (p h). Qed.
 

@@ -695,15 +695,28 @@ Section Rdf.
               (object t1) == (object t2)].
       Proof. by case t1; case t2=> /= ? ? ? ? ? ? ? ? ? ? [] -> -> ->; rewrite !eqxx. Qed.
 
+      Lemma relabeling_term_inj_terms_ts {B2 : eqType} (mu : B -> B2) ts sx sy :
+        {in get_bts ts &, injective mu} ->
+        sx \in terms_ts ts -> sy \in terms_ts ts ->
+                                relabeling_term mu sx = relabeling_term mu sy ->
+                                sx = sy.
+      Proof. case sx; case sy=> /= // bx b_y mu_inj memx memy.
+             by move=> [->].
+             by move=> [->].
+             by move=> [/mu_inj]-> //; rewrite -!bnode_memP !bterms_ts.
+      Qed.
+
       Lemma relabeling_term_inj_terms {B2 : eqType} (mu : B -> B2) g sx sy :
         {in get_b g &, injective mu} ->
         sx \in terms g -> sy \in terms g ->
                                 relabeling_term mu sx = relabeling_term mu sy ->
                                 sx = sy.
-      Proof. case sx; case sy=> /= // bx b_y mu_inj memy memx.
-             by move=> [->].
-             by move=> [->].
-             by move=> [/mu_inj]; rewrite /get_b -!bnode_memP !bterms // => ->.
+        Proof. apply relabeling_term_inj_terms_ts. Qed.
+
+      Lemma is_pre_iso_inj_ts {B2: eqType} ts (mu : B -> B2) : ({in get_bts ts &, injective mu}) -> {in ts &, injective (relabeling_triple mu)}.
+      Proof.
+        move=> mu_inj; case=> sx ps ox ? ?; case=> sy py oy ? ? /= /mem_triple_terms_ts /= /and3P[memsx mempx memox] /mem_triple_terms_ts /= /and3P[memsy mempy memoy] [] eqs eqp eqo.
+          by apply triple_inj=> /=; apply (relabeling_term_inj_terms_ts mu_inj)=> //.
       Qed.
 
       Lemma is_pre_iso_inj_g {B2: eqType} g (mu : B -> B2) : ({in get_b g &, injective mu}) -> {in g &, injective (relabeling_triple mu)}.

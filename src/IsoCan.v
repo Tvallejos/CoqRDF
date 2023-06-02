@@ -686,10 +686,9 @@ Section IsoCan.
       Lemma k_mapping_seq_uniq_perm_eq g s: perm_eq s (bnodes (init_hash g)) -> uniq (mapi (app_n mark_bnode) s).
       Proof. by apply k_mapping_seq_uniq_perm_eq_ts. Qed.
 
-  (* foldl Order.max (Order.max x y) l = Order.max y (foldl Order.max x l). *)
-      (* to prove *)
-
-      (* Lemma  *)
+      Lemma uniq_relabeling_pre_iso mu (ts : seq (triple I B L)):
+        uniq ts -> is_pre_iso_ts ts (relabeling_seq_triple mu ts) mu -> uniq (relabeling_seq_triple mu ts).
+      Proof. by rewrite /is_pre_iso_ts=> uts /is_pre_iso_ts_inj/is_pre_iso_inj_ts ?; rewrite map_inj_in_uniq //. Qed.
 
       Lemma nil_minimum (ts: seq (triple I B L)) : [::] <= ts.
       Proof. by case ts. Qed.
@@ -704,7 +703,8 @@ Section IsoCan.
       set relab := [seq relabeling_seq_triple mu ts | mu <- build_kmap].
       suffices relab_uniq : all uniq relab.
         by case: (foldl_max relab [::])=> [-> //|]; apply: (allP relab_uniq).
-(* prouve something like      have test : forall mu, forall ts, uniq ts -> is_pre_iso mu ts (relabeling_seq_triple mu ts) -> uniq (relabeling_seq_triple mu ts). May be as
+(* prouve something like      have test :
+forall mu, forall ts, uniq ts -> is_pre_iso mu ts (relabeling_seq_triple mu ts) -> uniq (relabeling_seq_triple mu ts). May be as
 an external lemma *)
       Search _ foldl.
 

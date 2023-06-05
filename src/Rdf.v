@@ -272,7 +272,7 @@ Section Rdf.
         bnodes (@relabeling B1 B2 mu g us) =i (map (relabeling_term mu) (bnodes g)).
       Proof. by move=> ? x; rewrite bnodes_ts_relabel_mem. Qed.
 
-      Lemma bnodes_ts_relabel (ts: seq (triple I B1 L)) (mu: B1 -> B2) (mu_inj : injective mu):
+      Lemma bnodes_ts_relabel_inj (ts: seq (triple I B1 L)) (mu: B1 -> B2) (mu_inj : injective mu):
         bnodes_ts (relabeling_seq_triple mu ts) = (map (relabeling_term mu) (bnodes_ts ts)).
       Proof.
         have /(_ I L) rtmu_inj := relabeling_term_inj mu_inj.
@@ -284,10 +284,24 @@ Section Rdf.
              by rewrite IHtl.
       Qed.
 
+      (* Lemma undup_map_inj_in (T1 T2 : eqType) (f : T1 -> T2) (s : seq T1) : *)
+      (*   (* {in s&, injective f} -> *) *)
+      (*   undup [seq f i | i <- s] =i [seq f i | i <- undup s]. *)
+      (* Proof. *)
+      (*   by move=> x; rewrite -mem_map_undup mem_undup. *)
+
+      (*   elim: s => //= h t IHt injF. *)
+      (*   case e: (h \in t). *)
+      (*   by rewrite map_f // IHt // => x y /(inweak h) xin /(inweak h) yin; apply injF. *)
+      (*   case e2: (f h \in [seq f i | i <- t]). *)
+      (*   rewrite (map_f f).  in e. rewrite e. *)
+
+
+      (*   /=. *)
       Lemma bnodes_relabel (g: rdf_graph I B1 L) (mu: B1 -> B2) (inj_mu : injective mu):
         forall us,
           bnodes (@relabeling B1 B2 mu g us) = (map (relabeling_term mu) (bnodes g)).
-      Proof. by rewrite /bnodes /= bnodes_ts_relabel. Qed.
+      Proof. by rewrite /bnodes /= bnodes_ts_relabel_inj. Qed.
 
     End BnodeRelabeling.
 
@@ -653,6 +667,12 @@ Section Rdf.
              by [].
              by rewrite -!undup_get_bs -mem_map_undup mem_undup.
       Qed.
+
+      Lemma perm_eq_bnodes_relabel_inj_in ts1 ts2 mu :
+        {in (get_bs (bnodes_ts ts1))&, injective mu} ->
+        perm_eq (get_bs (bnodes_ts (relabeling_seq_triple mu ts1))) (get_bs (bnodes_ts ts2)) ->
+        perm_eq [seq mu i | i <- get_bs (bnodes_ts ts1)] (get_bs (bnodes_ts ts2)).
+      Proof. by move=> inj /perm_eq_bnodes_relabel/perm_undup_map_inj ->. Qed.
 
       Lemma eqb_rdf_get_b_hom g1 g2 mu us :
         eqb_rdf (@relabeling _ _ mu g1 us) g2 -> perm_eq (undup (map mu (get_b g1))) (get_b g2).

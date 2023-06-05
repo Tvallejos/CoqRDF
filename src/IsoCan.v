@@ -693,6 +693,23 @@ Section IsoCan.
       Lemma nil_minimum (ts: seq (triple I B L)) : [::] <= ts.
       Proof. by case ts. Qed.
 
+      Lemma is_pre_iso_req (ts : seq (triple I B L)) bs':
+        uniq bs' ->
+        size (bnodes_ts ts) = size bs' ->
+        is_pre_iso_ts ts (relabeling_seq_triple (build_kmapping_from_seq bs') ts) (build_kmapping_from_seq bs').
+      Proof.
+        set mu:= (build_kmapping_from_seq bs').
+        suffices mu_inj: {in get_bts ts &, injective mu}.
+        rewrite /is_pre_iso_ts=> ubs ssize. apply uniq_perm=> //.
+        + by rewrite map_inj_in_uniq // uniq_get_bts.
+        + by rewrite uniq_get_bts.
+        + rewrite /get_bts=> b.
+          apply /mapP. rewrite -bnode_memP. rewrite bnodes_ts_relabel_mem.
+          case e: (_ \in _).
+          - by move: e; move=> /mapP[[]//= preb mem []->]; exists preb; rewrite // -bnode_memP.
+          - rewrite /==> H.
+          Abort.
+
       Lemma uniq_k_mapping_res (ts : rdf_graph I B L) : uniq (k_mapping_ts ts).
       Proof.
       case: ts => ts uniq_ts /=.
@@ -703,6 +720,9 @@ Section IsoCan.
       set relab := [seq relabeling_seq_triple mu ts | mu <- build_kmap].
       suffices relab_uniq : all uniq relab.
         by case: (foldl_max relab [::])=> [-> //|]; apply: (allP relab_uniq).
+      apply /allP. rewrite /relab/build_kmap -map_comp. move=> t /mapP[u mem ->].
+      apply uniq_relabeling_pre_iso=> //.
+
 (* prouve something like      have test :
 forall mu, forall ts, uniq ts -> is_pre_iso mu ts (relabeling_seq_triple mu ts) -> uniq (relabeling_seq_triple mu ts). May be as
 an external lemma *)

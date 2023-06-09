@@ -504,12 +504,19 @@ Section Rdf.
 
       End PreIsomorphism.
 
+      Definition is_iso_ts ts1 ts2 mu :=
+        [&& is_pre_iso_ts ts1 ts2 mu,
+          uniq (relabeling_seq_triple mu ts1) &
+            perm_eq (relabeling_seq_triple mu ts1) ts2].
+
       Definition is_iso g1 g2 mu :=
         [&& is_pre_iso g1 g2 mu,
           uniq (relabeling_seq_triple mu g1) &
             perm_eq (relabeling_seq_triple mu g1) g2].
 
-      Definition iso g1 g2 := exists mu, @is_iso g1 g2 mu.
+      Definition iso_ts ts1 ts2 := exists mu, @is_iso_ts ts1 ts2 mu.
+      Definition iso g1 g2 := iso_ts g1 g2.
+      (* exists mu, @is_iso g1 g2 mu. *)
 
       Remark is_iso_is_pre_iso g1 g2 mu: @is_iso g1 g2 mu -> is_pre_iso g1 g2 mu.
       Proof. by case/and3P. Qed.
@@ -517,7 +524,7 @@ Section Rdf.
       Definition iso_refl g : iso g g.
       Proof. exists id; rewrite /is_iso.
              case g=> g' ug /=.
-             by rewrite relabeling_seq_triple_id ug  /= /is_pre_iso/is_pre_iso_ts map_id !perm_refl.
+             by rewrite /is_iso_ts relabeling_seq_triple_id ug  /= /is_pre_iso/is_pre_iso_ts map_id !perm_refl.
       Qed.
 
       Lemma eqb_rdf_terms g1 g2 : eqb_rdf g1 g2 -> perm_eq (terms g1) (terms g2).
@@ -602,7 +609,7 @@ Section Rdf.
       Proof.
         exists id.
         have usid: uniq (relabeling_seq_triple id g1) by rewrite relabeling_seq_triple_id; case g1.
-        rewrite /is_iso usid /is_pre_iso/is_pre_iso_ts map_id relabeling_seq_triple_id /=; apply/andP; split=> //.
+        rewrite /is_iso/is_iso_ts usid /is_pre_iso/is_pre_iso_ts map_id relabeling_seq_triple_id /=; apply/andP; split=> //.
         - exact: eqb_rdf_get_b.
       Qed.
 
@@ -799,9 +806,9 @@ Section Rdf.
       Proof.
         suffices imp h1 h2 : iso h1 h2 -> iso h2 h1 by split; exact: imp.
         case=> mu /and3P[pre_iso_mu uniq_relab perm_relab].
-        move:(is_pre_iso_inv pre_iso_mu)=> [nu [pre_iso_nu /map_comp_in_id/can_b_can_rtb nuP]].
+        move:(is_pre_iso_inv pre_iso_mu); rewrite /pre_iso/is_pre_iso; move=> [nu [pre_iso_nu /map_comp_in_id/can_b_can_rtb nuP]].
         exists nu.
-        rewrite /is_iso pre_iso_nu.
+        rewrite /is_iso/is_iso_ts pre_iso_nu.
         have /perm_eq_relab_uniq [-> ->] //: perm_eq (relabeling_seq_triple nu h2) h1.
         move: perm_relab; rewrite perm_sym=> /(perm_map (relabeling_triple nu))=> perm_relab.
         apply: perm_trans perm_relab _; rewrite relabeling_triple_map_comp map_id_in //.
@@ -841,12 +848,19 @@ Section Rdf.
                by apply eq_mem_map; apply perm_mem.
       Qed.
 
+      Lemma uniq_relabeling_pre_iso mu (ts : seq (triple I B L)):
+        uniq ts -> is_pre_iso_ts ts (relabeling_seq_triple mu ts) mu -> uniq (relabeling_seq_triple mu ts).
+      Proof. by rewrite /is_pre_iso_ts=> uts /is_pre_iso_ts_inj/is_pre_iso_inj_ts ?; rewrite map_inj_in_uniq //. Qed.
+
+      Lemma ts_pre_iso_iso ts mu (urel: uniq (relabeling_seq_triple mu ts)) :
+        is_pre_iso_ts ts (relabeling_seq_triple mu ts) mu -> is_iso_ts ts (relabeling_seq_triple mu ts) mu.
+      Proof. move=> pre_iso; rewrite /is_iso/is_iso_ts pre_iso urel /=; apply perm_refl. Qed.
+
       Definition isocanonical_mapping (M : rdf_graph I B L -> rdf_graph I B L) :=
         forall g, iso (M g) g /\
                (forall g1 g2, eqb_rdf (M g1) (M g2) <-> iso g1 g2).
 
       Definition mapping_is_iso_mapping (M : rdf_graph I B L -> rdf_graph I B L) := forall g, iso (M g) g.
-
 
       Definition dt_names_mapping (M : rdf_graph I B L -> rdf_graph I B L) := forall g1 g2,
           iso g1 g2 -> eqb_rdf (M g1) (M g2).
@@ -875,6 +889,7 @@ Section Rdf.
         split; last by apply dt.
         + by apply: same_res_impl_iso_mapping iso_out.
       Qed.
+
 
 
     End Isomorphism.

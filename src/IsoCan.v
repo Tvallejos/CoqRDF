@@ -743,7 +743,34 @@ Section IsoCan.
           (* rewrite !mem_has // => /to_string_inj. *)
 
 
-          Abort.
+      Abort.
+(* Lemma mapP {T1 T2 : eqType} {f : T1 -> T2} {s : seq T1} {y : T2} : reflect (exists2 x, x \in s & y = f x) (y \in map f s). *)
+(* Proof. *)
+(* elim: s => [|x s IHs]; [by right; case|rewrite /= inE]. *)
+(* exact: equivP (orPP eqP IHs) (iff_sym exists_cons). *)
+(* Qed. *)
+      Lemma pmapP (T1 T2 : eqType) (f : T1 -> option T2) (s : seq T1) (y : T2):
+        reflect (exists2 x : T1, x \in s & f x = Some y) (y \in pmap f s).
+      Proof. elim: s => [|x s IHs].
+             by right; case=> x; rewrite in_nil //.
+             rewrite /=. case_eq (f x)=> s0.
+             move=> eq /=; rewrite inE. Admitted.
+
+      Lemma sub_pmap (T1 T2: eqType) (s1 s2: seq T1) (f: T1 -> option T2) :
+        {subset s1 <= s2} -> {subset pmap f s1 <= pmap f s2}.
+      Proof. by move=> sub_s y /pmapP [x x_s]; rewrite mem_pmap=> <-; rewrite map_f ?sub_s. Qed.
+
+      Lemma eq_mem_pmap (T1 T2 : eqType) (f : T1 -> option T2) (s1 s2 : seq T1):
+        s1 =i s2 -> pmap f s1 =i pmap f s2.
+      Proof. by move=> Es x; apply /idP/idP; apply sub_pmap=> ?; rewrite Es. Qed.
+
+      Lemma eq_lookup_eq_hash ht1 ht2 :
+        is_bnode ht1 -> is_bnode ht2 -> lookup_hash_default ht1 = lookup_hash_default ht2 ->
+        exists h1 h2 h, (Bnode h1 == ht1) && (Bnode h2 == ht2) &&
+                     (current_hash h1 == h) && (current_hash h2 == h).
+      Proof. case: ht1=> //b1; case ht2=> //b2=> _ _ /= eqch.
+             by exists b1; exists b2; exists (current_hash b2); rewrite eqch !eqxx.
+      Qed.
 
       Lemma uniq_k_mapping_res (ts : rdf_graph I B L) : uniq (k_mapping_ts ts).
       Proof.
@@ -758,12 +785,27 @@ Section IsoCan.
       apply /allP. rewrite /relab/build_kmap -map_comp. move=> t /mapP[u mem ->].
       apply uniq_relabeling_pre_iso=> //.
       set mu := build_kmapping_from_seq u.
+      suffices mu_inj : {in get_bts ts&, injective mu}.
+      apply uniq_perm.
+        + by rewrite map_inj_in_uniq // uniq_get_bts.
+        + by rewrite uniq_get_bts.
+        + rewrite /relabeling_seq_triple.
+          have rt_mu_inj := is_pre_iso_inj_ts mu_inj.
+          rewrite /get_bts -(get_bs_map _ (all_bnodes_ts _)).
+          by rewrite /get_bs; apply eq_mem_pmap=> b; rewrite bnodes_ts_relabel_mem.
+      suffices mem_has : forall x, x \in get_bts ts -> has (eqb_b_hterm x) u.
+      move=> x y /mem_has hasx /mem_has hasy.
+      rewrite /mu/build_kmapping_from_seq.
+      rewrite hasx hasy=> /to_string_inj.
+      set x0 := (Bnode (mkHinput x herror)).
+      set x1 := (Bnode (mkHinput y herror)).
+      have eqbnthx:= (nth_find x0 hasx).
+      have eqbnthy:= (nth_find x1 hasy).
+      (* having the same hash implies they are equal *)
+      have b_nthx : is_bnode (nth x0 u (find (eqb_b_hterm x) u)). admit.
+      have b_nthy : is_bnode (nth x1 u (find (eqb_b_hterm y) u)). admit.
+      move=> /(eq_lookup_eq_hash b_nthx b_nthy) [hb1 [hb2 [h_ /andP[/andP[/andP[bnthx bnthy] ch1] ch2]]]].
 
-
-(* prouve something like      have test :
-forall mu, forall ts, uniq ts -> is_pre_iso mu ts (relabeling_seq_triple mu ts) -> uniq (relabeling_seq_triple mu ts). May be as
-an external lemma *)
-      Search _ foldl.
 
       Abort.
 

@@ -285,10 +285,11 @@ Section Rdf.
       Qed.
 
       (* Lemma undup_map_inj_in (T1 T2 : eqType) (f : T1 -> T2) (s : seq T1) : *)
-      (*   (* {in s&, injective f} -> *) *)
+      (*   {in s&, injective f} -> *)
       (*   undup [seq f i | i <- s] =i [seq f i | i <- undup s]. *)
       (* Proof. *)
-      (*   by move=> x; rewrite -mem_map_undup mem_undup. *)
+      (*   move=> inj_f. *)
+      (*   move=> x; rewrite -mem_map_undup mem_undup. *)
 
       (*   elim: s => //= h t IHt injF. *)
       (*   case e: (h \in t). *)
@@ -354,7 +355,7 @@ Section Rdf.
     Lemma l_in_bnodes l g: Lit l \in bnodes g = false.
     Proof. by rewrite /bnodes l_in_bnodes_ts. Qed.
 
-    Definition get_bts ts : seq B :=
+    Definition get_bts {i b l : eqType} (ts : seq (triple i b l)) : seq b :=
       get_bs (bnodes_ts ts).
 
     Definition get_b g : seq B :=

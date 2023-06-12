@@ -358,3 +358,25 @@ Lemma neq_funapp_inj_in (T1 T2: eqType) (f: T1 -> T2) (s : seq T1) :
   {in s&, injective f} -> forall t t', t \in s -> t' \in s -> t != t' -> f t != f t'.
 Proof. by move=> inj_f t t' tin t'in; apply contraPneq=> /inj_f -> //; rewrite eqxx. Qed.
 
+Lemma pmapP (T1 T2 : eqType) (f : T1 -> option T2) (s : seq T1) (y : T2):
+  reflect (exists2 x : T1, x \in s & f x = Some y) (y \in pmap f s).
+Proof. elim: s => [|x s IHs].
+       by right; case=> x; rewrite in_nil //.
+       rewrite /=. case_eq (f x)=> s0.
+       move=> eq /=; rewrite inE. Admitted.
+
+Lemma sub_pmap (T1 T2: eqType) (s1 s2: seq T1) (f: T1 -> option T2) :
+  {subset s1 <= s2} -> {subset pmap f s1 <= pmap f s2}.
+Proof. by move=> sub_s y /pmapP [x x_s]; rewrite mem_pmap=> <-; rewrite map_f ?sub_s. Qed.
+
+Lemma eq_mem_pmap (T1 T2 : eqType) (f : T1 -> option T2) (s1 s2 : seq T1):
+  s1 =i s2 -> pmap f s1 =i pmap f s2.
+Proof. by move=> Es x; apply /idP/idP; apply sub_pmap=> ?; rewrite Es. Qed.
+
+Lemma uniq_neq_nth (T: eqType) (s : seq T) n m x0 x1:
+  uniq s -> n < (size s) -> m < (size s) -> n != m -> nth x0 s n != nth x1 s m.
+Proof. move/uniqP=> /(_ x1) us nin min neqnm.
+       rewrite (set_nth_default x1) //.
+       eapply neq_funapp_inj_in.
+Admitted.
+

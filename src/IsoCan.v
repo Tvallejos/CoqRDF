@@ -749,20 +749,6 @@ Section IsoCan.
 (* elim: s => [|x s IHs]; [by right; case|rewrite /= inE]. *)
 (* exact: equivP (orPP eqP IHs) (iff_sym exists_cons). *)
 (* Qed. *)
-      Lemma pmapP (T1 T2 : eqType) (f : T1 -> option T2) (s : seq T1) (y : T2):
-        reflect (exists2 x : T1, x \in s & f x = Some y) (y \in pmap f s).
-      Proof. elim: s => [|x s IHs].
-             by right; case=> x; rewrite in_nil //.
-             rewrite /=. case_eq (f x)=> s0.
-             move=> eq /=; rewrite inE. Admitted.
-
-      Lemma sub_pmap (T1 T2: eqType) (s1 s2: seq T1) (f: T1 -> option T2) :
-        {subset s1 <= s2} -> {subset pmap f s1 <= pmap f s2}.
-      Proof. by move=> sub_s y /pmapP [x x_s]; rewrite mem_pmap=> <-; rewrite map_f ?sub_s. Qed.
-
-      Lemma eq_mem_pmap (T1 T2 : eqType) (f : T1 -> option T2) (s1 s2 : seq T1):
-        s1 =i s2 -> pmap f s1 =i pmap f s2.
-      Proof. by move=> Es x; apply /idP/idP; apply sub_pmap=> ?; rewrite Es. Qed.
 
       Lemma eq_lookup_eq_hash ht1 ht2 :
         is_bnode ht1 -> is_bnode ht2 -> lookup_hash_default ht1 = lookup_hash_default ht2 ->
@@ -771,13 +757,6 @@ Section IsoCan.
       Proof. case: ht1=> //b1; case ht2=> //b2=> _ _ /= eqch.
              by exists b1; exists b2; exists (current_hash b2); rewrite eqch !eqxx.
       Qed.
-
-      Lemma uniq_neq_nth (T: eqType) (s : seq T) n m x0 x1:
-        uniq s -> n < (size s) -> m < (size s) -> n != m -> nth x0 s n != nth x1 s m.
-      Proof. move/uniqP=> /(_ x1) us nin min neqnm.
-             rewrite (set_nth_default x1) //.
-             eapply neq_funapp_inj_in.
-      Admitted.
 
       Lemma all_kmapb_b s : all [eta all [eta is_bnode (L:=L)]] s ->
                             all (all [eta is_bnode (L:=L)]) [seq mapi (app_n mark_bnode) i | i <- s].

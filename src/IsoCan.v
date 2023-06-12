@@ -718,7 +718,7 @@ Section IsoCan.
       set relab := [seq relabeling_seq_triple mu ts | mu <- build_kmap].
       suffices relab_uniq : all uniq relab.
         by case: (foldl_max relab [::])=> [-> //|]; apply: (allP relab_uniq).
-      apply /allP. rewrite /relab/build_kmap -map_comp=> t /mapP[u mem ->].
+      apply /allP; rewrite /relab/build_kmap -map_comp=> t /mapP[u mem ->] {relab build_kmap}.
       apply uniq_relabeling_pre_iso=> //.
       set mu := build_kmapping_from_seq u.
       suffices mu_inj : {in get_bts ts&, injective mu}.
@@ -736,8 +736,8 @@ Section IsoCan.
         by rewrite /negb; case : (mu x == mu y) eqmu.
       rewrite /mu/build_kmapping_from_seq.
       suffices mem_has : forall x, x \in get_bts ts -> has (eqb_b_hterm x) u.
-        have hasx:= mem_has x xb.
-        have hasy:= mem_has y yb.
+        have {xb}hasx:= mem_has x xb.
+        have {yb}hasy:= mem_has y yb.
         rewrite hasx hasy neq_funapp_inj //.
         set idx := (find (eqb_b_hterm x) u).
         set idy := (find (eqb_b_hterm y) u).
@@ -757,8 +757,8 @@ Section IsoCan.
             by apply /allP=> p; rewrite mem_permutations=> /perm_all ->.
           have : is_bnode nthx. by apply: eqb_b_hterm_is_bnode _; apply: nth_find hasx.
           have {abn}: is_bnode nthy. by apply: eqb_b_hterm_is_bnode _; apply: nth_find hasy.
-          have : nthx \in u by apply mem_nth; rewrite -has_find //.
-          have : nthy \in u by apply mem_nth; rewrite -has_find //.
+          have {hasx}: nthx \in u by apply mem_nth; rewrite -has_find //.
+          have {hasy}: nthy \in u by apply mem_nth; rewrite -has_find //.
           case: nthx nthy neq_nths=> // nthbx; case=> //= nthby.
           move=> /neq_funapp; rewrite eq_i_ch=> /nandP; case; last by move ->.
           move=> neq_input memux memuy _ _; move: neq_input.

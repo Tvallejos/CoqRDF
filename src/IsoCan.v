@@ -772,6 +772,26 @@ Section IsoCan.
              by exists b1; exists b2; exists (current_hash b2); rewrite eqch !eqxx.
       Qed.
 
+      Lemma uniq_neq_nth (T: eqType) (s : seq T) n m x0 x1:
+        uniq s -> n < (size s) -> m < (size s) -> n != m -> nth x0 s n != nth x1 s m.
+      Proof. move/uniqP=> /(_ x1) us nin min neqnm.
+             rewrite (set_nth_default x1) //.
+             eapply neq_funapp_inj_in.
+      Admitted.
+
+      Lemma all_kmapb_b s : all [eta all [eta is_bnode (L:=L)]] s ->
+                            all (all [eta is_bnode (L:=L)]) [seq mapi (app_n mark_bnode) i | i <- s].
+      Proof. elim: s=> // a l IHl /andP[bhd btl] /=. rewrite IHl // andbT {IHl}.
+             move: bhd. rewrite /mapi all_map=> allb_a.
+             set an := zip a (iota 0 (size a)).
+             suffices : all (fun b=> is_bnode b.1) an.
+             elim: an=> // anhd antl IHantl /andP[banhd bantl] /=.
+             rewrite IHantl // andbT {IHantl bantl}.
+             move: banhd. case anhd=> [[]]//=b n _.
+             by elim: n=> //= n'; case (app_n mark_bnode (Bnode b) n')=> //.
+             by apply all_zip1.
+      Qed.
+
       Lemma uniq_k_mapping_res (ts : rdf_graph I B L) : uniq (k_mapping_ts ts).
       Proof.
       case: ts => ts uniq_ts /=.
@@ -782,30 +802,50 @@ Section IsoCan.
       set relab := [seq relabeling_seq_triple mu ts | mu <- build_kmap].
       suffices relab_uniq : all uniq relab.
         by case: (foldl_max relab [::])=> [-> //|]; apply: (allP relab_uniq).
-      apply /allP. rewrite /relab/build_kmap -map_comp. move=> t /mapP[u mem ->].
+      apply /allP. rewrite /relab/build_kmap -map_comp=> t /mapP[u mem ->].
       apply uniq_relabeling_pre_iso=> //.
       set mu := build_kmapping_from_seq u.
       suffices mu_inj : {in get_bts ts&, injective mu}.
-      apply uniq_perm.
-        + by rewrite map_inj_in_uniq // uniq_get_bts.
-        + by rewrite uniq_get_bts.
-        + rewrite /relabeling_seq_triple.
-          have rt_mu_inj := is_pre_iso_inj_ts mu_inj.
-          rewrite /get_bts -(get_bs_map _ (all_bnodes_ts _)).
-          by rewrite /get_bs; apply eq_mem_pmap=> b; rewrite bnodes_ts_relabel_mem.
-      suffices mem_has : forall x, x \in get_bts ts -> has (eqb_b_hterm x) u.
-      move=> x y /mem_has hasx /mem_has hasy.
+        apply uniq_perm.
+          + by rewrite map_inj_in_uniq // uniq_get_bts.
+          + by rewrite uniq_get_bts.
+          + rewrite /relabeling_seq_triple.
+            have rt_mu_inj := is_pre_iso_inj_ts mu_inj.
+            rewrite /get_bts -(get_bs_map _ (all_bnodes_ts _)).
+            by rewrite /get_bs; apply eq_mem_pmap=> b; rewrite bnodes_ts_relabel_mem.
+      move=> x y xb yb.
+      apply: contra_eq => neqb.
+      apply/negP => eqmu.
+      suffices {eqmu}: mu x != mu y.
+        by rewrite /negb; case : (mu x == mu y) eqmu.
       rewrite /mu/build_kmapping_from_seq.
-      rewrite hasx hasy=> /to_string_inj.
-      set x0 := (Bnode (mkHinput x herror)).
-      set x1 := (Bnode (mkHinput y herror)).
-      have eqbnthx:= (nth_find x0 hasx).
-      have eqbnthy:= (nth_find x1 hasy).
-      (* having the same hash implies they are equal *)
-      have b_nthx : is_bnode (nth x0 u (find (eqb_b_hterm x) u)). admit.
-      have b_nthy : is_bnode (nth x1 u (find (eqb_b_hterm y) u)). admit.
-      move=> /(eq_lookup_eq_hash b_nthx b_nthy) [hb1 [hb2 [h_ /andP[/andP[/andP[bnthx bnthy] ch1] ch2]]]].
-
+      suffices mem_has : forall x, x \in get_bts ts -> has (eqb_b_hterm x) u.
+        have hasx:= mem_has x xb.
+        have hasy:= mem_has y yb.
+        rewrite hasx hasy neq_funapp_inj //.
+        set idx := (find (eqb_b_hterm x) u).
+        set idy := (find (eqb_b_hterm y) u).
+        suffices neq_index : idx != idy.
+          have umaps : all uniq map_mu_on_bs.
+            rewrite /map_mu_on_bs all_map; apply/allP.
+            by move=> maps; rewrite mem_permutations; apply: k_mapping_seq_uniq_perm_eq_ts.
+          have uu := in_all mem umaps.
+          set nthx := (nth (Bnode (mkHinput x herror)) u idx).
+          set nthy := (nth (Bnode (mkHinput y herror)) u idy).
+          have neq_nths : nthx != nthy by rewrite !has_find in hasx hasy; apply uniq_neq_nth=> //.
+          have abn: all (fun t=> is_bnode t) u.
+            apply (in_all mem); rewrite all_map /=.
+            suffices : all (fun p => all (fun t=> is_bnode t) p) perm_bs.
+              by rewrite -all_map; apply all_kmapb_b.
+            have ? := all_bnodes_ts (init_hash_ts ts).
+            by apply /allP=> p; rewrite mem_permutations=> /perm_all ->.
+          have : is_bnode nthx. by apply: eqb_b_hterm_is_bnode _; apply: nth_find hasx.
+          have : is_bnode nthy. by apply: eqb_b_hterm_is_bnode _; apply: nth_find hasy.
+          have : nthx \in u by apply mem_nth; rewrite -has_find //.
+          have : nthy \in u by apply mem_nth; rewrite -has_find //.
+          case: nthx nthy neq_nths=> // nthbx; case=> //= nthby.
+          move=> /neq_funapp; rewrite eq_i_ch=> /nandP; case; last by move ->.
+          move=> neq_input memux memuy _ _; move: neq_input.
 
       Abort.
 

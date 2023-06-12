@@ -186,7 +186,7 @@ Qed.
 Lemma zip_uniq_l (S T : eqType) (ss : seq S) (ts : seq T) : uniq ss -> uniq (zip ss ts).
 Proof.
   elim: ts ss=> [[//|//]| t' ts' IHts] ss uniq_ss.
-  + case: ss uniq_ss => [| s ss']; first by rewrite zip0s.
+  + case: ss uniq_ss => [| s ss]; first by rewrite zip0s.
     rewrite /==> /andP[nin_ss uniq_ss]; apply /andP; split; first by apply (notin_zip_l _ _ nin_ss).
     by apply: IHts uniq_ss.
 Qed.
@@ -195,6 +195,19 @@ Lemma zip_uniq_r (S T : eqType) (ss : seq S) (ts : seq T) : uniq ts -> uniq (zip
 Proof.
   by rewrite zip_uniq_sym; apply zip_uniq_l.
 Qed.
+
+Lemma all_zip1 (T1 T2: Type) (s1: seq T1) (s2 : seq T2) p : all p s1 -> all (fun t=> p t.1) (zip s1 s2).
+Proof. elim: s1 s2=> [|hd tl IHtl] s2; first by case s2.
+       + move=> /andP[phd ptl] /=. case: s2=> //= b btl.
+         by rewrite phd /= IHtl.
+Qed.
+
+Lemma all_zip_sym (T1 T2 : Type) (s1: seq T1) (s2 : seq T2) p :
+  all (fun t=> p t.1) (zip s1 s2) = all (fun t => p t.2) (zip s2 s1).
+Proof. by apply /idP/idP; elim: s1 s2=> [| x s IHs] [| y t]//= /andP[-> ts2] /=; rewrite IHs. Qed.
+
+Lemma all_zip2 (T1 T2: Type) (s1: seq T1) (s2 : seq T2) p : all p s2 -> all (fun t=> p t.2) (zip s1 s2).
+Proof. by move=> allp2; rewrite -all_zip_sym all_zip1. Qed.
 
 Lemma uniq_zip_iota (T : eqType) (s: seq T) n m: uniq (zip s (iota n m)).
 Proof. by apply: zip_uniq_r _ (iota_uniq _ _). Qed.
@@ -334,3 +347,14 @@ Proof. elim: s=> [//| h t IHl].
        by rewrite e -IHl.
        by rewrite e !in_cons -IHl.
 Qed.
+
+Lemma neq_funapp (T1 T2: eqType) (f: T1 -> T2) : forall t t', f t != f t' -> t != t'.
+Proof. by move=> t t'; apply contraPneq=> ->; rewrite eqxx. Qed.
+
+Lemma neq_funapp_inj (T1 T2: eqType) (f: T1 -> T2) : injective f -> forall t t', t != t' -> f t != f t'.
+Proof. by move=> inj_f t t'; apply contraPneq=> /inj_f ->; rewrite eqxx. Qed.
+
+Lemma neq_funapp_inj_in (T1 T2: eqType) (f: T1 -> T2) (s : seq T1) :
+  {in s&, injective f} -> forall t t', t \in s -> t' \in s -> t != t' -> f t != f t'.
+Proof. by move=> inj_f t t' tin t'in; apply contraPneq=> /inj_f -> //; rewrite eqxx. Qed.
+

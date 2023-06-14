@@ -380,3 +380,47 @@ Proof. move/uniqP=> /(_ x1) us nin min neqnm.
        eapply neq_funapp_inj_in.
 Admitted.
 
+Lemma in_map_injPn (T1 : eqType) (T2 : eqType) (s : seq T1) (f : T1 -> T2) (us: uniq s):
+  reflect (exists2 x, x \in s & exists2 y, (y != x) && (y \in s) & f x = f y) (negb (uniq (map f s))).
+Proof.
+  apply: (iffP idP) => [injf | [x Dx [y Dxy eqfxy]]]; last first.
+  move: (rot_to Dx)=>[i E defE].
+  rewrite /dinjectiveb -(rot_uniq i) -map_rot defE /=; apply/nandP; left.
+  rewrite eqfxy.
+  rewrite map_f //.
+  suffices : y \in x :: E.
+  rewrite in_cons. case/orP=> //. by move: Dxy; rewrite /negb; case (y == x).
+  by rewrite -defE mem_rot; move: Dxy=> /andP[_ ->].
+
+  (* NEED WLOG *)
+
+  suffices s0 : T2.
+  move : injf=> /uniqPn p.
+  have [i [j [ijle [jsize [ntheq]]]]]:= p s0.
+  suffices s1 : T1.
+  exists (nth s1 s i). apply mem_nth. rewrite size_map in jsize.
+  apply: ltn_trans ijle jsize.
+  exists (nth s1 s j). apply /andP; split.
+  apply uniq_neq_nth=> //.
+  by rewrite size_map in jsize.
+  by rewrite size_map in jsize; apply: ltn_trans ijle jsize.
+  rewrite Order.NatOrder.ltn_def in ijle.
+  by move/andP : ijle=> [].
+  by apply mem_nth; rewrite size_map in jsize.
+  erewrite <- nth_map.
+  suffices <-: nth s0 [seq f i | i <- s] j = f (nth s1 s j).
+  by apply ntheq.
+  by apply nth_map; rewrite size_map in jsize.
+  by rewrite size_map in jsize; apply: ltn_trans ijle jsize.
+  admit. admit.
+Admitted.
+
+Lemma in_map_injP (T1 : eqType) (T2 : eqType) (s : seq T1) (f : T1 -> T2) (us: uniq s):
+  reflect {in s&, injective f} (uniq (map f s)).
+Proof. rewrite -[uniq (map f s)]negbK.
+       case: in_map_injPn=> // [noinjf | injf]; constructor.
+         case: noinjf => x Dx [y /andP[neqxy /= Dy] eqfxy] injf.
+         by case/eqP: neqxy; apply: injf.
+       move=> x y Dx Dy /= eqfxy; apply/eqP; apply/idPn=> nxy; case: injf.
+       by exists x => //; exists y => //=; rewrite /= eq_sym nxy.
+Qed.

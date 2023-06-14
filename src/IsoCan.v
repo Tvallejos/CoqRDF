@@ -729,6 +729,21 @@ Section IsoCan.
             have rt_mu_inj := is_pre_iso_inj_ts mu_inj.
             rewrite /get_bts -(get_bs_map _ (all_bnodes_ts _)).
             by rewrite /get_bs; apply eq_mem_pmap=> b; rewrite bnodes_ts_relabel_mem.
+
+            (* begining inj uniq map *)
+      (* apply /in_map_injP. *)
+      (* + apply uniq_get_bts. *)
+      (*   rewrite /mu. *)
+      (*   suffices mem_has: forall b, b \in get_bts ts -> has (eqb_b_hterm b) u. *)
+      (*   rewrite -[uniq _]negbK. *)
+      (*   apply /in_map_injPn. *)
+      (* + apply uniq_get_bts. *)
+      (*   rewrite /build_kmapping_from_seq. *)
+      (*   case=> bx /mem_has hasbx [b_y]/andP[neqxy /mem_has hasby]. *)
+      (*   rewrite hasby hasbx=> /to_string_inj=> H. *)
+      (*   apply eq_lookup_eq_hash in H. case H=> [X [Y [ha /andP[/andP[/andP[/eqP bnx /eqP bny]/eqP eqchx]/eqP eqchy]]]]. *)
+            (* end inj uniq map *)
+
       move=> x y xb yb.
       apply: contra_eq => neqb.
       apply/negP => eqmu.
@@ -762,6 +777,8 @@ Section IsoCan.
           case: nthx nthy neq_nths=> // nthbx; case=> //= nthby.
           move=> /neq_funapp; rewrite eq_i_ch=> /nandP; case; last by move ->.
           move=> neq_input memux memuy _ _; move: neq_input.
+          apply: contra_neq=> /=.
+          move: memux memuy.
 
       Abort.
 

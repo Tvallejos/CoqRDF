@@ -359,15 +359,12 @@ Lemma neq_funapp_inj_in (T1 T2: eqType) (f: T1 -> T2) (s : seq T1) :
 Proof. by move=> inj_f t t' tin t'in; apply contraPneq=> /inj_f -> //; rewrite eqxx. Qed.
 
 Lemma pmapP (T1 T2 : eqType) (f : T1 -> option T2) (s : seq T1) (y : T2):
-  reflect (exists2 x : T1, x \in s & f x = Some y) (y \in pmap f s).
-Proof. elim: s => [|x s IHs].
-       by right; case=> x; rewrite in_nil //.
-       rewrite /=. case_eq (f x)=> s0.
-       move=> eq /=; rewrite inE. Admitted.
+  reflect (exists2 x : T1, x \in s & Some y = f x) (y \in pmap f s).
+Proof. by rewrite mem_pmap; apply mapP. Qed.
 
 Lemma sub_pmap (T1 T2: eqType) (s1 s2: seq T1) (f: T1 -> option T2) :
   {subset s1 <= s2} -> {subset pmap f s1 <= pmap f s2}.
-Proof. by move=> sub_s y /pmapP [x x_s]; rewrite mem_pmap=> <-; rewrite map_f ?sub_s. Qed.
+Proof. by move=> sub_s y /pmapP [x x_s]; rewrite mem_pmap=> ->; rewrite map_f ?sub_s. Qed.
 
 Lemma eq_mem_pmap (T1 T2 : eqType) (f : T1 -> option T2) (s1 s2 : seq T1):
   s1 =i s2 -> pmap f s1 =i pmap f s2.
@@ -375,10 +372,9 @@ Proof. by move=> Es x; apply /idP/idP; apply sub_pmap=> ?; rewrite Es. Qed.
 
 Lemma uniq_neq_nth (T: eqType) (s : seq T) n m x0 x1:
   uniq s -> n < (size s) -> m < (size s) -> n != m -> nth x0 s n != nth x1 s m.
-Proof. move/uniqP=> /(_ x1) us nin min neqnm.
-       rewrite (set_nth_default x1) //.
-       eapply neq_funapp_inj_in.
-Admitted.
+Proof. move/uniqP=> /(_ x1) us nin min.
+       by rewrite (set_nth_default x1) //; apply contra_neq=> /us ->.
+Qed.
 
 Lemma in_map_injPn (T1 : eqType) (T2 : eqType) (s : seq T1) (f : T1 -> T2) (us: uniq s):
   reflect (exists2 x, x \in s & exists2 y, (y != x) && (y \in s) & f x = f y) (negb (uniq (map f s))).
@@ -391,13 +387,11 @@ Proof.
   suffices : y \in x :: E.
   rewrite in_cons. case/orP=> //. by move: Dxy; rewrite /negb; case (y == x).
   by rewrite -defE mem_rot; move: Dxy=> /andP[_ ->].
-
-  (* NEED WLOG *)
-
-  suffices s0 : T2.
+  wlog s1 :/ T1.
+  by case: s us injf=> // hd tl us injf hwlog; apply hwlog.
   move : injf=> /uniqPn p.
+  have s0 := f s1.
   have [i [j [ijle [jsize [ntheq]]]]]:= p s0.
-  suffices s1 : T1.
   exists (nth s1 s i). apply mem_nth. rewrite size_map in jsize.
   apply: ltn_trans ijle jsize.
   exists (nth s1 s j). apply /andP; split.
@@ -412,8 +406,7 @@ Proof.
   by apply ntheq.
   by apply nth_map; rewrite size_map in jsize.
   by rewrite size_map in jsize; apply: ltn_trans ijle jsize.
-  admit. admit.
-Admitted.
+Qed.
 
 Lemma in_map_injP (T1 : eqType) (T2 : eqType) (s : seq T1) (f : T1 -> T2) (us: uniq s):
   reflect {in s&, injective f} (uniq (map f s)).

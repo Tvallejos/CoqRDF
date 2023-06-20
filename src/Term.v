@@ -66,6 +66,17 @@ Section Poly.
     | Iri i => Iri i
     | Lit l => Lit l
     end.
+  Section blank_node_mapping.
+    Variable mu : B -> B.
+    Lemma bnodes_to_bnodes (t : term I B L) : is_bnode t -> is_bnode (relabeling_term mu t).
+      Proof. by case t. Qed.
+
+    Lemma relabeling_lit l : (relabeling_term mu (Lit l)) = Lit l.
+      Proof. by []. Qed.
+
+    Lemma relabeling_iri i : (relabeling_term mu (Iri i)) = Iri i.
+      Proof. by []. Qed.
+  End blank_node_mapping.
 
   (* Definition relabeling_term_alt B1 B2 (μ : (trm : term I B1 L) : term I B2 L := *)
   (*   match trm with *)

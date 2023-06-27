@@ -28,6 +28,10 @@ Section PolyTriple.
   Variables I B L : Type.
   Implicit Type t : triple I B L.
 
+  Remark triple_spec_correct t :
+    is_in_ib (subject t) && is_in_i (predicate t) && is_in_ibl (object t).
+  Proof. by case t=> ? ? []? /= -> ->. Qed.
+
   Definition is_ground_triple t : bool:=
     let (s,p,o,_,_) := t in
     ~~ (is_bnode s || is_bnode p || is_bnode o).
@@ -142,9 +146,9 @@ Section OperationsOnTriples.
   Proof. by case t => s p o /= _ _; rewrite -orbA !negb_or; case: s p o. Qed.
 
   Lemma Obnodes_groundtriple t : size (bnodes_triple t) == 0 = is_ground_triple t.
-  Proof. rewrite sizeO_filter /terms_triple; case t=> s p o.
-         rewrite -all_filter filter_undup.
-         by case: s; case: p; case: o=> x y z // ? ? /= ; case:( Bnode z \in [:: Bnode x] ).
+  Proof. rewrite sizeO_filter /terms_triple -all_filter; case t=> s p o.
+         rewrite filter_undup all_undup.
+         by case: s; case: p; case: o.
   Qed.
 
   Canonical triple_predType2 := PredType (pred_of_seq \o (bnodes_triple)).

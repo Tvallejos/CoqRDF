@@ -670,10 +670,6 @@ Section IsoCan.
       Lemma k_mapping_seq_uniq_graph g: uniq (mapi (app_n mark_bnode) (bnodes (init_hash g))).
       Proof. by apply k_mapping_seq_uniq_ts. Qed.
 
-      Lemma all_bnodes_perm {i b l: eqType} (ts : seq (triple i b l)) s:
-        perm_eq (bnodes_ts ts) s -> forall x, x \in s -> is_bnode x.
-      Proof. by move=> peq x xin; apply (in_all xin); rewrite -(perm_all _ peq) all_bnodes_ts. Qed.
-
       Lemma k_mapping_seq_uniq_perm_eq_ts ts s: perm_eq s (bnodes_ts (init_hash_ts ts)) -> uniq (mapi (app_n mark_bnode) s).
       Proof. rewrite /mapi perm_sym=> perm_eq. rewrite map_inj_in_uniq. apply uniq_zip_iota.
              move=> [x1 n] [y1 m] /in_zip/andP [x1_ins n_iniota] /in_zip/andP [y1_ins m_iniota] /=.

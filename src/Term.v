@@ -41,6 +41,12 @@ Definition is_in_ib (I B L : Type) (trm : term I B L) : bool :=
 Definition is_in_i (I B L : Type) (trm : term I B L) : bool :=
   is_iri trm.
 
+Definition is_in_ibl (I B L : Type) (trm : term I B L) : bool :=
+  is_iri trm || is_bnode trm || is_lit trm.
+
+Remark term_spec (I B L : Type) (trm : term I B L) : is_in_ibl trm.
+Proof. by case trm. Qed.
+
 Definition iri_from_i (I B L : Type) (i:I) : term I B L:= @Iri I B L i.
 Definition bnode_from_b (I B L : Type) (b:B) : term I B L:= @Bnode I B L b.
 Definition lit_from_l (I B L : Type) (l:L) : term I B L:= @Lit I B L l.
@@ -152,7 +158,8 @@ Section EqTerm.
     end.
 
   Lemma eqb_eq trm1 trm2 : (trm1 == trm2) = eqb_term trm1 trm2.
-  Proof. rewrite /eq_op /Equality.op /= /code_term. case e: (eqb_term trm1 trm2); move: e; case trm1; case trm2=> //x y /=.
+  Proof. rewrite /eq_op/Equality.op/code_term.
+         case e: (eqb_term trm1 trm2); move: e; case trm1; case trm2=> //x y /=.
          by move=> /eqP ->; rewrite eqxx.
          by move=> /eqP ->; rewrite eqxx.
          by move=> /eqP ->; rewrite eqxx.

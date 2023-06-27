@@ -323,6 +323,10 @@ Section Rdf.
            by rewrite bnodes_ts_cons all_undup all_cat IHts Bool.andb_true_r all_bnodes_triple_is_bnode.
     Qed.
 
+    Lemma all_bnodes_perm ts s:
+      perm_eq (bnodes_ts ts) s -> forall x, x \in s -> is_bnode x.
+    Proof. by move=> peq x xin; apply (in_all xin); rewrite -(perm_all _ peq) all_bnodes_ts. Qed.
+
     Lemma all_bnodes g : all (@is_bnode I B L) (bnodes g).
     Proof. by rewrite all_bnodes_ts. Qed.
 

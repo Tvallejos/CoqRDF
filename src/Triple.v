@@ -36,34 +36,39 @@ Section PolyTriple.
     let (s,p,o,_,_) := t in
     ~~ (is_bnode s || is_bnode p || is_bnode o).
 
-  Definition relabeling_triple B1 B2 (μ : B1 -> B2) (t : triple I B1 L) : triple I B2 L :=
+  Lemma is_ground_not_bnode t :
+    is_ground_triple t =
+      ~~ is_bnode (subject t) && ~~ is_bnode (predicate t) &&  ~~ is_bnode (object t).
+  Proof. by case t => s p o /= _ _; rewrite -orbA !negb_or; case: s p o. Qed.
+
+  Definition relabeling_triple B1 B2 (mu : B1 -> B2) (t : triple I B1 L) : triple I B2 L :=
     let (s, p, o, sin, pin) := t in
-    mkTriple (relabeling_term μ o)
-      ((iffLR (relabeling_term_preserves_is_in_ib μ s)) sin)
-      ((iffLR (relabeling_term_preserves_is_in_i μ p)) pin).
+    mkTriple (relabeling_term mu o)
+      ((iffLR (relabeling_term_preserves_is_in_ib mu s)) sin)
+      ((iffLR (relabeling_term_preserves_is_in_i mu p)) pin).
 
   Lemma relabeling_triple_id t : relabeling_triple id t = t.
   Proof. by case t => * /=; apply triple_inj; apply relabeling_term_id. Qed.
 
-  Lemma relabeling_triple_comp (B1 B2 : Type) (μ1 : B -> B1) (μ2 : B1 -> B2) t :
-    relabeling_triple (μ2 \o μ1) t = relabeling_triple μ2 (relabeling_triple μ1 t).
+  Lemma relabeling_triple_comp (B1 B2 : Type) (mu1 : B -> B1) (mu2 : B1 -> B2) t :
+    relabeling_triple (mu2 \o mu1) t = relabeling_triple mu2 (relabeling_triple mu1 t).
   Proof. by case t=> * ; apply: triple_inj ; rewrite /= relabeling_term_comp. Qed.
 
   Section Relabeling_triple.
 
     Variable B1 : Type.
-    Implicit Type μ : B -> B1.
+    Implicit Type mu : B -> B1.
 
-    Lemma relabeling_triple_preserves_is_in_ib μ t :
-      is_in_ib (subject t) <-> is_in_ib (subject (relabeling_triple μ t)).
+    Lemma relabeling_triple_preserves_is_in_ib mu t :
+      is_in_ib (subject t) <-> is_in_ib (subject (relabeling_triple mu t)).
     Proof. by case t => s /= *; apply: relabeling_term_preserves_is_in_ib. Qed.
 
-    Lemma relabeling_triple_preserves_is_in_i μ t :
-      is_in_i (predicate t) <-> is_in_i (predicate (relabeling_triple μ t)).
+    Lemma relabeling_triple_preserves_is_in_i mu t :
+      is_in_i (predicate t) <-> is_in_i (predicate (relabeling_triple mu t)).
     Proof. by case t => ? p /= *; apply: relabeling_term_preserves_is_in_i. Qed.
 
-    Lemma relabeling_triple_ext μ1 μ2:
-      μ1 =1 μ2 -> relabeling_triple μ1 =1 relabeling_triple μ2.
+    Lemma relabeling_triple_ext mu1 mu2 :
+      mu1 =1 mu2 -> relabeling_triple mu1 =1 relabeling_triple mu2.
     Proof.
       move=> μpweq t; apply: triple_inj; case t => /= *; exact: relabeling_term_ext.
     Qed.
@@ -128,6 +133,10 @@ Section OperationsOnTriples.
   Definition terms_triple (I' B' L': eqType) (t : triple I' B' L') : seq (term I' B' L') :=
     let (s,p,o,_,_) := t in undup [:: s ; p ; o].
 
+  Lemma terms_relabeled_triple_mem (B1 B2: eqType) (t : triple I B1 L) (mu : B1 -> B2) : 
+    terms_triple (relabeling_triple mu t) =i map (relabeling_term mu) (terms_triple t).
+  Proof. by case t=> s p o ? ? trm; rewrite mem_undup -mem_map_undup. Qed.
+
   Lemma terms_relabeled_triple (B1 B2: eqType) (t : triple I B1 L)
     (mu: B1 -> B2) (inj_mu: injective mu) :
     terms_triple (relabeling_triple mu t) = map (relabeling_term mu) (terms_triple t).
@@ -139,11 +148,6 @@ Section OperationsOnTriples.
 
   Definition bnodes_triple (t : triple I B L) : seq (term I B L) :=
     filter (@is_bnode I B L) (terms_triple t).
-
-  Lemma is_ground_not_bnode t :
-    is_ground_triple t =
-      ~~ is_bnode (subject t) && ~~ is_bnode (predicate t) &&  ~~ is_bnode (object t).
-  Proof. by case t => s p o /= _ _; rewrite -orbA !negb_or; case: s p o. Qed.
 
   Lemma Obnodes_groundtriple t : size (bnodes_triple t) == 0 = is_ground_triple t.
   Proof. rewrite sizeO_filter /terms_triple -all_filter; case t=> s p o.
@@ -163,7 +167,7 @@ Section OperationsOnTriples.
 
   (* (μ :  {ffun (seq_sub (bnodes g1)) -> B}) *)
 
-  Definition all_bnodes_triple_is_bnode t : all (@is_bnode I B L) (bnodes_triple t).
+  Lemma all_bnodes_triple_is_bnode t : all (@is_bnode I B L) (bnodes_triple t).
   Proof.
     case t=> s p o; rewrite /bnodes_triple/terms_triple=> _ _.
     rewrite filter_undup all_undup; exact: filter_all.

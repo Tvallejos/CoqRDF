@@ -47,9 +47,9 @@ Definition is_in_ibl (I B L : Type) (trm : term I B L) : bool :=
 Remark term_spec (I B L : Type) (trm : term I B L) : is_in_ibl trm.
 Proof. by case trm. Qed.
 
-Definition iri_from_i (I B L : Type) (i:I) : term I B L:= @Iri I B L i.
-Definition bnode_from_b (I B L : Type) (b:B) : term I B L:= @Bnode I B L b.
-Definition lit_from_l (I B L : Type) (l:L) : term I B L:= @Lit I B L l.
+Definition iri_from_i (I B L : Type) (i : I) : term I B L := @Iri I B L i.
+Definition bnode_from_b (I B L : Type) (b : B) : term I B L := @Bnode I B L b.
+Definition lit_from_l (I B L : Type) (l : L) : term I B L := @Lit I B L l.
 
 Remark i_in_ib (I B L:Type) (i : I) : is_in_ib (@iri_from_i I B L i).
 Proof. done. Defined.
@@ -66,9 +66,9 @@ Definition is_ground_term (I B L : Type) (trm : term I B L) : bool :=
 Section Poly.
   Variables I B B1 B2 B3 L : Type.
 
-  Definition relabeling_term B1 B2 μ (trm : term I B1 L) : term I B2 L :=
+  Definition relabeling_term B1 B2 mu (trm : term I B1 L) : term I B2 L :=
     match trm with
-    | Bnode name => Bnode (μ name)
+    | Bnode name => Bnode (mu name)
     | Iri i => Iri i
     | Lit l => Lit l
     end.
@@ -94,23 +94,23 @@ Section Poly.
   Lemma relabeling_term_id (trm : term I B L) : relabeling_term id trm = trm.
   Proof. by case: trm. Qed.
 
-  Lemma relabeling_term_comp trm (μ1: B1 -> B2) (μ2 : B2 -> B3) :
-    relabeling_term (μ2 \o μ1) trm = relabeling_term μ2 (relabeling_term μ1 trm).
+  Lemma relabeling_term_comp trm (mu1 : B1 -> B2) (mu2 : B2 -> B3) :
+    relabeling_term (mu2 \o mu1) trm = relabeling_term mu2 (relabeling_term mu1 trm).
   Proof. by case: trm. Qed.
 
-  Lemma relabeling_term_preserves_is_in_ib (μ : B1 -> B2) (trm : term I B1 L) :
-    is_in_ib  trm <-> is_in_ib (relabeling_term μ trm).
+  Lemma relabeling_term_preserves_is_in_ib (mu : B1 -> B2) (trm : term I B1 L) :
+    is_in_ib  trm <-> is_in_ib (relabeling_term mu trm).
   Proof. by case: trm. Defined.
 
-  Lemma relabeling_term_preserves_is_in_i (μ : B1 -> B2) (trm : term I B1 L) :
-    is_in_i trm <-> is_in_i (relabeling_term μ trm).
+  Lemma relabeling_term_preserves_is_in_i (mu : B1 -> B2) (trm : term I B1 L) :
+    is_in_i trm <-> is_in_i (relabeling_term mu trm).
   Proof. by case: trm. Defined.
 
-  Lemma relabeling_term_ext (μ1 μ2 : B1 -> B2) :
-    μ1 =1 μ2 -> relabeling_term μ1 =1 relabeling_term μ2.
-  Proof. by move=> μpweq [//| // | b] /=; rewrite μpweq. Qed.
+  Lemma relabeling_term_ext (mu1 mu2 : B1 -> B2) :
+    mu1 =1 mu2 -> relabeling_term mu1 =1 relabeling_term mu2.
+  Proof. by move=> mupweq [//| // | b] /=; rewrite mupweq. Qed.
 
-  Lemma relabeling_term_inj (mu: B1 -> B2) (inj_mu : injective mu) : injective (relabeling_term mu).
+  Lemma relabeling_term_inj (mu : B1 -> B2) (inj_mu : injective mu) : injective (relabeling_term mu).
   Proof. move=> x y; case x; case y => // x' y'; case=> eq; rewrite ?eq //.
          by congr Bnode; apply inj_mu.
   Qed.
@@ -149,7 +149,7 @@ Canonical term_eqType (I B L : eqType) :=
 
 Section EqTerm.
   Variables I B L : eqType.
-  Definition eqb_term (t1 t2: term I B L) : bool :=
+  Definition eqb_term (t1 t2 : term I B L) : bool :=
     match t1, t2 with
     | Lit l1,Lit l2 => l1 == l2
     | Bnode b1, Bnode b2=> b1 == b2
@@ -170,7 +170,7 @@ Section EqTerm.
 
 End EqTerm.
 
-Definition get_b_term (I B L :eqType) (t : (term I B L)) : option B :=
+Definition get_b_term (I B L : eqType) (t : (term I B L)) : option B :=
   if t is Bnode b then Some b else None.
 
 Definition get_bs (I B L : eqType) (ts : seq (term I B L)) :=

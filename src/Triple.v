@@ -50,9 +50,15 @@ Section PolyTriple.
   Lemma relabeling_triple_id t : relabeling_triple id t = t.
   Proof. by case t => * /=; apply triple_inj; apply relabeling_term_id. Qed.
 
-  Lemma relabeling_triple_comp (B1 B2 : Type) (mu1 : B -> B1) (mu2 : B1 -> B2) t :
+  Lemma relabeling_triple_comp (B1 B2 B3 : Type) (mu1 : B1 -> B2) (mu2 : B2 -> B3) (t : triple I B1 L) :
     relabeling_triple (mu2 \o mu1) t = relabeling_triple mu2 (relabeling_triple mu1 t).
   Proof. by case t=> * ; apply: triple_inj ; rewrite /= relabeling_term_comp. Qed.
+
+  Lemma map_of_triples t1 ft (f : B -> B): relabeling_term f (subject t1) = (subject ft) ->
+                                                relabeling_term f (predicate t1) = predicate ft ->
+                                                relabeling_term f (object t1) = object ft
+                                                -> relabeling_triple f t1 = ft.
+  Proof. by move=> rts rtp rto; apply triple_inj; rewrite -?rts -?rtp -?rto; case t1. Qed.
 
   Section Relabeling_triple.
 
@@ -73,7 +79,26 @@ Section PolyTriple.
       move=> μpweq t; apply: triple_inj; case t => /= *; exact: relabeling_term_ext.
     Qed.
 
+    Lemma relabeling_triple_inj (mu : B -> B1) (mu_inj : injective mu) : injective (@relabeling_triple B B1 mu).
+    Proof.
+      have /(_ I L) rtmu_inj := (relabeling_term_inj mu_inj).
+      by move=> [? ? ? ? ?] [? ? ? ? ?] // [] /rtmu_inj eq1 /rtmu_inj eq2 /rtmu_inj eq3; apply triple_inj.
+    Qed.
+
+    Lemma eq_relabeling_triple (mu nu : B -> B1) : mu =1 nu -> (relabeling_triple mu) =1 (relabeling_triple nu).
+    Proof. by move=> feq [[]? []? []? ? ?]; apply /triple_inj=> //=; rewrite feq. Qed.
+
   End Relabeling_triple.
+
+  Section Relabeling_triple_mem.
+    Variables B1 B2 B3 : eqType.
+
+    Lemma relabeling_triple_of_comp (mu : B2 -> B3) (nu : B1 -> B2):
+      ((relabeling_triple mu) \o (relabeling_triple nu)) =1 (relabeling_triple (mu \o nu)).
+    Proof. by move=> t; rewrite relabeling_triple_comp. Qed.
+
+  End Relabeling_triple_mem.
+
 End PolyTriple.
 
 Section CodeTriple.
@@ -130,10 +155,15 @@ Section OperationsOnTriples.
   Variables I B L : eqType.
   Implicit Type t : triple I B L.
 
+  Lemma triple_case t1 t2: t1 = t2 -> [&& (subject t1) == (subject t2),
+        (predicate t1) == (predicate t2) &
+          (object t1) == (object t2)].
+  Proof. by case t1; case t2=> /= ? ? ? ? ? ? ? ? ? ? [] -> -> ->; rewrite !eqxx. Qed.
+
   Definition terms_triple (I' B' L': eqType) (t : triple I' B' L') : seq (term I' B' L') :=
     let (s,p,o,_,_) := t in undup [:: s ; p ; o].
 
-  Lemma terms_relabeled_triple_mem (B1 B2: eqType) (t : triple I B1 L) (mu : B1 -> B2) : 
+  Lemma terms_relabeled_triple_mem (B1 B2: eqType) (t : triple I B1 L) (mu : B1 -> B2) :
     terms_triple (relabeling_triple mu t) =i map (relabeling_term mu) (terms_triple t).
   Proof. by case t=> s p o ? ? trm; rewrite mem_undup -mem_map_undup. Qed.
 

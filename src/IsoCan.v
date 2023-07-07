@@ -722,7 +722,7 @@ Section IsoCan.
           + by rewrite map_inj_in_uniq // uniq_get_bts.
           + by rewrite uniq_get_bts.
           + rewrite /relabeling_seq_triple.
-            have rt_mu_inj := is_pre_iso_inj_ts mu_inj.
+            have rt_mu_inj := inj_get_bts_inj_ts mu_inj.
             rewrite /get_bts -(get_bs_map _ (all_bnodes_ts _)).
             by rewrite /get_bs; apply eq_mem_pmap=> b; rewrite bnodes_ts_relabel_mem.
 

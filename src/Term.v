@@ -66,6 +66,9 @@ Definition is_ground_term (I B L : Type) (trm : term I B L) : bool :=
 Section Poly.
   Variables I B B1 B2 B3 L : Type.
 
+  Lemma bnode_inj : injective (fun bn=> @Bnode I B L bn).
+  Proof. by move=> x y; case. Qed.
+
   Definition relabeling_term B1 B2 mu (trm : term I B1 L) : term I B2 L :=
     match trm with
     | Bnode name => Bnode (mu name)
@@ -73,10 +76,11 @@ Section Poly.
     | Lit l => Lit l
     end.
   Section blank_node_mapping.
-    Variable mu : B -> B.
-    Lemma bnodes_to_bnodes (t : term I B L) : is_bnode t -> is_bnode (relabeling_term mu t).
+
+    Lemma bnodes_to_bnodes (mu : B -> B1) (t : term I B L) : is_bnode t -> is_bnode (relabeling_term mu t).
       Proof. by case t. Qed.
 
+    Variable mu : B -> B.
     Lemma relabeling_lit l : (relabeling_term mu (Lit l)) = Lit l.
       Proof. by []. Qed.
 
@@ -168,13 +172,64 @@ Section EqTerm.
          by move=> H; apply /eqP; move=> []z; rewrite z eqxx in H.
   Qed.
 
+  Definition get_b_term (t : (term I B L)) : option B :=
+    if t is Bnode b then Some b else None.
+
+  Definition get_bs (ts : seq (term I B L)) :=
+    pmap get_b_term ts.
+
+  Lemma bnode_memP (b : B) trms : Bnode b \in trms = (b \in get_bs trms).
+  Proof. elim: trms=> [//| h t' IHt].
+         by case: h=> // ?; rewrite !in_cons IHt eqb_eq.
+  Qed.
+
+  Lemma bnode_memPn (b : B) (trms : seq (term I B L)) : Bnode b \notin trms = (b \notin get_bs trms).
+  Proof. by rewrite /negb bnode_memP. Qed.
+
+  Lemma get_bs_of_uniq (s : seq (term I B L)) : uniq s -> get_bs (undup s) = get_bs s.
+  Proof. rewrite /get_bs. elim: s=> [//| h t IHl]; rewrite cons_uniq=> /andP[/eqP nin unt] /=.
+         by case: (h \in t) nin => //; case: h=> x /= _; rewrite IHl.
+  Qed.
+
+  Lemma undup_get_bsC (s : seq (term I B L)) : uniq s -> (undup (get_bs s)) = get_bs s.
+  Proof. elim: s=> [//| h t IHt].
+         move=> /andP[nin unt] /=; case: h nin=> //= b; rewrite ?IHt //.
+         by rewrite bnode_memPn /negb; case: (b \in get_bs t)=> //; by rewrite IHt.
+  Qed.
+
+  Lemma perm_eq_1s (b1 b2: B) : perm_eq [:: b1] [:: b2] = perm_eq [:: (@Bnode I B L b1)] [:: Bnode b2].
+  Proof. by rewrite /perm_eq /= !eqb_eq /=. Qed.
+
+  Lemma get_bs_map s mu: all (@is_bnode I B L) s -> (get_bs (map (relabeling_term mu) s)) = map mu (get_bs s).
+  Proof. by elim: s=> [//| []//b t IHtl] /==> ? ; rewrite IHtl. Qed.
+
+  Lemma map_rel_bnode s mu: all (@is_bnode I B L) s -> all (@is_bnode I B L) (map (relabeling_term mu) s).
+  Proof. by elim: s=> [//| []//b t IHt]. Qed.
+
+  Lemma all_bnodes_uniq_bs s : all (@is_bnode I B L) s -> uniq (get_bs s) = uniq s.
+  Proof. by elim: s=> [//| []//ab t IHt] alb; rewrite /= IHt // bnode_memPn. Qed.
+
+  Lemma count_mem_bnodes b l: all (@is_bnode I B L) l -> count_mem b (get_bs l) = count_mem (Bnode b) l.
+  Proof. elim: l=> [//|[]//b' t IHt] albn.
+         by rewrite /= eqb_eq /eqb_term /= IHt.
+  Qed.
+
+  Lemma undup_get_bs (s : seq (term I B L)) : (undup (get_bs s)) = (get_bs (undup s)).
+  Proof. elim: s=> [//|h t IHts] /=.
+         case e: (h \in t); first by move: e; case h=> //b; rewrite /= -IHts bnode_memP=> ->.
+         by move: e; case h=> //b; rewrite /= -IHts bnode_memP=> ->.
+  Qed.
+
+  Lemma get_bs_cat (s1 s2: seq (term I B L)) : get_bs s1 ++ get_bs s2 = get_bs (s1 ++ s2).
+  Proof. by elim: s1 s2=> [//| []//=b t IHts] s2; rewrite IHts. Qed.
+
+  Lemma mem_get_bs_undup (s: seq (term I B L)) : get_bs (undup s) =i get_bs s.
+  Proof. move=> x; rewrite /get_bs !mem_pmap. apply eq_mem_map. exact: mem_undup. Qed.
+
 End EqTerm.
 
-Definition get_b_term (I B L : eqType) (t : (term I B L)) : option B :=
-  if t is Bnode b then Some b else None.
 
-Definition get_bs (I B L : eqType) (ts : seq (term I B L)) :=
-  pmap (@get_b_term I B L) ts.
+
 
 Definition term_canChoiceMixin (I B L : choiceType) :=
   PcanChoiceMixin (@pcancel_code_decode I B L).

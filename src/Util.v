@@ -49,6 +49,12 @@ Proof.
   by rewrite !undup_cat undup_idem.
 Qed.
 
+Lemma mem_filter_map (T : eqType) f p a (s : seq T) :
+  (forall b, p b = p (f b)) -> (a \in (map f (filter p s))) = (a \in filter p (map f s)).
+Proof. elim: s=> [//|h t IHts] pres.
+       by case e: (p h); rewrite /= e; rewrite pres in e; rewrite e /= ?in_cons IHts //.
+Qed.
+
 Lemma empty_permutations (T:eqType) : @permutations T [::] = [:: [::]]. Proof. by []. Qed.
 
 Lemma map_inv (T U: eqType) (s:seq T) (f: T -> U):

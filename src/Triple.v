@@ -93,7 +93,7 @@ Section PolyTriple.
   Section Relabeling_triple_mem.
     Variables B1 B2 B3 : eqType.
 
-    Lemma relabeling_triple_of_comp (mu : B2 -> B3) (nu : B1 -> B2):
+    Lemma relabeling_triple_of_comp (mu : B2 -> B3) (nu : B1 -> B2) :
       ((relabeling_triple mu) \o (relabeling_triple nu)) =1 (relabeling_triple (mu \o nu)).
     Proof. by move=> t; rewrite relabeling_triple_comp. Qed.
 
@@ -160,21 +160,21 @@ Section OperationsOnTriples.
           (object t1) == (object t2)].
   Proof. by case t1; case t2=> /= ? ? ? ? ? ? ? ? ? ? [] -> -> ->; rewrite !eqxx. Qed.
 
-  Definition terms_triple (I' B' L': eqType) (t : triple I' B' L') : seq (term I' B' L') :=
+  Definition terms_triple (I' B' L' : eqType) (t : triple I' B' L') : seq (term I' B' L') :=
     let (s,p,o,_,_) := t in undup [:: s ; p ; o].
 
-  Lemma terms_relabeled_triple_mem (B1 B2: eqType) (t : triple I B1 L) (mu : B1 -> B2) :
+  Lemma terms_relabeled_triple_mem (B1 B2 : eqType) (t : triple I B1 L) (mu : B1 -> B2) :
     terms_triple (relabeling_triple mu t) =i map (relabeling_term mu) (terms_triple t).
   Proof. by case t=> s p o ? ? trm; rewrite mem_undup -mem_map_undup. Qed.
 
-  Lemma terms_relabeled_triple (B1 B2: eqType) (t : triple I B1 L)
-    (mu: B1 -> B2) (inj_mu: injective mu) :
+  Lemma terms_relabeled_triple (B1 B2 : eqType) (t : triple I B1 L)
+    (mu : B1 -> B2) (inj_mu : injective mu) :
     terms_triple (relabeling_triple mu t) = map (relabeling_term mu) (terms_triple t).
   Proof. case t=> s p o ? ?.
          rewrite /relabeling_triple /terms_triple -undup_map_inj //; exact: relabeling_term_inj.
   Qed.
 
-  Canonical triple_predType (I' B' L': eqType):= PredType (pred_of_seq \o (@terms_triple I' B' L')).
+  Canonical triple_predType (I' B' L' : eqType):= PredType (pred_of_seq \o (@terms_triple I' B' L')).
 
   Definition bnodes_triple (t : triple I B L) : seq (term I B L) :=
     filter (@is_bnode I B L) (terms_triple t).
@@ -203,13 +203,13 @@ Section OperationsOnTriples.
     rewrite filter_undup all_undup; exact: filter_all.
   Qed.
 
-  Remark undup_bnodes_triple (t: triple I B L) : undup (bnodes_triple t) = bnodes_triple t.
+  Remark undup_bnodes_triple (t : triple I B L) : undup (bnodes_triple t) = bnodes_triple t.
   Proof. by case t=> ? ? ? ? ?; rewrite /bnodes_triple/terms_triple filter_undup undup_idem. Qed.
 
-  Lemma i_in_bnodes_triple id t: Iri id \in bnodes_triple t = false.
+  Lemma i_in_bnodes_triple id t : Iri id \in bnodes_triple t = false.
   Proof. by rewrite /bnodes_triple mem_filter. Qed.
 
-  Lemma l_in_bnodes_triple l t: Lit l \in bnodes_triple t = false.
+  Lemma l_in_bnodes_triple l t : Lit l \in bnodes_triple t = false.
   Proof. by rewrite /bnodes_triple mem_filter. Qed.
 
   Definition get_b_triple t : seq B.

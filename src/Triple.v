@@ -176,6 +176,20 @@ Section OperationsOnTriples.
 
   Canonical triple_predType (I' B' L' : eqType):= PredType (pred_of_seq \o (@terms_triple I' B' L')).
 
+  Lemma mem_triple_terms (trm : term I B L) (t : triple I B L) :
+    trm \in t = [|| (trm == (subject t)),
+        (trm == (predicate t)) |
+        (trm == (object t))].
+  Proof.
+    suffices H: forall s x, mem_seq (undup s) x = mem_seq s x.
+    by case: trm=> x; case : t=> s p o ? ? /=; rewrite -topredE /=;
+    have ->: (if s \in [:: p; o]
+     then if p \in [:: o] then [:: o] else [:: p; o]
+              else s :: (if p \in [:: o] then [:: o] else [:: p; o])) = undup [:: s ; p ; o] by [];
+       rewrite H /= Bool.orb_false_r.
+    by move=> T s x; rewrite !topredE mem_undup.
+  Qed.
+
   Definition bnodes_triple (t : triple I B L) : seq (term I B L) :=
     filter (@is_bnode I B L) (terms_triple t).
 

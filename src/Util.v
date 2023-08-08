@@ -159,6 +159,11 @@ Proof.
     by rewrite in_cons=> /IHts/andP [-> ->]; rewrite !Bool.orb_true_r.
 Qed.
 
+(* Lemma in_zip_loc (S T : eqType) (ss : seq S) (ts : seq T) s t: *)
+(*   forall s0 t0, *)
+(*     (s,t) \in zip ss ts -> (s \in ss) && (t \in ts) && nth s1. *)
+(* Proof. *)
+
 Lemma in_zip_sym (S T : eqType) (ss : seq S) (ts : seq T) s t:
   (s,t) \in zip ss ts = ((t, s) \in zip ts ss).
 Proof.
@@ -237,9 +242,6 @@ Definition map_fintype (T U: eqType) (s : seq T) (f : T -> U) (arg : seq_sub s) 
 Proof. suffices: f (ssval arg) \in (map f s). by apply SeqSub.
        by apply (map_f f); apply (ssvalP arg).
 Qed.
-
-Definition is_some {T : Type} (ot : option T) : bool :=
-  match ot with Some _ => true | None => false end.
 
 Fixpoint someT_to_T {T : Type} (os : seq (option T)) : seq T :=
   match os with
@@ -423,3 +425,25 @@ Proof. rewrite -[uniq (map f s)]negbK.
        move=> x y Dx Dy /= eqfxy; apply/eqP; apply/idPn=> nxy; case: injf.
        by exists x => //; exists y => //=; rewrite /= eq_sym nxy.
 Qed.
+
+Lemma zip_uniq_proj (T1 T2 : eqType) (s1 : seq T1) (s2 : seq T2) :
+  (uniq s1) ->
+  (size s1 = size s2) ->
+  forall x y, x \in zip s1 s2 ->
+               y \in zip s1 s2 ->
+                     x.1 = y.1 -> x = y.
+  Proof. move=> us1 eqsize /= [x1 x2] [y1 y2].
+         wlog p0 :/ ((T1 * T2)%type).
+         by move=> hwlog; apply: hwlog (x1,x2).
+         case: p0=> x0 y0.
+         suffices minnrefl : minn (size s1) (size s1) = size s1.
+           move=> /nthP /= /(_ (x0,y0)) [xn]; rewrite size_zip -eqsize minnrefl=> sizes1.
+           rewrite nth_zip // => /eqP; rewrite xpair_eqE=> /andP[/eqP x1nth /eqP x2nth].
+           move=> /nthP /= /(_ (x0,y0)) [yn]; rewrite size_zip -eqsize minnrefl=> sizes2.
+           rewrite nth_zip // => /eqP; rewrite xpair_eqE=> /andP[/eqP y1nth /eqP y2nth].
+           rewrite -x1nth{x1nth} -x2nth{x2nth} -y1nth{y1nth} -y2nth{y2nth}.
+           by move=> /eqP; rewrite nth_uniq // => /eqP ->; apply/eqP; rewrite eqxx.
+         by rewrite /minn; case e: (_ < _)%N.
+  Qed.
+
+

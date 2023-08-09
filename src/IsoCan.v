@@ -710,7 +710,10 @@ Section IsoCan.
       case: ts => ts uniq_ts /=; rewrite /k_mapping_ts.
       set perm_bs := permutations _.
       rewrite /mapi.
-      set map_mu_on_bs := [seq mapi (app_n mark_bnode) i | i <- perm_bs].
+      set map_mu_on_bs :=  [seq [seq app_n mark_bnode an.1 an.2 | an <- zip s (iota 0 (size s))]
+                               | s <- perm_bs].
+
+        (* [seq mapi (app_n mark_bnode) i | i <- perm_bs]. *)
       set build_kmap := [seq build_kmapping_from_seq i | i <- map_mu_on_bs].
       set relab := [seq relabeling_seq_triple mu ts | mu <- build_kmap].
       suffices relab_uniq : all uniq relab.
@@ -738,7 +741,21 @@ Section IsoCan.
          by rewrite -all_map; apply all_kmapb_b.
        have ? := all_bnodes_ts (init_hash_ts ts).
          by apply /allP=> p; rewrite mem_permutations=> /perm_all ->.
-      
+       rewrite /map_mu_on_bs in mem.
+       move/mapP : mem=> [us usin ueq] /=; rewrite ueq.
+       set tp :=  [seq app_n mark_bnode an.1 an.2 | an <- zip us (iota 0 (size us))].
+       rewrite (has_not_default _ (Bnode (mkHinput x herror)) (Bnode (mkHinput y herror))).
+       set dflt := (Bnode (mkHinput y herror)).
+       suffices J: {in tp&, injective lookup_hash_default}.
+       move=> /J.
+       rewrite !mem_nth. move=> /(_ isT isT)/eqP.
+       rewrite nth_uniq.
+       admit.
+
+       (* has (eqb_b_hterm x) tp *)
+       by rewrite ueq in mem_has; rewrite /tp mem_has //.
+       suffices J: {in tp&, injective lookup_hash_default}.
+
 
             (* end inj uniq map *)
 

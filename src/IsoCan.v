@@ -70,6 +70,7 @@ Section IsoCan.
 
     Implicit Type trm : term I B L.
 
+    Local Notation hash_alt := hash.
     Local Notation hash := (hash h).
 
     Lemma by_perf_hash trm (o : h) (eqb : hashTerm trm == o) : hashTerm trm = o.
@@ -79,6 +80,16 @@ Section IsoCan.
       mkHinput b h0.
 
     Lemma init_bnode_inj : injective init_bnode.
+    Proof. by move=> x y []. Qed.
+
+    Hypothesis to_string_nat : nat -> B.
+    Hypothesis to_string_nat_inj : injective to_string_nat.
+    Definition n0 := 0%N.
+
+    Definition init_bnode_nat (b : B) : (hash_alt nat B) :=
+      mkHinput b n0.
+
+    Lemma init_bnode_nat_inj : injective init_bnode_nat.
     Proof. by move=> x y []. Qed.
 
     (* Algorithm 3, line 13
@@ -136,20 +147,24 @@ Section IsoCan.
 
       Definition eqb_trm_hi trm (ht : hterm) : bool := trm == (term_of_hterm ht).
 
-      Definition eqb_b_hterm b (ht : hterm) : bool :=
+      Definition eqb_b_hterm (T : countType) (b : B) (ht : (term I (hash_alt T B) L)) : bool :=
         if ht is Bnode hb then b == (input hb) else false.
 
       Lemma eqb_b_hterm_is_bnode b (ht : hterm) : eqb_b_hterm b ht -> is_bnode ht.
       Proof. by case ht. Qed.
 
-      Lemma eqb_b_hterm_trans b b' ht : eqb_b_hterm b ht -> eqb_b_hterm b' ht -> b = b'.
+      Lemma eqb_b_hterm_trans (T : countType) (b b': B) (ht : (term I (hash_alt T B) L)) :
+        eqb_b_hterm b ht -> eqb_b_hterm b' ht -> b = b'.
       Proof. by case: ht=> // ? /eqP-> /eqP->. Qed.
 
       Definition lookup_hash (hb : hterm) : option (hash B) :=
         if hb is Bnode hin then some hin else None.
 
+      Definition lookup_hash_default_ (T : countType) (t0 : T) (hb : (term I (hash_alt T B) L) ) : T :=
+        if hb is Bnode hin then current_hash hin else t0.
+
       Definition lookup_hash_default (hb : hterm) : h :=
-        if hb is Bnode hin then current_hash hin else herror.
+        lookup_hash_default_ herror hb.
 
       Definition eq_hash (b1 b2 : hterm) : bool :=
         match (lookup_hash b1), (lookup_hash b2) with
@@ -247,6 +262,9 @@ Section IsoCan.
 
       Definition init_hash_ts (ts : seq (triple I B L)) : hts :=
         relabeling_seq_triple init_bnode ts.
+
+      Definition init_hash_ts_nat (ts : seq (triple I B L)) : (seq (triple I (hash_alt nat B) L)) :=
+        relabeling_seq_triple init_bnode_nat ts.
 
       (* Algorithm 1, lines 2-8
        initializes every blank node with a known default name *)
@@ -642,6 +660,15 @@ Section IsoCan.
 
       Lemma empty_ak_mapping : ak_mapping empty_rdf_graph = [::]. Proof. by []. Qed.
 
+
+      Definition build_kmapping_from_seq_alt (trms : seq (term I (hash_alt nat B) L)) : B -> B :=
+        fun b =>
+          if has (eqb_b_hterm b) trms then
+            let the_bnode := nth (Bnode (mkHinput b n0)) trms (find (eqb_b_hterm b) trms) in
+            to_string_nat (lookup_hash_default_ n0 the_bnode)
+          else
+            b.
+
       Definition build_kmapping_from_seq (trms : seq hterm) : B -> B :=
         fun b =>
           if has (eqb_b_hterm b) trms then
@@ -649,6 +676,18 @@ Section IsoCan.
             to_string (lookup_hash_default the_bnode)
           else
             b.
+
+      Definition k_mapping_alt (ts : seq (triple I B L)) : seq (triple I B L) :=
+        let perms :=  permutations (get_bts ts) in (* seq seq B *)
+                        (* (init_hash_ts_nat ts))) in (* seq seq term I hash nat B L*) *)
+        let all_maps := map
+                          (map (fun an=> Bnode (mkHinput an.1 an.2))) (* (A * B) -> term I (hash A B) L*)
+                          (map (fun s=> zip s (iota 0 (size s))) perms) (* seq seq (B * nat) *)
+        in
+        let mus := map build_kmapping_from_seq_alt all_maps in
+        let isocans := map (fun mu => (relabeling_seq_triple mu ts)) mus in
+        foldl Order.max [::] isocans.
+
 
       Definition k_mapping_ts (ts : seq (triple I B L)) : seq (triple I B L) :=
         let all_maps :=
@@ -705,6 +744,70 @@ Section IsoCan.
              by apply all_zip1.
       Qed.
 
+      Lemma uniq_k_mapping_res_alt (ts : rdf_graph I B L) : uniq (k_mapping_alt ts).
+      Proof.
+      case: ts => ts uniq_ts /=; rewrite /k_mapping_alt.
+      set perm_bs := permutations _.
+      set tg_labels_perm := [seq zip s (iota 0 (size s)) | s <- perm_bs].
+      set label_perm := [seq [seq Bnode (mkHinput an.1 an.2) | an <- i] | i <- tg_labels_perm].
+      set build_kmap := [seq build_kmapping_from_seq_alt i | i <- label_perm].
+      set relab := [seq relabeling_seq_triple mu ts | mu <- build_kmap].
+      suffices relab_uniq : all uniq relab.
+        by case: (foldl_max relab [::])=> [-> //|]; apply: (allP relab_uniq).
+      apply /allP; rewrite /relab/build_kmap -map_comp=> t /mapP[u mem ->] {relab build_kmap}.
+      apply uniq_relabeling_pre_iso=> //.
+      set mu := build_kmapping_from_seq_alt u.
+      suffices mu_inj : {in get_bts ts&, injective mu}.
+        apply uniq_perm.
+          + by rewrite map_inj_in_uniq // uniq_get_bts.
+          + by rewrite uniq_get_bts.
+          + rewrite /relabeling_seq_triple.
+            have rt_mu_inj := inj_get_bts_inj_ts mu_inj.
+            rewrite /get_bts -(get_bs_map _ (all_bnodes_ts _)).
+            by rewrite /get_bs; apply eq_mem_pmap=> b; rewrite bnodes_ts_relabel_mem.
+      move=> x y xin yin;rewrite /mu/build_kmapping_from_seq_alt.
+      suffices mem_has: forall b, b \in get_bts ts -> has (eqb_b_hterm b) u.
+        rewrite !mem_has // => /to_string_nat_inj.
+        suffices ->: (nth (Bnode (mkHinput x n0)) u (find (eqb_b_hterm x) u)) = (nth (Bnode (mkHinput y n0)) u (find (eqb_b_hterm x) u)).
+          set dflt := (Bnode (mkHinput y n0)).
+            suffices uform : forall bn, bn \in get_bts ts -> nth dflt u (find (eqb_b_hterm bn) u) = Bnode (mkHinput bn (find (eqb_b_hterm bn) u)).
+              rewrite (uform x) // (uform y) //.
+              suffices J: {in u&, injective (lookup_hash_default_ n0)}.
+                move=> /J; rewrite -{1}uform // -{1}uform //.
+                move : (mem_has x xin) (mem_has y yin); rewrite !has_find=> nthxin nthyin.
+                by rewrite !mem_nth // => /(_ isT isT)[->].
+              rewrite /label_perm in mem.
+              move=> ht1 ht2.
+              move/mapP : mem=> [tgd_perm tgin ->].
+              move=> /mapP[tgd_instx tgdinsxin ->] /mapP[tgd_insty tgdinsyin ->].
+              rewrite /tg_labels_perm in tgin.
+              move/mapP : tgin=> [aperm pinperm tgdeq].
+              rewrite tgdeq in tgdinsxin tgdinsyin.
+              move=> /= eq2. congr Bnode.
+              suffices minnrefl s : minn (size s) (size s) = size s.
+                have eqsize : size aperm = size (iota 0 (size aperm)). by rewrite size_iota.
+                move/nthP : tgdinsxin=> /= /(_ tgd_instx)[xn]; rewrite size_zip -eqsize minnrefl=> sizex.
+                move: eq2; case : tgd_instx=> /= tagx1 tagx2 eq2.
+                rewrite nth_zip // => /eqP; rewrite xpair_eqE=> /andP[/eqP x1nth /eqP x2nth].
+                move/nthP : tgdinsyin=> /= /(_ tgd_insty)[yn]; rewrite size_zip -eqsize minnrefl=> sizey.
+                move: eq2; case: tgd_insty=> /= tagy1 tagy2 eq2.
+                rewrite nth_zip // => /eqP; rewrite xpair_eqE=> /andP[/eqP y1nth /eqP y2nth].
+                rewrite -x2nth -y2nth in eq2.
+                rewrite -x1nth{x1nth} -x2nth{x2nth} -y1nth{y1nth} -y2nth{y2nth}.
+                move: eq2.
+                rewrite (set_nth_default tagx2). move=> /eqP.
+                rewrite nth_uniq //. move=> /eqP ->; apply/eqP.
+                by rewrite eq_i_ch /= eqxx andbC /= (set_nth_default tagx1) //.
+                by rewrite -eqsize.
+                by rewrite -eqsize.
+                by apply iota_uniq.
+                by rewrite -eqsize.
+              by move=> ?; rewrite /minn; case e: (_ < _)%N.
+              admit.
+              admit.
+              admit.
+      Admitted.
+
       Lemma uniq_k_mapping_res (ts : rdf_graph I B L) : uniq (k_mapping_ts ts).
       Proof.
       case: ts => ts uniq_ts /=; rewrite /k_mapping_ts.
@@ -751,10 +854,6 @@ Section IsoCan.
        rewrite !mem_nth. move=> /(_ isT isT)/eqP.
        rewrite nth_uniq.
        admit.
-
-       (* has (eqb_b_hterm x) tp *)
-       by rewrite ueq in mem_has; rewrite /tp mem_has //.
-       suffices J: {in tp&, injective lookup_hash_default}.
 
 
             (* end inj uniq map *)
@@ -809,7 +908,7 @@ Section IsoCan.
       Definition k_mapping (g : rdf_graph I B L) : rdf_graph I B L :=
         @mkRdfGraph I B L (k_mapping_ts (graph g)) todo.
 
-      Lemma injection_kmap b b' ht s (eb: eqb_b_hterm b ht) (eb': eqb_b_hterm b' ht):
+      Lemma injection_kmap b b' (ht : hterm ) s (eb: eqb_b_hterm b ht) (eb': eqb_b_hterm b' ht):
         (build_kmapping_from_seq (mapi (app_n mark_bnode) s) b) =
           (build_kmapping_from_seq (mapi (app_n mark_bnode) s) b').
       Proof. by rewrite (eqb_b_hterm_trans eb eb'). Qed.

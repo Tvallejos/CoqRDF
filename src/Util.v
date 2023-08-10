@@ -446,4 +446,19 @@ Lemma zip_uniq_proj (T1 T2 : eqType) (s1 : seq T1) (s2 : seq T2) :
          by rewrite /minn; case e: (_ < _)%N.
   Qed.
 
+  Lemma in_zip_l (S T: eqType) (s1 : seq S) (s2 : seq T) (s0 : S) :
+    (size s1 = size s2) ->
+    s0 \in s1 ->
+    exists st, st \in zip s1 s2 /\ st.1 = s0 /\ exists t, st.2 = t.
+  Proof. move=> eqsize sin /=.
+         wlog t0 :/ (S * T)%type.
+           move=> hwlog. apply hwlog.
+           case :s2 eqsize sin {hwlog}; first by move=> /= /size_0_nil ->; rewrite in_nil.
+           by move=> a _ _ _ ; exact (s0,a).
+         case t0=> sd td; exists (nth (sd,td) (zip s1 s2) (index s0 s1)).
+         split.
+         + by rewrite mem_nth // size_zip -eqsize /minn; case e: (size s1 < size s1)%N; rewrite index_mem //.
+         + split; first by rewrite nth_zip //= nth_index //.
+         + by exists (nth td s2 (index s0 s1)); rewrite nth_zip.
+  Qed.
 

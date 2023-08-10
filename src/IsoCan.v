@@ -768,44 +768,48 @@ Section IsoCan.
       move=> x y xin yin;rewrite /mu/build_kmapping_from_seq_alt.
       suffices mem_has: forall b, b \in get_bts ts -> has (eqb_b_hterm b) u.
         rewrite !mem_has // => /to_string_nat_inj.
-        suffices ->: (nth (Bnode (mkHinput x n0)) u (find (eqb_b_hterm x) u)) = (nth (Bnode (mkHinput y n0)) u (find (eqb_b_hterm x) u)).
-          set dflt := (Bnode (mkHinput y n0)).
-            suffices uform : forall bn, bn \in get_bts ts -> nth dflt u (find (eqb_b_hterm bn) u) = Bnode (mkHinput bn (find (eqb_b_hterm bn) u)).
-              rewrite (uform x) // (uform y) //.
-              suffices J: {in u&, injective (lookup_hash_default_ n0)}.
-                move=> /J; rewrite -{1}uform // -{1}uform //.
-                move : (mem_has x xin) (mem_has y yin); rewrite !has_find=> nthxin nthyin.
-                by rewrite !mem_nth // => /(_ isT isT)[->].
-              rewrite /label_perm in mem.
-              move=> ht1 ht2.
-              move/mapP : mem=> [tgd_perm tgin ->].
-              move=> /mapP[tgd_instx tgdinsxin ->] /mapP[tgd_insty tgdinsyin ->].
-              rewrite /tg_labels_perm in tgin.
-              move/mapP : tgin=> [aperm pinperm tgdeq].
-              rewrite tgdeq in tgdinsxin tgdinsyin.
-              move=> /= eq2. congr Bnode.
-              suffices minnrefl s : minn (size s) (size s) = size s.
-                have eqsize : size aperm = size (iota 0 (size aperm)). by rewrite size_iota.
-                move/nthP : tgdinsxin=> /= /(_ tgd_instx)[xn]; rewrite size_zip -eqsize minnrefl=> sizex.
-                move: eq2; case : tgd_instx=> /= tagx1 tagx2 eq2.
-                rewrite nth_zip // => /eqP; rewrite xpair_eqE=> /andP[/eqP x1nth /eqP x2nth].
-                move/nthP : tgdinsyin=> /= /(_ tgd_insty)[yn]; rewrite size_zip -eqsize minnrefl=> sizey.
-                move: eq2; case: tgd_insty=> /= tagy1 tagy2 eq2.
-                rewrite nth_zip // => /eqP; rewrite xpair_eqE=> /andP[/eqP y1nth /eqP y2nth].
-                rewrite -x2nth -y2nth in eq2.
-                rewrite -x1nth{x1nth} -x2nth{x2nth} -y1nth{y1nth} -y2nth{y2nth}.
-                move: eq2.
-                rewrite (set_nth_default tagx2). move=> /eqP.
-                rewrite nth_uniq //. move=> /eqP ->; apply/eqP.
-                by rewrite eq_i_ch /= eqxx andbC /= (set_nth_default tagx1) //.
-                by rewrite -eqsize.
-                by rewrite -eqsize.
-                by apply iota_uniq.
-                by rewrite -eqsize.
-              by move=> ?; rewrite /minn; case e: (_ < _)%N.
-              admit.
-              admit.
-              admit.
+        have ->: (nth (Bnode (mkHinput x n0)) u (find (eqb_b_hterm x) u)) = (nth (Bnode (mkHinput y n0)) u (find (eqb_b_hterm x) u)). by rewrite (set_nth_default (Bnode (mkHinput x n0))) // -has_find mem_has.
+        set dflt := (Bnode (mkHinput y n0)).
+        suffices uform : forall bn, bn \in get_bts ts -> nth dflt u (find (eqb_b_hterm bn) u) = Bnode (mkHinput bn (find (eqb_b_hterm bn) u)).
+          rewrite (uform x) // (uform y) //.
+          suffices J: {in u&, injective (lookup_hash_default_ n0)}.
+            move=> /J; rewrite -{1}uform // -{1}uform //.
+            move : (mem_has x xin) (mem_has y yin); rewrite !has_find=> nthxin nthyin.
+            by rewrite !mem_nth // => /(_ isT isT)[->].
+          move=> ht1 ht2.
+          move/mapP : mem=> [tgd_perm tgin ->].
+          move=> /mapP[tgd_instx tgdinsxin ->] /mapP[tgd_insty tgdinsyin ->].
+          move/mapP : tgin=> [aperm pinperm tgdeq].
+          rewrite tgdeq in tgdinsxin tgdinsyin.
+          move=> /= eq2; congr Bnode.
+          suffices minnrefl s : minn (size s) (size s) = size s.
+            have eqsize : size aperm = size (iota 0 (size aperm)) by rewrite size_iota.
+            move/nthP : tgdinsxin=> /= /(_ tgd_instx)[xn]; rewrite size_zip -eqsize minnrefl=> sizex.
+            move: eq2; case : tgd_instx=> /= tagx1 tagx2 eq2.
+            rewrite nth_zip // => /eqP; rewrite xpair_eqE=> /andP[/eqP x1nth /eqP x2nth].
+            move/nthP : tgdinsyin=> /= /(_ tgd_insty)[yn]; rewrite size_zip -eqsize minnrefl=> sizey.
+            move: eq2; case: tgd_insty=> /= tagy1 tagy2 eq2.
+            rewrite nth_zip // => /eqP; rewrite xpair_eqE=> /andP[/eqP y1nth /eqP y2nth].
+            rewrite -x2nth -y2nth in eq2.
+            rewrite -x1nth{x1nth} -x2nth{x2nth} -y1nth{y1nth} -y2nth{y2nth}.
+            move: eq2.
+            rewrite (set_nth_default tagx2). move=> /eqP.
+            rewrite nth_uniq //. move=> /eqP ->; apply/eqP.
+            by rewrite eq_i_ch /= eqxx andbC /= (set_nth_default tagx1) //.
+            by rewrite -eqsize.
+            by rewrite -eqsize.
+            by apply iota_uniq.
+            by rewrite -eqsize.
+          by move=> ?; rewrite /minn; case e: (_ < _)%N.
+        admit.
+      move=> b bin.
+      move/mapP : mem=> [/= bns /mapP[/= bs]]. rewrite mem_permutations=> /perm_mem peq -> ->.
+      rewrite seq.has_map /=.
+      apply/hasP=> /=.
+      have eqsize : size bs = size (iota 0 (size bs)) by rewrite size_iota.
+      rewrite -peq in bin.
+      have [/= st [stin [<- [t2 t2eq]]]]:= in_zip_l eqsize bin.
+      by exists st.
       Admitted.
 
       Lemma uniq_k_mapping_res (ts : rdf_graph I B L) : uniq (k_mapping_ts ts).

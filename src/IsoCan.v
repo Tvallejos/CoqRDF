@@ -744,7 +744,7 @@ Section IsoCan.
              by apply all_zip1.
       Qed.
 
-      Lemma uniq_k_mapping_res_alt (ts : rdf_graph I B L) : uniq (k_mapping_alt ts).
+      Lemma uniq_k_mapping_res (ts : rdf_graph I B L) : uniq (k_mapping_alt ts).
       Proof.
       case: ts => ts uniq_ts /=; rewrite /k_mapping_alt.
       set perm_bs := permutations _.
@@ -770,12 +770,16 @@ Section IsoCan.
         rewrite !mem_has // => /to_string_nat_inj.
         have ->: (nth (Bnode (mkHinput x n0)) u (find (eqb_b_hterm x) u)) = (nth (Bnode (mkHinput y n0)) u (find (eqb_b_hterm x) u)). by rewrite (set_nth_default (Bnode (mkHinput x n0))) // -has_find mem_has.
         set dflt := (Bnode (mkHinput y n0)).
-        suffices uform : forall bn, bn \in get_bts ts -> nth dflt u (find (eqb_b_hterm bn) u) = Bnode (mkHinput bn (find (eqb_b_hterm bn) u)).
-          rewrite (uform x) // (uform y) //.
+        suffices uform :
+          forall bn, bn \in get_bts ts ->
+                       exists n,
+                         nth dflt u (find (eqb_b_hterm bn) u) = Bnode (mkHinput bn n).
+          move: (uform x xin) (uform y yin)=> [n eqnnthx] [m eqmnthy].
+          rewrite eqnnthx eqmnthy.
           suffices J: {in u&, injective (lookup_hash_default_ n0)}.
-            move=> /J; rewrite -{1}uform // -{1}uform //.
+            move=> /J; rewrite -eqnnthx -eqmnthy.
             move : (mem_has x xin) (mem_has y yin); rewrite !has_find=> nthxin nthyin.
-            by rewrite !mem_nth // => /(_ isT isT)[->].
+            by rewrite !mem_nth // => /(_ isT isT); rewrite eqnnthx eqmnthy; move=> [->].
           move=> ht1 ht2.
           move/mapP : mem=> [tgd_perm tgin ->].
           move=> /mapP[tgd_instx tgdinsxin ->] /mapP[tgd_insty tgdinsyin ->].
@@ -802,6 +806,17 @@ Section IsoCan.
             by rewrite -eqsize.
           by move=> ?; rewrite /minn; case e: (_ < _)%N.
         admit.
+        (* ============ *)
+        (* move/mapP : mem=> [/= bns /mapP[/= bs permbs -> ->]]. *)
+        (* rewrite (nth_map (bn,0)) /=. *)
+        (* congr Bnode; apply/eqP. rewrite eq_i_ch /=; apply /andP; split; apply/eqP. *)
+        (* have eqsize : size bs = size (iota 0 (size bs)) by rewrite size_iota. *)
+        (* rewrite nth_zip //=. *)
+        (* suffices ->: (find (eqb_b_hterm bn) [seq Bnode (mkHinput an.1 an.2) | an <- zip bs (iota 0 (size bs))]) = (index bn bs). rewrite nth_index //. *)
+        (*   rewrite mem_permutations in permbs. *)
+        (*   by move/perm_mem : permbs=> ->. *)
+        (* ============= *)
+
       move=> b bin.
       move/mapP : mem=> [/= bns /mapP[/= bs]]. rewrite mem_permutations=> /perm_mem peq -> ->.
       rewrite seq.has_map /=.
@@ -812,105 +827,11 @@ Section IsoCan.
       by exists st.
       Admitted.
 
-      Lemma uniq_k_mapping_res (ts : rdf_graph I B L) : uniq (k_mapping_ts ts).
-      Proof.
-      case: ts => ts uniq_ts /=; rewrite /k_mapping_ts.
-      set perm_bs := permutations _.
-      rewrite /mapi.
-      set map_mu_on_bs :=  [seq [seq app_n mark_bnode an.1 an.2 | an <- zip s (iota 0 (size s))]
-                               | s <- perm_bs].
-
-        (* [seq mapi (app_n mark_bnode) i | i <- perm_bs]. *)
-      set build_kmap := [seq build_kmapping_from_seq i | i <- map_mu_on_bs].
-      set relab := [seq relabeling_seq_triple mu ts | mu <- build_kmap].
-      suffices relab_uniq : all uniq relab.
-        by case: (foldl_max relab [::])=> [-> //|]; apply: (allP relab_uniq).
-      apply /allP; rewrite /relab/build_kmap -map_comp=> t /mapP[u mem ->] {relab build_kmap}.
-      apply uniq_relabeling_pre_iso=> //.
-      set mu := build_kmapping_from_seq u.
-      suffices mu_inj : {in get_bts ts&, injective mu}.
-        apply uniq_perm.
-          + by rewrite map_inj_in_uniq // uniq_get_bts.
-          + by rewrite uniq_get_bts.
-          + rewrite /relabeling_seq_triple.
-            have rt_mu_inj := inj_get_bts_inj_ts mu_inj.
-            rewrite /get_bts -(get_bs_map _ (all_bnodes_ts _)).
-            by rewrite /get_bs; apply eq_mem_pmap=> b; rewrite bnodes_ts_relabel_mem.
-
-            (* begining inj uniq map *)
-      (* apply /in_map_injP; first by apply uniq_get_bts. *)
-      move=> x y xin yin;rewrite /mu/build_kmapping_from_seq.
-      suffices mem_has: forall b, b \in get_bts ts -> has (eqb_b_hterm b) u.
-      rewrite !mem_has // => /to_string_inj.
-      have abn: all (fun t=> is_bnode t) u.
-       apply (in_all mem); rewrite all_map /=.
-       suffices : all (fun p => all (fun t=> is_bnode t) p) perm_bs.
-         by rewrite -all_map; apply all_kmapb_b.
-       have ? := all_bnodes_ts (init_hash_ts ts).
-         by apply /allP=> p; rewrite mem_permutations=> /perm_all ->.
-       rewrite /map_mu_on_bs in mem.
-       move/mapP : mem=> [us usin ueq] /=; rewrite ueq.
-       set tp :=  [seq app_n mark_bnode an.1 an.2 | an <- zip us (iota 0 (size us))].
-       rewrite (has_not_default _ (Bnode (mkHinput x herror)) (Bnode (mkHinput y herror))).
-       set dflt := (Bnode (mkHinput y herror)).
-       suffices J: {in tp&, injective lookup_hash_default}.
-       move=> /J.
-       rewrite !mem_nth. move=> /(_ isT isT)/eqP.
-       rewrite nth_uniq.
-       admit.
-
-
-            (* end inj uniq map *)
-
-      (* move=> x y xb yb. *)
-      (* apply: contra_eq => neqb. *)
-      (* apply/negP => eqmu. *)
-      (* suffices {eqmu}: mu x != mu y. *)
-      (*   by rewrite /negb; case : (mu x == mu y) eqmu. *)
-      (* rewrite /mu/build_kmapping_from_seq. *)
-      (* suffices mem_has : forall x, x \in get_bts ts -> has (eqb_b_hterm x) u. *)
-      (*   have {xb}hasx:= mem_has x xb. *)
-      (*   have {yb}hasy:= mem_has y yb. *)
-      (*   rewrite hasx hasy neq_funapp_inj //. *)
-      (*   set idx := (find (eqb_b_hterm x) u). *)
-      (*   set idy := (find (eqb_b_hterm y) u). *)
-      (*   suffices neq_index : idx != idy. *)
-      (*     have umaps : all uniq map_mu_on_bs. *)
-      (*       rewrite /map_mu_on_bs all_map; apply/allP. *)
-      (*       by move=> maps; rewrite mem_permutations; apply: k_mapping_seq_uniq_perm_eq_ts. *)
-      (*     have uu := in_all mem umaps. *)
-      (*     set nthx := (nth (Bnode (mkHinput x herror)) u idx). *)
-      (*     set nthy := (nth (Bnode (mkHinput y herror)) u idy). *)
-      (*     have neq_nths : nthx != nthy by rewrite !has_find in hasx hasy; apply uniq_neq_nth=> //. *)
-      (*     have abn: all (fun t=> is_bnode t) u. *)
-      (*       apply (in_all mem); rewrite all_map /=. *)
-      (*       suffices : all (fun p => all (fun t=> is_bnode t) p) perm_bs. *)
-      (*         by rewrite -all_map; apply all_kmapb_b. *)
-      (*       have ? := all_bnodes_ts (init_hash_ts ts). *)
-      (*       by apply /allP=> p; rewrite mem_permutations=> /perm_all ->. *)
-      (*     have : is_bnode nthx. by apply: eqb_b_hterm_is_bnode _; apply: nth_find hasx. *)
-      (*     have {abn}: is_bnode nthy. by apply: eqb_b_hterm_is_bnode _; apply: nth_find hasy. *)
-      (*     have *)
-      (*       (* {hasx} *) *)
-      (*       : nthx \in u by apply mem_nth; rewrite -has_find //. *)
-      (*     have *)
-      (*       (* {hasy} *) *)
-      (*       : nthy \in u by apply mem_nth; rewrite -has_find //. *)
-      (*     case: nthx nthy neq_nths=> // nthbx; case=> //= nthby. *)
-      (*     move=> /neq_funapp; rewrite eq_i_ch=> /nandP; case; last by move ->. *)
-      (*     move=> neq_input memux memuy _ _; move: neq_input. *)
-      (*     rewrite !has_find in hasx hasy. *)
-      (*     apply: contra_neq=> /=. *)
-      (*     move: memux memuy. *)
-          admit.
-
-      Abort.
-
       Lemma uniq_k_mapping_iso_res (ts :rdf_graph I B L) : exists mu, is_iso_ts (k_mapping_ts ts) ts mu.
       Abort.
 
       Definition k_mapping (g : rdf_graph I B L) : rdf_graph I B L :=
-        @mkRdfGraph I B L (k_mapping_ts (graph g)) todo.
+        @mkRdfGraph I B L (k_mapping_alt (graph g)) (uniq_k_mapping_res g).
 
       Lemma injection_kmap b b' (ht : hterm ) s (eb: eqb_b_hterm b ht) (eb': eqb_b_hterm b' ht):
         (build_kmapping_from_seq (mapi (app_n mark_bnode) s) b) =
@@ -934,6 +855,68 @@ Section IsoCan.
           have IHtl' := IHtl eq isT tl' f injF eqtl.
           by rewrite eqtl -has_map ?has_tl in IHtl'; last by apply injF.
       Qed.
+
+
+      Lemma kmapping_iso_out g: iso g (k_mapping g).
+      Proof. rewrite /mapping_is_iso_mapping/k_mapping/iso/iso_ts/is_iso_ts.
+             case : g=> ts uts /=.
+             suffices dream : k_mapping_alt ts = [::] -> ts = [::].
+             rewrite /k_mapping_alt.
+             case : (foldl_max ([seq relabeling_seq_triple mu0 ts
+                   | mu0 <- [seq build_kmapping_from_seq_alt i
+                               | i <- [seq [seq Bnode (mkHinput an.1 an.2) | an <- i]
+                                         | i <- [seq zip s (iota 0 (size s))
+                                               | s <- permutations (get_bts ts)]]]]) [::]).
+             have kmap : k_mapping_alt ts = foldl Order.max [::]
+    [seq relabeling_seq_triple mu0 ts
+       | mu0 <- [seq build_kmapping_from_seq_alt i
+                   | i <- [seq [seq Bnode (mkHinput an.1 an.2) | an <- i]
+                         | i <- [seq zip s (iota 0 (size s)) | s <- permutations (get_bts ts)]]]] by [].
+             by exists id; rewrite a dream.
+             rewrite /=.
+             rewrite -map_comp.
+             move=> /mapP /=[s sin ->].
+             exists (build_kmapping_from_seq_alt s).
+             (* rewrite sinP. *)
+             suffices preiso : is_pre_iso_ts ts (relabeling_seq_triple (build_kmapping_from_seq_alt s) ts) (build_kmapping_from_seq_alt s).
+               apply/and3P; split.
+                 + by rewrite preiso.
+                 + apply uniq_relabeling_pre_iso=> //.
+                 + by rewrite perm_refl.
+                   move/mapP : sin=> /=[bn /mapP[/= perm inperm ->] ->].
+             set sgen := [seq Bnode (mkHinput an.1 an.2) | an <- zip perm (iota 0 (size perm))].
+             rewrite /is_pre_iso_ts.
+             suffices mem_has: forall b, b \in get_bts ts -> has (eqb_b_hterm b) sgen.
+             apply perm_eq_bts_relabel_inj_in.
+             move=> x y xin yin.
+             rewrite /build_kmapping_from_seq_alt !mem_has // => /to_string_nat_inj.
+             suffices J: {in sgen &, injective (lookup_hash_default_ n0)}.
+             move=> /J /=.
+             have nthxin : nth (Bnode (mkHinput x n0)) sgen (find (eqb_b_hterm x) sgen) \in sgen. admit.
+             have nthyin : nth (Bnode (mkHinput y n0)) sgen (find (eqb_b_hterm y) sgen) \in sgen. admit.
+             move=> /(_ nthxin nthyin).
+             rewrite (set_nth_default (Bnode (mkHinput y n0))).
+             suffices uform :
+               forall bn, bn \in get_bts ts ->
+                            exists n,
+                              nth (Bnode (mkHinput y n0)) sgen (find (eqb_b_hterm bn) sgen) = Bnode (mkHinput bn n).
+             move: (uform _ xin) (uform _ yin)=> [n nthxeq] [m nthyeq].
+             by rewrite nthxeq nthyeq; move=> [->].
+             admit. (* admitted before *)
+             by rewrite -has_find; apply mem_has.
+             admit. (* proved before, extract as a lemma *)
+             by rewrite perm_refl.
+             admit. (* proved before, extract as a lemma *)
+             admit.
+       Admitted.
+
+      Lemma iso_can_kmapping : isocanonical_mapping k_mapping.
+      Proof. rewrite /isocanonical_mapping=> g; split; first by apply kmapping_iso_out.
+             move=> g1 g2; split.
+             + by apply same_res_impl_iso_mapping; rewrite /mapping_is_iso_mapping; apply kmapping_iso_out.
+             + rewrite /iso/iso_ts/is_iso_ts => [[mu /and3P [mu_preiso ures peq]]].
+               admit.
+      Admitted.
 
       Lemma all_kmaps_bijective g : List.Forall (fun mu => bijective mu) [seq build_kmapping_from_seq i
                                                                          | i <- [seq mapi (app_n mark_bnode) i
@@ -977,24 +960,6 @@ Section IsoCan.
       Admitted.
 
       End experiment.
-
-      Lemma k_mapping_iso_output : mapping_is_iso_mapping k_mapping.
-      Proof. rewrite /mapping_is_iso_mapping/iso/is_iso=> g.
-             exists todo.
-             suffices eqb: eqb_rdf (relabeling todo) g.
-             apply /and3P; split; last by apply eqb.
-             admit.
-      Admitted.
-
-      Lemma k_mapping_dont_manipulate_names : (dt_names_mapping k_mapping).
-      Proof.
-      Admitted.
-
-      Lemma k_mapping_isocan : isocanonical_mapping k_mapping.
-      Proof. apply: isocanonical_mapping_dt_out_mapping k_mapping_iso_output k_mapping_dont_manipulate_names. Qed.
-
-      Lemma k_mapping_iso g : iso (k_mapping g) g.
-      Proof. rewrite /iso/is_iso. Admitted.
 
     End Kmapping.
 

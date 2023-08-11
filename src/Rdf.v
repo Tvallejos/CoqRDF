@@ -821,10 +821,10 @@ Section Rdf.
       Section Isocanonical.
 
         Definition isocanonical_mapping (M : rdf_graph I B L -> rdf_graph I B L) :=
-          forall g, iso (M g) g /\
+          forall g, iso g (M g) /\
                  (forall g1 g2, eqb_rdf (M g1) (M g2) <-> iso g1 g2).
 
-        Definition mapping_is_iso_mapping (M : rdf_graph I B L -> rdf_graph I B L) := forall g, iso (M g) g.
+        Definition mapping_is_iso_mapping (M : rdf_graph I B L -> rdf_graph I B L) := forall g, iso g (M g).
 
         Definition dt_names_mapping (M : rdf_graph I B L -> rdf_graph I B L) := forall g1 g2,
             iso g1 g2 -> eqb_rdf (M g1) (M g2).
@@ -842,8 +842,8 @@ Section Rdf.
 
         Lemma same_res_impl_iso_mapping M g1 g2 (iso_output : mapping_is_iso_mapping M) : eqb_rdf (M g1) (M g2) -> iso g1 g2.
         Proof.
-          have isog1k1 : iso g1 (M g1). by rewrite iso_sym; apply iso_output.
-          have isog2k2 : iso (M g2) g2. by apply iso_output.
+          have isog1k1 : iso g1 (M g1). by apply iso_output.
+          have isog2k2 : iso (M g2) g2. by rewrite iso_sym; apply iso_output.
           by move=> /eqiso peqm; apply: iso_trans (iso_trans isog1k1 peqm) isog2k2.
         Qed.
 

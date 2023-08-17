@@ -248,3 +248,45 @@ Definition term_canPOrderMixin (I B L : countType) :=
 Canonical term_POrderType (I B L : countType) :=
   Eval hnf in POrderType tt (term_countType I B L) (term_canPOrderMixin I B L).
 
+Section OrderTerm.
+  Variables I B L : porderType tt.
+
+  Definition le_term : rel (term I B L) := fun (x y : term I B L)=> true.
+  Definition lt_term : rel (term I B L) := fun (x y : term I B L) => true.
+  Lemma lt_def : forall x y, lt_term x y = (y != x) && (le_term x y). Admitted.
+  Lemma le_term_refl : reflexive le_term. Admitted.
+  Lemma le_term_sym : antisymmetric le_term. Admitted.
+  Lemma le_term_trans : transitive le_term. Admitted.
+  Lemma le_total : total le_term. Admitted.
+
+End OrderTerm.
+
+Definition term_lePOrderMixin (t u v : porderType tt) :=
+  Eval hnf in
+    @LePOrderMixin (term_choiceType t u v)
+      (@le_term t u v) (@lt_term t u v) (@lt_def t u v)
+      (@le_term_refl t u v) (@le_term_sym t u v) (@le_term_trans t u v).
+
+Canonical my_term_POrderType (t u v : porderType tt) :=
+  Eval hnf in POrderType tt (term_choiceType t u v) (term_lePOrderMixin t u v).
+
+Variables I B L : porderType tt.
+Variables t1 t2 : (term I B L).
+Check (<=%O t1 t2).
+
+Definition term_totalPOrderMixin (t u v : porderType tt) :=
+  Eval hnf in @totalPOrderMixin tt (@my_term_POrderType t u v).
+
+Check term_totalPOrderMixin.
+Check mathcomp.ssreflect.order.Order.TotalPOrderMixin.Exports.totalPOrderMixin.
+Check LePOrderMixin.
+
+(* (@le_total t u v). *)
+
+
+
+Canonical term_OrderType (I B L : porderType tt) :=
+   Eval hnf in OrderOfPOrder (term_totalPOrderMixin I B L) (term_totalPOrderMixin I B L).
+  Eval hnf in OrderType (term_POrderType I B L) (term_totalPOrderMixin I B L).
+
+

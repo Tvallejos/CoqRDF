@@ -3,6 +3,9 @@ Set Implicit Arguments.
 Unset Strict Implicit.
 Unset Printing Implicit Defensive.
 
+Import Order.Theory.
+Open Scope order_scope.
+
 Lemma all_undup (T : eqType) (s : seq T) p : all p (undup s) = all p s.
 Proof.
   suffices /eq_all_r -> : (undup s) =i s by [].
@@ -277,6 +280,13 @@ Qed.
 
 Lemma min_sym : symmetric Order.min.
 Proof. by move=> x y; rewrite Order.POrderTheory.minEle Order.POrderTheory.minElt Order.TotalTheory.leNgt; case: (y < x)%O.
+Qed.
+
+Lemma order_le_neq_antisym (T : orderType tt) (x y : T) : x != y -> (x <= y) == ~~ (y <= x).
+Proof. rewrite neq_lt !leNgt=> /orP[] lxy; rewrite lxy -leNgt /=; apply /eqP.
+       by apply ltW.
+       rewrite leNgt negbK; apply/eqP; rewrite eq_sym; apply /eqP.
+       by apply lt_gtF.
 Qed.
 
 Lemma max_distr_foldl disp (T: porderType disp) (l : seq T) (x y : T) :

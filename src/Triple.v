@@ -160,6 +160,29 @@ Section OperationsOnTriples.
           (object t1) == (object t2)].
   Proof. by case t1; case t2=> /= ? ? ? ? ? ? ? ? ? ? [] -> -> ->; rewrite !eqxx. Qed.
 
+  Lemma tripleE t1 t2 : t1 == t2 = [&& (subject t1) == (subject t2),
+        (predicate t1) == (predicate t2) &
+          (object t1) == (object t2)].
+  Proof. case e: [&& subject t1 == subject t2, predicate t1 == predicate t2 & object t1 == object t2].
+         by move/and3P : e=> [/eqP eqs /eqP eqp /eqP eqo]; apply /eqP; apply triple_inj.
+         by move/negP : e=> H; apply /negP; apply: contra_not H=> /eqP/triple_case.
+  Qed.
+
+  Corollary tripleNeqs t1 t2 : subject t1 != subject t2 -> t1 != t2.
+  Proof. apply contraPT=> /=; rewrite negbK tripleE.
+         by move=> /and3P[/eqP -> _ _]; apply /negP; rewrite negbK eqxx.
+  Qed.
+
+  Corollary tripleNeqp t1 t2 : predicate t1 != predicate t2 -> t1 != t2.
+  Proof. apply contraPT=> /=; rewrite negbK tripleE.
+         by move=> /and3P[_ /eqP -> _]; apply /negP; rewrite negbK eqxx.
+  Qed.
+
+  Corollary tripleNeqo t1 t2 : object t1 != object t2 -> t1 != t2.
+  Proof. apply contraPT=> /=; rewrite negbK tripleE.
+         by move=> /and3P[_ _ /eqP->]; apply /negP; rewrite negbK eqxx.
+  Qed.
+
   Definition terms_triple (I' B' L' : eqType) (t : triple I' B' L') : seq (term I' B' L') :=
     let (s,p,o,_,_) := t in undup [:: s ; p ; o].
 
@@ -235,6 +258,177 @@ Section OperationsOnTriples.
   Defined.
 
 End OperationsOnTriples.
+
+Section OrderTriple.
+  Variables I B L : orderType tt.
+
+  Definition le_triple : rel (triple I B L) :=
+    fun (x y : triple I B L)=>
+      let (sx,px,ox,_,_) := x in
+      let (sy,py,oy,_,_) := y in
+      if (le_term sx sy) then
+        true
+      else (if (le_term sx sy) && (le_term px py) then
+              true
+            else (le_term sx sy) && (le_term px py) && le_term ox oy).
+
+  (* Hypothesis r : rel I. *)
+  (* Goal total r. *)
+  (* Proof. move=> x y. apply/eqP. *)
+  (*        move: H. *)
+  (*        apply contraPT. *)
+
+  (* Definition le_triple_eqs x y : le_triple x y -> le_term (subject x) (subject y). *)
+  (* Proof. move=>  *)
+
+  Definition lt_triple : rel (triple I B L) :=
+    fun (x y : triple I B L)=> (negb (x == y)) && (le_triple x y).
+
+  (* Infimum *)
+  Definition meet_triple : (triple I B L) -> (triple I B L) -> (triple I B L) :=
+    fun x y => (if lt_triple x y then x else y).
+
+  (* Supremum *)
+  Definition join_triple : (triple I B L) -> (triple I B L) -> (triple I B L) :=
+    fun x y => (if lt_triple x y then y else x).
+
+  Lemma lt_def : forall x y, lt_triple x y = (y != x) && (le_triple x y).
+  Proof. by move=> x y; rewrite /lt_triple/negb eq_sym. Qed.
+
+  Lemma meet_def : forall x y, meet_triple x y = (if lt_triple x y then x else y).
+  Proof. by []. Qed.
+
+  Lemma join_def : forall x y, join_triple x y = (if lt_triple x y then y else x).
+  Proof. by []. Qed.
+
+  Lemma le_total : total le_triple.
+  Proof. move=> x y; have /(_ I B L) ltot := le_term_total.
+         have /orP[] := ltot (subject x) (subject y);
+         have /orP[] := ltot (predicate x) (predicate y);
+         have /orP[] := ltot (object x) (object y);
+         by case: x=> sx px ox ? ?; case: y=> sy py oy ? ? /= -> -> ->; rewrite ?orbT.
+  Qed.
+
+  Lemma lt_neq_total t1 t2 : t1 != t2 -> lt_triple t1 t2 || lt_triple t2 t1.
+  Proof. by rewrite !lt_def /negb eq_sym=> -> /=; apply le_total. Qed.
+
+  (* Lemma lt_neq_antisym t1 t2 : t1 != t2 -> lt_triple t1 t2 == ~~ lt_triple t2 t1. *)
+  (* Proof. move=> neqT. rewrite !lt_def. /negb eq_sym=> -> /=; apply le_total. Qed. *)
+
+  Lemma le_neq_antisym_triple t1 t2 : t1 != t2 -> le_triple t1 t2 == ~~ le_triple t2 t1.
+  Proof.
+    Abort.
+
+    (* move=> /negP/negP ; rewrite tripleE !Bool.negb_andb=> /orP[]. *)
+    (*      move=> H; have /le_neq_antisym /eqP /= : (subject t1 != subject t2) by []. *)
+    (*      case: t1 H => [sx px ox sibx piix] ; case: t2=> [sy py oy siby piiy] /= H LH. *)
+    (*      + move : (le_term_total sx sy)=> /orP[]. *)
+    (*        - by rewrite LH=> H2; rewrite H2 -if_neg H2 -if_neg !negb_and H2 /= !negb_and H2. *)
+    (*        - by move=> H2; rewrite LH /= H2 /=. *)
+    (*      case/orP. *)
+    (*      move=> H; have /le_neq_antisym /eqP /= : (predicate t1 != predicate t2) by []. *)
+    (*      case: t1 H => [sx px ox sibx piix] ; case: t2=> [sy py oy siby piiy] /= H LH. *)
+    (*      + move : (le_term_total px py)=> /orP[]. *)
+    (*        - by rewrite LH=> H2; rewrite H2 -if_neg H2 -if_neg !negb_and H2 /= !negb_and H2. *)
+    (*        - by move=> H2; rewrite LH /= H2 /=.  *)
+         
+
+
+    (*      move : (le_term_total px py)=> /orP[]. *)
+    (*      rewrite H=> H2. rewrite H2 -if_neg H2. *)
+    (*      rewrite -if_neg. rewrite -{2}if_neg. {2}H negbK. *)
+    (*      rewrite H /=. *)
+    (*      case: t1; sx *)
+    (*      rewrite /le_triple H. *)
+
+    (*      rewrite /le_triple. *)
+
+
+
+  Lemma le_triple_antisym : antisymmetric le_triple.
+  Proof. move=> x y. move=> H. apply/eqP. apply: contraPT H=> neqT.
+         have neqTsym: y != x by rewrite /negb eq_sym.
+         apply /negP. rewrite Bool.negb_andb.
+         move: (lt_neq_total neqT).
+         rewrite !lt_def neqT neqTsym /=. 
+         rewrite /negb. case e: (x == y)=> // _.
+
+         (* ========================== *)
+    (*      move: e; rewrite tripleE=> /negP/negP. *)
+    (*      rewrite !Bool.negb_andb. *)
+    (*      case/orP. *)
+    (*      + move=> neqs; apply /negP. rewrite Bool.negb_andb. *)
+    (*      move/negP : e=> /negP. *)
+         
+    (*      apply /negP; rewrite Bool.negb_andb. apply /orP. *)
+    (*      apply /nandP. *)
+
+    (* move=> [sx px ox sibx piix] [sy py oy siby piiy] /= H. *)
+    (*      apply triple_inj=> //=. *)
+    (*      move: H=> /andP[hx hy]. *)
+    (*      case/orP : hx hy=> hx /orP[] hy. *)
+    (*      by apply le_term_antisym; rewrite hx hy. *)
+    (*      case/orP : hy. *)
+    (*      case e: hx. *)
+    (*      => /andP[/ifP hx hy]. *)
+
+
+    (*      /andP[/ifP hx hy]. [/orP [hx | hx] /orP hy]. *)
+    (*      admit. *)
+    (*      apply triple_inj=> //=; case/andP : H; case/orP=> lexlr /orP[] lexrl. *)
+    (*      apply le_term_antisym. by apply /andP; split. *)
+    (*      move/orP : lexrl=> []. *)
+
+
+    (*      [lexrl f]. /le_term_antisym. => *)
+  (*      move/andP : H. move:   => [/ifP h1 h2]. *)
+         Abort.
+
+
+  Lemma le_triple_trans : transitive le_triple.
+  Proof. move=> [sx px ox sibx piix] [sy py oy siby piiy] [sz pz oz sibz piiz] //=.
+         case/orP=> H.
+         + case/orP=> H2.
+           - by rewrite (le_term_trans H H2).
+           - case/orP: H2=> /andP[H12 H22].
+             * by rewrite (le_term_trans H H12).
+             * by move/andP: H12=> [H112 H122]; rewrite (le_term_trans H H112).
+         + case/orP: H.
+         (*   move=> /andP [H12 H22]. suffices eqleq: forall a b, a == b -> le_term a b /\ le_term b a. *)
+         (*   case e: (sx == sz). *)
+         (*   apply eqleq in e. *)
+         (*   move : e. move=> [H HH]. *)
+         (*   rewrite H. *)
+         (*   rewrite HH. *)
+
+
+         (*   rewrite /le_term. case e: (eqb_term sx sz). *)
+         (*   case: sx sibx H12 e; case: sy siby => x _ y _ lexy //=; case: sz sibz=> z _ //=. *)
+         (*   move=> /eqP ->; rewrite Order.POrderTheory.lexx /=. move=> _. *)
+         (*   apply/orP=> /=. *)
+           
+
+
+         (*   case/orP=> H2. by rewrite (le_term_trans H H2). *)
+
+           (* exact: le_trans. Qed. *)
+           Abort.
+
+
+Definition triple_leOrderMixin :=
+  Eval hnf in
+    @LeOrderMixin (@triple_choiceType I B L)
+      le_triple lt_triple meet_triple join_triple
+      lt_def meet_def join_def
+      le_triple_antisym le_triple_trans le_total.
+
+Canonical my_triple_OrderType :=
+  Eval hnf in OrderOfChoiceType tt triple_leOrderMixin.
+
+Canonical my_triplePOrderType :=
+  Eval hnf in Order.Total.porderType my_triple_OrderType.
+
+End OrderTriple.
 
 (* Section Relabeling_alt. *)
 

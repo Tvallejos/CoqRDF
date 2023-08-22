@@ -2,6 +2,7 @@ From mathcomp Require Import all_ssreflect.
 Set Implicit Arguments.
 Unset Strict Implicit.
 Unset Printing Implicit Defensive.
+From RDF Require Import Util.
 
 Import Order.Theory.
 
@@ -162,7 +163,20 @@ Section EqTerm.
     end.
 
   Lemma eqb_eq trm1 trm2 : (trm1 == trm2) = eqb_term trm1 trm2.
-  Proof. rewrite /eq_op/Equality.op/code_term.
+  Proof.
+    rewrite /eq_op/Equality.op/code_term.
+    (*      case trm1=> []x; case trm2=> []y//=. *)
+    (*      case e: (x == y); first by move: e=> /eqP[]->; rewrite eqxx. *)
+    (*      move: e. *)
+    (*      apply contraPF. move=> /eqP[->]; rewrite eqxx. apply /eqP.  *)
+    (*      apply: contraTnot _. *)
+    (*      move=> []/eqP; rewrite e. done. *)
+    (*      injection. *)
+    (*      congr GenTree.Node _ . *)
+    (*      move: e. *)
+    (*      apply contraPneq. *)
+    (*      rewrite eq_sym in e. *)
+    (*      move: e=> /eqP/=. []. ->; rewrite eqxx. *)
          case e: (eqb_term trm1 trm2); move: e; case trm1; case trm2=> //x y /=.
          by move=> /eqP ->; rewrite eqxx.
          by move=> /eqP ->; rewrite eqxx.
@@ -228,9 +242,6 @@ Section EqTerm.
 
 End EqTerm.
 
-
-
-
 Definition term_canChoiceMixin (I B L : choiceType) :=
   PcanChoiceMixin (@pcancel_code_decode I B L).
 
@@ -249,44 +260,65 @@ Canonical term_POrderType (I B L : countType) :=
   Eval hnf in POrderType tt (term_countType I B L) (term_canPOrderMixin I B L).
 
 Section OrderTerm.
-  Variables I B L : porderType tt.
+  Variables I B L : orderType tt.
 
-  Definition le_term : rel (term I B L) := fun (x y : term I B L)=> true.
-  Definition lt_term : rel (term I B L) := fun (x y : term I B L) => true.
-  Lemma lt_def : forall x y, lt_term x y = (y != x) && (le_term x y). Admitted.
-  Lemma le_term_refl : reflexive le_term. Admitted.
-  Lemma le_term_sym : antisymmetric le_term. Admitted.
-  Lemma le_term_trans : transitive le_term. Admitted.
-  Lemma le_total : total le_term. Admitted.
+  Definition le_term : rel (term I B L) :=
+    fun (x y : term I B L)=>
+      match x, y with
+      | Iri ix, Iri iy => ix <= iy
+      | Bnode bx, Bnode By => bx <= By
+      | Lit lx, Lit ly => lx <= ly
+      | Iri _, Lit _ => true
+      | Iri _, Bnode _ => true
+      | Lit _, Bnode _ => true
+      | _,_ => false
+      end.
+
+  Definition lt_term : rel (term I B L) :=
+    fun (x y : term I B L)=>
+      (negb (eqb_term x y)) && (le_term x y).
+
+  (* Infimum *)
+  Definition meet_term : (term I B L) -> (term I B L) -> (term I B L) :=
+    fun x y => (if lt_term x y then x else y).
+
+  (* Supremum *)
+  Definition join_term : (term I B L) -> (term I B L) -> (term I B L) :=
+    fun x y => (if lt_term x y then y else x).
+
+  Lemma lt_def : forall x y, lt_term x y = (y != x) && (le_term x y).
+  Proof. by move=> []x []y//; rewrite /lt_term/= eqb_eq eq_sym. Qed.
+
+  Lemma meet_def : forall x y, meet_term x y = (if lt_term x y then x else y).
+  Proof. by []. Qed.
+
+  Lemma join_def : forall x y, join_term x y = (if lt_term x y then y else x).
+  Proof. by []. Qed.
+
+  Lemma le_term_antisym : antisymmetric le_term.
+  Proof. by move=> []x []y //= /le_anti ->. Qed.
+
+  Lemma le_term_trans : transitive le_term.
+  Proof. move=> []x []y []z //=; exact: le_trans. Qed.
+
+  Lemma le_term_total : total le_term.
+  Proof. move=> []x []y //=; exact: le_total. Qed.
+
+  Lemma le_neq_antisym t1 t2 : t1 != t2 -> le_term t1 t2 == ~~ le_term t2 t1.
+  Proof. by case: t1=> []?; case: t2=> []? //; rewrite /negb eqb_eq; apply order_le_neq_antisym. Qed.
+
+Definition term_leOrderMixin :=
+  Eval hnf in
+    @LeOrderMixin (@term_choiceType I B L)
+      le_term lt_term meet_term join_term
+      lt_def meet_def join_def
+      le_term_antisym le_term_trans le_term_total.
+
+Canonical my_term_OrderType :=
+  Eval hnf in OrderOfChoiceType tt term_leOrderMixin.
+
+Canonical my_termPOrderType :=
+  Eval hnf in Order.Total.porderType my_term_OrderType.
 
 End OrderTerm.
-
-Definition term_lePOrderMixin (t u v : porderType tt) :=
-  Eval hnf in
-    @LePOrderMixin (term_choiceType t u v)
-      (@le_term t u v) (@lt_term t u v) (@lt_def t u v)
-      (@le_term_refl t u v) (@le_term_sym t u v) (@le_term_trans t u v).
-
-Canonical my_term_POrderType (t u v : porderType tt) :=
-  Eval hnf in POrderType tt (term_choiceType t u v) (term_lePOrderMixin t u v).
-
-Variables I B L : porderType tt.
-Variables t1 t2 : (term I B L).
-Check (<=%O t1 t2).
-
-Definition term_totalPOrderMixin (t u v : porderType tt) :=
-  Eval hnf in @totalPOrderMixin tt (@my_term_POrderType t u v).
-
-Check term_totalPOrderMixin.
-Check mathcomp.ssreflect.order.Order.TotalPOrderMixin.Exports.totalPOrderMixin.
-Check LePOrderMixin.
-
-(* (@le_total t u v). *)
-
-
-
-Canonical term_OrderType (I B L : porderType tt) :=
-   Eval hnf in OrderOfPOrder (term_totalPOrderMixin I B L) (term_totalPOrderMixin I B L).
-  Eval hnf in OrderType (term_POrderType I B L) (term_totalPOrderMixin I B L).
-
 

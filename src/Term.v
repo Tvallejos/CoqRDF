@@ -295,8 +295,17 @@ Section OrderTerm.
   Lemma join_def : forall x y, join_term x y = (if lt_term x y then y else x).
   Proof. by []. Qed.
 
-  Lemma le_term_antisym : antisymmetric le_term.
+  Lemma le_term_anti : antisymmetric le_term.
   Proof. by move=> []x []y //= /le_anti ->. Qed.
+
+  Lemma le_term_anticurr t1 t2 : le_term t1 t2 -> le_term t2 t1 -> t1 = t2.
+  Proof. by move=> le1 le2; apply le_term_anti; apply/andP. Qed.
+
+  Lemma le_term_refl t : le_term t t.
+  Proof. by case: t => //=. Qed.
+
+  Remark le_term_eqleq t1 t2: t1 == t2 -> le_term t1 t2 == le_term t2 t1.
+  Proof. by move/eqP ->; rewrite eqxx. Qed.
 
   Lemma le_term_trans : transitive le_term.
   Proof. move=> []x []y []z //=; exact: le_trans. Qed.
@@ -304,7 +313,7 @@ Section OrderTerm.
   Lemma le_term_total : total le_term.
   Proof. move=> []x []y //=; exact: le_total. Qed.
 
-  Lemma le_neq_antisym t1 t2 : t1 != t2 -> le_term t1 t2 == ~~ le_term t2 t1.
+  Lemma le_term_neq_antisym t1 t2 : t1 != t2 -> le_term t1 t2 == ~~ le_term t2 t1.
   Proof. by case: t1=> []?; case: t2=> []? //; rewrite /negb eqb_eq; apply order_le_neq_antisym. Qed.
 
 Definition term_leOrderMixin :=
@@ -312,7 +321,7 @@ Definition term_leOrderMixin :=
     @LeOrderMixin (@term_choiceType I B L)
       le_term lt_term meet_term join_term
       lt_def meet_def join_def
-      le_term_antisym le_term_trans le_term_total.
+      le_term_anti le_term_trans le_term_total.
 
 Canonical my_term_OrderType :=
   Eval hnf in OrderOfChoiceType tt term_leOrderMixin.

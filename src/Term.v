@@ -256,11 +256,12 @@ Canonical term_countType (I B L : countType) :=
 Definition term_canPOrderMixin (I B L : countType) :=
   PcanPOrderMixin (@pickleK (term_countType I B L)).
 
-Canonical term_POrderType (I B L : countType) :=
-  Eval hnf in POrderType tt (term_countType I B L) (term_canPOrderMixin I B L).
+Canonical term_POrderType (disp : unit) (I B L : countType) :=
+  Eval hnf in POrderType disp (term_countType I B L) (term_canPOrderMixin I B L).
 
 Section OrderTerm.
-  Variables I B L : orderType tt.
+  Variable disp : unit.
+  Variables I B L : orderType disp.
 
   Definition le_term : rel (term I B L) :=
     fun (x y : term I B L)=>
@@ -323,11 +324,11 @@ Definition term_leOrderMixin :=
       lt_def meet_def join_def
       le_term_anti le_term_trans le_term_total.
 
-Canonical my_term_OrderType :=
-  Eval hnf in OrderOfChoiceType tt term_leOrderMixin.
-
-Canonical my_termPOrderType :=
-  Eval hnf in Order.Total.porderType my_term_OrderType.
-
 End OrderTerm.
+
+Canonical my_term_OrderType (disp: unit) (I B L : orderType disp) :=
+  Eval hnf in OrderOfChoiceType disp (@term_leOrderMixin disp I B L).
+
+Canonical my_termPOrderType (disp: unit) (I B L : orderType disp) :=
+  Eval hnf in Order.Total.porderType (@my_term_OrderType disp I B L).
 

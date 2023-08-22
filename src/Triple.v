@@ -260,7 +260,8 @@ Section OperationsOnTriples.
 End OperationsOnTriples.
 
 Section OrderTriple.
-  Variables I B L : orderType tt.
+  Variable disp : unit.
+  Variables I B L : orderType disp.
 
   Definition le_triple : rel (triple I B L) :=
     fun (x y : triple I B L)=>
@@ -272,15 +273,6 @@ Section OrderTriple.
           else le_term ox oy
         else  le_term px py
       else le_term sx sy.
-
-  (* Hypothesis r : rel I. *)
-  (* Goal total r. *)
-  (* Proof. move=> x y. apply/eqP. *)
-  (*        move: H. *)
-  (*        apply contraPT. *)
-
-  (* Definition le_triple_eqs x y : le_triple x y -> le_term (subject x) (subject y). *)
-  (* Proof. move=>  *)
 
   Definition lt_triple : rel (triple I B L) :=
     fun (x y : triple I B L)=> (negb (x == y)) && (le_triple x y).
@@ -328,16 +320,12 @@ Section OrderTriple.
   Proof. by move=> t1 t2 /le_triple_antisym/eqP ->. Qed.
 
   Lemma le_triple_trans : transitive le_triple.
-  Proof. move=> [sx px ox sibx piix] [sy py oy siby piiy] [sz pz oz sibz piiz] //=.
-         repeat (let le := fresh "le" in
-                 case : ifP=> [/eqP ? | /eqP ? le] ); subst=> //; rewrite ?eqxx;
-                 repeat (case : ifP=> // /eqP ?; subst)=> //.
-         by apply: le_term_trans le le0.
+  Proof. move=> [sx px ox sibx piix] [sy py oy siby piiy] [sz pz oz sibz piiz] /=.
+         repeat (let le := fresh "le" in case : ifP=> [/eqP ? | /eqP ? le] );
+         subst=> //; rewrite ?eqxx;
+         repeat (case : ifP=> // /eqP ?; subst)=> //;
+         try (by apply: le_term_trans le le0);
          by move: (le_term_anticurr le le0)=> //.
-         by apply: le_term_trans le le0.
-         by move: (le_term_anticurr le le0)=> //.
-         by move: (le_term_anticurr le le0)=> //.
-         by apply: le_term_trans le le0.
   Qed.
 
 Definition triple_leOrderMixin :=
@@ -347,13 +335,13 @@ Definition triple_leOrderMixin :=
       lt_def meet_def join_def
       le_triple_anti le_triple_trans le_total.
 
-Canonical my_triple_OrderType :=
-  Eval hnf in OrderOfChoiceType tt triple_leOrderMixin.
-
-Canonical my_triplePOrderType :=
-  Eval hnf in Order.Total.porderType my_triple_OrderType.
-
 End OrderTriple.
+
+Canonical my_triple_OrderType (disp : unit) (I B L : orderType disp):=
+  Eval hnf in OrderOfChoiceType disp (@triple_leOrderMixin disp I B L).
+
+Canonical my_triplePOrderType (disp : unit) (I B L : orderType disp):=
+  Eval hnf in @Order.Total.porderType disp (@my_triple_OrderType disp I B L).
 
 (* Section Relabeling_alt. *)
 

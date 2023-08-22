@@ -282,7 +282,7 @@ Lemma min_sym : symmetric Order.min.
 Proof. by move=> x y; rewrite Order.POrderTheory.minEle Order.POrderTheory.minElt Order.TotalTheory.leNgt; case: (y < x)%O.
 Qed.
 
-Lemma order_le_neq_antisym (T : orderType tt) (x y : T) : x != y -> (x <= y) == ~~ (y <= x).
+Lemma order_le_neq_antisym (disp : unit) (T : orderType disp) (x y : T) : x != y -> (x <= y) == ~~ (y <= x).
 Proof. rewrite neq_lt !leNgt=> /orP[] lxy; rewrite lxy -leNgt /=; apply /eqP.
        by apply ltW.
        rewrite leNgt negbK; apply/eqP; rewrite eq_sym; apply /eqP.

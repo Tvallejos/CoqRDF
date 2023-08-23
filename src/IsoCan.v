@@ -838,6 +838,9 @@ Section IsoCan.
           (build_kmapping_from_seq (mapi (app_n mark_bnode) s) b').
       Proof. by rewrite (eqb_b_hterm_trans eb eb'). Qed.
 
+      Lemma size_neq0 (T : eqType) (s : seq T): (size s != 0) = (s != [::]).
+      Proof. by congr negb; apply size_eq0. Qed.
+
       Lemma map_kmap b n s :
         (build_kmapping_from_seq s b) = n ->
         (has (eqb_b_hterm b) s) ->
@@ -856,6 +859,30 @@ Section IsoCan.
           by rewrite eqtl -has_map ?has_tl in IHtl'; last by apply injF.
       Qed.
 
+      Lemma lt0_size_permutations (T : eqType) (s : seq T) : 0 < size (permutations s).
+      Proof. elim: s=> [//|a l IHl].
+             suffices lt : size (permutations l) <= size (permutations (a :: l)).
+               by apply: Order.POrderTheory.lt_le_trans IHl lt.
+               Abort.
+             (* rewrite !size_permutations. *)
+             (* apply lt_trans. *)
+
+
+      Lemma permutations_neq_nil (T : eqType) (s : seq T) : permutations s != [::].
+      Proof. suffices: size (permutations s) != 0 by rewrite size_neq0.
+             rewrite size_permutations.
+             elim: s=> [//| a l IHl].
+             Abort.
+        (*      rewrite size_permutations /=. *)
+        (*      rewrite -lt0n //. Abott. *)
+        (*      Set Printing All. *)
+        (*      apply lt0n_neq0.//.  *)
+
+        (* elim: s=> [| a l IHl]; first by rewrite empty_permutations. *)
+        (*      have /permutationsE: (0 < size (a :: l)) by []. *)
+        (*      move=> peq. *)
+             
+        (*      rewrite /=. *)
 
       Lemma kmapping_iso_out g: iso g (k_mapping g).
       Proof. rewrite /mapping_is_iso_mapping/k_mapping/iso/iso_ts/is_iso_ts.
@@ -872,7 +899,7 @@ Section IsoCan.
        | mu0 <- [seq build_kmapping_from_seq_alt i
                    | i <- [seq [seq Bnode (mkHinput an.1 an.2) | an <- i]
                          | i <- [seq zip s (iota 0 (size s)) | s <- permutations (get_bts ts)]]]] by [].
-             by exists id; rewrite a dream.
+             by exists id;rewrite a dream.
              rewrite /=.
              rewrite -map_comp.
              move=> /mapP /=[s sin ->].
@@ -907,7 +934,14 @@ Section IsoCan.
              admit. (* proved before, extract as a lemma *)
              by rewrite perm_refl.
              admit. (* proved before, extract as a lemma *)
+             rewrite /k_mapping_alt.
+             move=> /max_foldl_minimum /orP[]//.
+             rewrite -map_comp /=.
+             rewrite !map_nil_is_nil.
+             case e: (get_bts ts). rewrite empty_permutations //.
+             rewrite /=.
              admit.
+             by rewrite -map_comp=> /mapP[/=xs /mapP[/= a ain]] -> => /eqP; rewrite eq_sym=> /eqP/relabeling_seq_triple_is_nil ->. 
        Admitted.
 
       Lemma iso_can_kmapping : isocanonical_mapping k_mapping.
@@ -915,6 +949,16 @@ Section IsoCan.
              move=> g1 g2; split.
              + by apply same_res_impl_iso_mapping; rewrite /mapping_is_iso_mapping; apply kmapping_iso_out.
              + rewrite /iso/iso_ts/is_iso_ts => [[mu /and3P [mu_preiso ures peq]]].
+               rewrite /eqb_rdf rdf_perm_mem_eq rdf_mem_eq_graph /k_mapping /k_mapping_alt /==> x.
+               suffices mem_eq_l: [seq relabeling_seq_triple mu0 g1
+              | mu0 <- [seq build_kmapping_from_seq_alt i
+                          | i <- [seq [seq Bnode (mkHinput an.1 an.2) | an <- i]
+                                    | i <- [seq zip s (iota 0 (size s)) | s <- permutations (get_bts g1)]]]] =i
+                                                                                                              [seq relabeling_seq_triple mu0 g2
+              | mu0 <- [seq build_kmapping_from_seq_alt i
+                          | i <- [seq [seq Bnode (mkHinput an.1 an.2) | an <- i]
+                                    | i <- [seq zip s (iota 0 (size s)) | s <- permutations (get_bts g2)]]]].
+
                admit.
       Admitted.
 

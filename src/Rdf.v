@@ -181,6 +181,10 @@ Section Rdf.
         forall u1 u2, @relabeling B B1 mu1 g u1 = @relabeling B B1 mu2 g u2.
       Proof. by move=> u1 u2; apply /rdf_inj; rewrite /= (relabeling_seq_triple_ext _ mu_ext). Qed.
 
+      Lemma relabeling_seq_triple_is_nil (B2 : eqType) (ts : seq (triple I B1 L)) (mu : B1 -> B2) :
+        relabeling_seq_triple mu ts = [::] -> ts = [::].
+      Proof. by move=> /eqP; rewrite /relabeling_seq_triple map_nil_is_nil=> /eqP->. Qed.
+
       Lemma relabeling_nil (B2 : eqType) (mu : B1 -> B2) :
         @relabeling B1 B2 mu empty_rdf_graph (eqxx true) = empty_rdf_graph.
       Proof. by apply rdf_inj. Qed.

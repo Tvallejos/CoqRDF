@@ -213,8 +213,14 @@ Section IsoCan.
       Definition relabeling_hterm (mu : B -> B) ht : hterm :=
         relabeling_term (mu_ext mu) ht.
 
+      Definition relabeling_pterm (T : countType) (mu : B -> B) ht : (term I (hash_alt T B) L) :=
+        relabeling_term (mu_ext mu) ht.
+
       Lemma lookup_hash_relabeling ht mu: (lookup_hash_default ht) = (lookup_hash_default (relabeling_hterm mu ht)).
       Proof. by case ht. Qed.
+
+      Lemma lookup_hash__relabeling (T : countType) (ht: term I (hash_alt T B) L) (mu : B -> B) n0 : (lookup_hash_default_ n0 ht) = (lookup_hash_default_ n0 (relabeling_hterm mu ht)).
+      Proof. case ht=> //=b. Qed.
 
       Lemma eqb_b_hterm_relabel f b ht (injF: injective f): (eqb_b_hterm b ht) = (eqb_b_hterm (f b) (relabeling_hterm f ht)).
       Proof. by case ht=> //= name; rewrite inj_eq. Qed.
@@ -976,6 +982,22 @@ Section IsoCan.
                move=> [t tints1 -> /=].
                exists (relabeling_triple mu t).
                by apply /mapP; exists t.
+               rewrite -relabeling_triple_comp /build_kmapping_from_seq_alt.
+               apply relabeling_triple_ext=> b1 /=.
+               suffices mem_has : has (eqb_b_hterm b1)[seq Bnode (mkHinput an.1 an.2) | an <- zip bperm1 (iota 0 (size bperm1))].
+               have ->: has (eqb_b_hterm (mu b1)) [seq Bnode (mkHinput an.1 an.2) | an <- zip bperm2 (iota 0 (size bperm2))]. admit.
+               rewrite mem_has; congr to_string_nat.
+               set nthx :=  (nth (Bnode (mkHinput b1 n0))
+       [seq Bnode (mkHinput an.1 an.2) | an <- zip bperm1 (iota 0 (size bperm1))]
+       (find (eqb_b_hterm b1)
+          [seq Bnode (mkHinput an.1 an.2) | an <- zip bperm1 (iota 0 (size bperm1))])). 
+               rewrite (lookup_hash__relabeling).
+
+               rewrite relabeling_triple_ext.
+               (* === *)
+               rewrite /is_pre_iso_ts perm_sym in iso12.
+               have p2map := perm_trans mem_perm2 iso12.
+               (*   ==== *)
                apply triple_inj=> /=.
                case: t tints1=> /= s ? ? sib ? .
                case: s sib=> //= b ? tin.

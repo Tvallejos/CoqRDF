@@ -108,6 +108,11 @@ Section Rdf.
     End Relabeling_seq_triple_poly.
     Section Relabeling_seq_triple_eq.
 
+      Lemma relabeling_seq_triple_rel_mem ts1 ts2 (mu : B -> B) :
+        ts1 =i ts2 ->
+        relabeling_seq_triple mu ts1 =i relabeling_seq_triple mu ts2.
+      Proof. by apply eq_mem_map. Qed.
+
       Lemma uniq_rdf_graph g : uniq g. Proof. exact: ugraph. Qed.
       Hint Resolve uniq_rdf_graph.
 
@@ -849,6 +854,13 @@ Section Rdf.
           have isog1k1 : iso g1 (M g1). by apply iso_output.
           have isog2k2 : iso (M g2) g2. by rewrite iso_sym; apply iso_output.
           by move=> /eqiso peqm; apply: iso_trans (iso_trans isog1k1 peqm) isog2k2.
+        Qed.
+
+        Lemma iso_can_trans M g1 g2 (iso_output : mapping_is_iso_mapping M) : iso g1 g2 -> iso (M g1) (M g2).
+        Proof.
+          have isog1k1 : iso (M g1) g1. by rewrite iso_sym; apply iso_output.
+          have isog2k2 : iso g2 (M g2). by apply iso_output.
+          move=> peqm; apply: (iso_trans (iso_trans isog1k1 peqm) isog2k2).
         Qed.
 
         Lemma isocanonical_mapping_dt_out_mapping M (iso_out: mapping_is_iso_mapping M) (dt: dt_names_mapping M) : isocanonical_mapping M.

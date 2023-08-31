@@ -65,13 +65,17 @@ Section Rdf.
 
     Definition empty_rdf_graph {i b l : eqType} := @mkRdfGraph i b l [::] (eqxx true) : rdf_graph i b l.
 
+    Definition is_ground_ts ts : bool :=
+      all (@is_ground_triple _ _ _) ts.
+
     Definition is_ground g : bool :=
-      all (@is_ground_triple _ _ _) g.
+      is_ground_ts g.
 
     Definition relabeling_seq_triple
       (B1 B2: Type) (mu : B1 -> B2)
       (ts : seq (triple I B1 L)) : seq (triple I B2 L) :=
       map (relabeling_triple mu) ts.
+
 
     Section Relabeling_seq_triple_poly.
       Variable B1 B2 B3 : Type.
@@ -102,8 +106,14 @@ Section Rdf.
       Proof. by []. Qed.
 
       Lemma eq_relabeling_seq_triple (mu nu : B1 -> B2) : mu =1 nu -> (relabeling_seq_triple mu) =1 (relabeling_seq_triple nu).
-      Proof. by move=> feq; elim=> [//| h t IHtl]; rewrite /= (eq_relabeling_triple feq) IHtl. Qed.
+      Proof. move=> feq; elim=> [//| h t IHtl] /=.
+             by rewrite (eq_relabeling_triple feq) IHtl.
+      Qed.
 
+      Lemma relabeling_ground ts mu : is_ground_ts ts -> relabeling_seq_triple mu ts = ts.
+      Proof. elim: ts=> [//| a l IHl] /=/andP[gtrpl gtl].
+             by rewrite ground_triple_relabeling // IHl.
+      Qed.
 
     End Relabeling_seq_triple_poly.
     Section Relabeling_seq_triple_eq.

@@ -65,6 +65,9 @@ Section PolyTriple.
     Variable B1 : Type.
     Implicit Type mu : B -> B1.
 
+    Lemma ground_triple_relabeling t (mu : B -> B) : is_ground_triple t -> relabeling_triple mu t = t.
+    Proof. by case: t => [[]]//s []//p []//=o /= sib pii _; apply triple_inj. Qed.
+
     Lemma relabeling_triple_preserves_is_in_ib mu t :
       is_in_ib (subject t) <-> is_in_ib (subject (relabeling_triple mu t)).
     Proof. by case t => s /= *; apply: relabeling_term_preserves_is_in_ib. Qed.

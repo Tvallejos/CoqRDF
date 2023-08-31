@@ -1002,52 +1002,50 @@ Section IsoCan.
           + by apply contraTneq=> -> ; apply /perm_nilP.
       Qed.
 
+      Lemma eq_mem_foldl_max [disp : unit] [T : orderType disp] [l1 l2 : seq T] [x y : T]:
+        l1 =i l2 -> foldl Order.max x l1 = foldl Order.max x l2.
+      Proof. Admitted.
+
+      Lemma eq_mem_foldl_max_rdf [l1 l2 : seq (seq (triple I B L))] :
+        l1 =i l2 -> foldl Order.max [::] l1 = foldl Order.max [::] l2.
+      Proof. Admitted.
+
+      Lemma build_from_nil (ts : seq (triple I B L)) :
+        relabeling_seq_triple (build_kmapping_from_seq_alt [::]) ts = ts.
+      Proof. by elim: ts=> [//| a l IHl]; by rewrite /= relabeling_triple_id IHl. Qed.
+
       Lemma iso_can_kmapping : isocanonical_mapping k_mapping.
-      Proof. rewrite /isocanonical_mapping=> g; split; first by apply kmapping_iso_out.
-             move=> g1 g2; split.
-             + by apply same_res_impl_iso_mapping; rewrite /mapping_is_iso_mapping; apply kmapping_iso_out.
-             + move=> isog1g2.
-               have: iso (k_mapping g1) (k_mapping g2).
-               by apply: iso_can_trans _ isog1g2; rewrite /mapping_is_iso_mapping; apply kmapping_iso_out.
-               move: isog1g2; rewrite rdf_perm_mem_eq rdf_mem_eq_graph.
-               case: g1=> ts1 ug1; case: g2=> ts2 ug2. rewrite /iso/eqb_rdf /==> isog1g2.
-               move=> /iso_structure/orP [/andP [/eqP -> /eqP -> //]|/andP[]]; rewrite /k_mapping_alt.
-               rewrite -!map_comp.
-               set cand1 := [seq (((relabeling_seq_triple (B2:=B))^~ ts1 \o build_kmapping_from_seq_alt) \o
+      Proof.
+        split=> [|g1 g2]; first by apply kmapping_iso_out.
+        split=> [| isog1g2]; first by apply same_res_impl_iso_mapping; rewrite /mapping_is_iso_mapping; apply kmapping_iso_out.
+        have: iso (k_mapping g1) (k_mapping g2).
+        by apply: iso_can_trans _ isog1g2; rewrite /mapping_is_iso_mapping; apply kmapping_iso_out.
+        move: isog1g2; rewrite rdf_perm_mem_eq rdf_mem_eq_graph.
+        case: g1=> ts1 ug1; case: g2=> ts2 ug2; rewrite /iso/eqb_rdf /==> isog1g2.
+        move=> /iso_structure/orP [/andP [/eqP -> /eqP -> //]|/andP[]]; rewrite /k_mapping_alt -!map_comp.
+        set cand1 := [seq (((relabeling_seq_triple (B2:=B))^~ ts1 \o build_kmapping_from_seq_alt) \o
             (map (fun an : B * nat => Bnode (mkHinput an.1 an.2)) \o
                (fun s : seq B => zip s (iota 0 (size s))))) i
        | i <- permutations (get_bts ts1)].
-               set cand2 := [seq (((relabeling_seq_triple (B2:=B))^~ ts2 \o build_kmapping_from_seq_alt) \o
+        set cand2 := [seq (((relabeling_seq_triple (B2:=B))^~ ts2 \o build_kmapping_from_seq_alt) \o
             (map (fun an : B * nat => Bnode (mkHinput an.1 an.2)) \o
                (fun s : seq B => zip s (iota 0 (size s))))) i
        | i <- permutations (get_bts ts2)].
-               move: (foldl_max cand1 [::]) =>[-> //| /mapP[/= bperm1 mem_perm1 ->]].
-               move: (foldl_max cand2 [::]) =>[-> //| /mapP[/= bperm2 mem_perm2 ->]].
-               move=> _ _ trpl. (* relabeling 1 and 2 are not nil *)
-               rewrite !mem_permutations in mem_perm1 mem_perm2.
-               case: isog1g2=> mu. rewrite /is_iso_ts. move=> /and3P[iso12 urel1 peq].
-               (* rewrite -(relabeling_seq_triple_rel_mem _ (perm_mem peq)). *)
-               rewrite /relabeling_seq_triple.
-               apply /mapP/mapP=> /=.
-               (* exists (relabeling_triple mu t). *)
-               (* by apply perm_mem in peq; rewrite -peq; apply /mapP; exists t. *)
-               (* rewrite -relabeling_triple_comp. *)
-               (* apply triple_inj=> //=; case: t tints1=> s p o sib pii //=. *)
-               (* move=> /mem_ts_mem_triple_bts. *)
-               (* case: s sib=> //=b sib sin. *)
-               (* congr Bnode. *)
-               (* rewrite /is_pre_iso_ts in iso12. *)
-               (* have:  perm_eq [seq mu i | i <- bperm1] bperm2. *)
-               (* apply : perm_trans _ _. *)
-               (* apply (perm_map mu) in mem_perm1. *)
-               (* apply mem_perm1. *)
-               (* apply: perm_trans _ _. *)
-               (* apply iso12. *)
-               (* rewrite perm_sym; apply mem_perm2. *)
-               (* apply (perm_map nu) in iso12. *)
-               (* rewrite -map_comp can_munu in iso12. *)
-
-               Admitted.
+        move: (foldl_max cand1 [::]) =>[-> //|].
+        (* move: (foldl_max cand1 [::]) =>[-> //| /mapP[/= bperm1 mem_perm1 ->]]. *)
+        move: (foldl_max cand2 [::]) =>[-> //| ].
+        (* move: (foldl_max cand2 [::]) =>[-> //| /mapP[/= bperm2 mem_perm2 ->]]. *)
+        move=> memc2 memc1 s1neqnil s2neqnil trpl. (* relabeling 1 and 2 are not nil *)
+        suffices : foldl Order.max [::] cand1 = foldl Order.max [::] cand2.
+          by move=> ->.
+        suffices : cand1 =i cand2.
+          by apply eq_mem_foldl_max_rdf.
+          (* suffices : cand1 =! nil && cand *)
+        rewrite /cand1/cand2/relabeling_seq_triple/= => c.
+        move : isog1g2=> [mu /and3P[piso12 urel peq]].
+        apply /mapP/mapP=> /= [[p pin ->]|[p pin ->]].
+        rewrite /is_pre_iso_ts in piso12.
+      Admitted.
 
       Lemma all_kmaps_bijective g : List.Forall (fun mu => bijective mu) [seq build_kmapping_from_seq i
                                                                          | i <- [seq mapi (app_n mark_bnode) i

@@ -750,45 +750,84 @@ Section IsoCan.
              by apply all_zip1.
       Qed.
 
+      Lemma minn_refl n : minn n n = n.
+      Proof. by rewrite /minn; case e: (_ < _)%N. Qed.
+
+      Lemma nth_mapzip (T1 T2 : Type) (S0 T0 : eqType) (x0 : S0) (y0 : T0) [s : seq S0] [t : seq T0] (i : nat) :
+              size s = size t -> nth (@Bnode T1 (hash_alt T0 S0) T2 (mkHinput x0 y0)) [seq Bnode (mkHinput an.1 an.2) | an <- zip s t ] i = Bnode (mkHinput (nth x0 s i) (nth y0 t i)).
+        Proof.
+            move=> eqsize.
+            case/orP : (leqVgt (size t) i)=> leq.
+            + rewrite !nth_default //; first by rewrite eqsize.
+              by rewrite size_map size_zip eqsize minn_refl.
+            by rewrite (nth_map (x0,y0)) ?size_zip ?eqsize ?minn_refl // ; congr Bnode; apply/eqP; rewrite eq_i_ch /= nth_zip //= !eqxx.
+        Qed.
+
+        Lemma get_bts_in_l_perm (ts : seq (triple I B L)) u
+          (mem : u \in [seq [seq Bnode (mkHinput an.1 an.2) | an <- i]
+                       | i <- [seq zip s (iota 0 (size s)) | s <- permutations (get_bts ts)]]) :
+          forall b, b \in get_bts ts -> has (eqb_b_hterm b) u.
+        Proof.
+          move=> b bin.
+          move/mapP : mem=> [/= bns /mapP[/= bs]]. rewrite mem_permutations=> /perm_mem peq -> ->.
+          rewrite seq.has_map /=.
+          apply/hasP=> /=.
+          have eqsize : size bs = size (iota 0 (size bs)) by rewrite size_iota.
+          rewrite -peq in bin.
+          have [/= st [stin [<- [t2 t2eq]]]]:= in_zip_l eqsize bin.
+          by exists st.
+        Qed.
+
       Lemma nth_bperms (ts : seq (triple I B L))
           (uniq_ts : uniq ts)
-          (bn : B) d
+          (bn : B) db dn
           (bin : bn \in get_bts ts)
           u (mem : u \in  [seq [seq Bnode (mkHinput an.1 an.2) | an <- i] | i <-
                                     [seq zip s (iota 0 (size s)) | s <- permutations (get_bts ts)]]) :
-                                       exists n : nat, nth d u (find (eqb_b_hterm bn) u) = Bnode (mkHinput bn n).
+                                       exists n : nat, nth (Bnode (mkHinput db dn)) u (find (eqb_b_hterm bn) u) = Bnode (mkHinput bn n).
         Proof.
-
-        (* ============ *)
-        (* move/mapP : mem=> [/= bns /mapP[/= bs permbs -> ->]]. *)
-        (* rewrite (nth_map (bn,0)) /=. *)
-        (* congr Bnode; apply/eqP. rewrite eq_i_ch /=; apply /andP; split; apply/eqP. *)
-        (* have eqsize : size bs = size (iota 0 (size bs)) by rewrite size_iota. *)
-        (* rewrite nth_zip //=. *)
-        (* suffices ->: (find (eqb_b_hterm bn) [seq Bnode (mkHinput an.1 an.2) | an <- zip bs (iota 0 (size bs))]) = (index bn bs). rewrite nth_index //. *)
-        (*   rewrite mem_permutations in permbs. *)
-        (*   by move/perm_mem : permbs=> ->. *)
-        (* ============= *)
-
-        Admitted.
-
-  Lemma get_bts_in_l_perm (ts : seq (triple I B L)) u
-    (mem : u \in [seq [seq Bnode (mkHinput an.1 an.2) | an <- i]
-                 | i <- [seq zip s (iota 0 (size s)) | s <- permutations (get_bts ts)]]) :
-    forall b, b \in get_bts ts -> has (eqb_b_hterm b) u.
-    Proof.
-      move=> b bin.
-      move/mapP : mem=> [/= bns /mapP[/= bs]]. rewrite mem_permutations=> /perm_mem peq -> ->.
-      rewrite seq.has_map /=.
-      apply/hasP=> /=.
-      have eqsize : size bs = size (iota 0 (size bs)) by rewrite size_iota.
-      rewrite -peq in bin.
-      have [/= st [stin [<- [t2 t2eq]]]]:= in_zip_l eqsize bin.
-      by exists st.
-    Qed.
-
-    Lemma minn_refl n : minn n n = n.
-    Proof. by rewrite /minn; case e: (_ < _)%N. Qed.
+          move/mapP : mem=> [/= bns /mapP[/= bs]]. rewrite mem_permutations=> peq_bs bnseq ueq; rewrite ueq bnseq.
+          have permbs := perm_mem peq_bs.
+          have uniqbs := perm_uniq peq_bs.
+          suffices H1 :
+            nth (Bnode (mkHinput db dn)) [seq Bnode (mkHinput an.1 an.2) | an <- zip bs (iota 0 (size bs))]
+ (find (eqb_b_hterm bn) [seq Bnode (mkHinput an.1 an.2) | an <- zip bs (iota 0 (size bs))]) =
+   Bnode (mkHinput (nth db bs (index bn bs)) (nth dn (iota 0 (size bs)) (index bn bs))).
+          suffices H2 : forall [S0 T0 : eqType] (x : S0) (y : T0) [s : seq S0] [t : seq T0] (i : nat),
+              size s = size t -> nth (Bnode (mkHinput x y)) [seq Bnode (mkHinput an.1 an.2) | an <- zip s t ] i = Bnode (mkHinput (nth x s i) (nth y t i)).
+              exists (index bn bs).
+              rewrite H1 //. congr Bnode.
+              apply/eqP; rewrite eq_i_ch /=; apply /andP; split; apply/eqP.
+              by rewrite nth_index // permbs.
+              by rewrite nth_iota // index_mem permbs //.
+            by apply nth_mapzip.
+          move=> T1 T2.
+          rewrite (nth_map (db, dn)). congr Bnode; apply/eqP; rewrite eq_i_ch /=.
+          rewrite nth_zip /= ; last by rewrite size_iota.
+          suffices ->: (find (eqb_b_hterm bn) [seq Bnode (mkHinput an.1 an.2) | an <- zip bs (iota 0 (size bs))]) = (index bn bs).
+          by rewrite !eqxx.
+          suffices H : forall s, size s = size bs ->
+                          find (eqb_b_hterm bn) [seq Bnode (mkHinput an.1 an.2) | an <- zip bs s] =
+                            index bn bs.
+            by rewrite H // size_iota.
+          move=> t s eqsize.
+          rewrite /index/eqb_b_hterm/pred1.
+          subst.
+          move=> {bin peq_bs permbs uniqbs}.
+          elim: bs s eqsize => [| a l IHl]; first by move=> ?; rewrite zip0s.
+          case =>  [//| b l2] /=[eqsize_tl].
+          by rewrite eq_sym IHl //.
+          suffices /(_ I L) <- : size [seq Bnode (mkHinput an.1 an.2) | an <- zip bs (iota 0 (size bs))] =  size (zip bs (iota 0 (size bs))).
+          rewrite -has_find.
+          suffices /(_ I L) uin: [seq Bnode (mkHinput an.1 an.2) | an <- zip bs (iota 0 (size bs))] \in
+            [seq [seq Bnode (mkHinput an.1 an.2) | an <- i]
+              | i <- [seq zip s (iota 0 (size s)) | s <- permutations (get_bts ts)]].
+            by apply (get_bts_in_l_perm uin).
+          move=> ? ?. apply/mapP; exists (zip bs (iota 0 (size bs)))=> //; apply /mapP; exists bs=> //.
+                                 (* refactor this *)
+          by rewrite mem_permutations.
+          by move=> ? ?; rewrite size_map.
+        Qed.
 
     Lemma in_perm_luh_inj (ts : seq (triple I B L))
                   u :
@@ -830,7 +869,7 @@ Section IsoCan.
         rewrite !mem_has // => /to_string_nat_inj.
         have ->: (nth (Bnode (mkHinput x n0)) u (find (eqb_b_hterm x) u)) = (nth (Bnode (mkHinput y n0)) u (find (eqb_b_hterm x) u)). by rewrite (set_nth_default (Bnode (mkHinput x n0))) // -has_find mem_has.
         set dflt := (Bnode (mkHinput y n0)).
-        move: (nth_bperms uniq_ts dflt xin mem) (nth_bperms uniq_ts dflt yin mem)=> [n eqnnthx] [m eqmnthy].
+        move: (nth_bperms uniq_ts y n0 xin mem) (nth_bperms uniq_ts y n0 yin mem)=> [n eqnnthx] [m eqmnthy].
         rewrite eqnnthx eqmnthy.
         suffices J: {in u&, injective (lookup_hash_default_ n0)}.
           move=> /J; rewrite -eqnnthx -eqmnthy.
@@ -842,8 +881,6 @@ Section IsoCan.
 
     Lemma auto_iso_rel_perm (ts : seq (triple I B L))
   (uts : uniq ts)
-  (* (s : seq (term I (hash_alt nat B) L)) *)
-  (* (bn : seq (B * nat)) *)
   (perm : seq B)
   (inperm : perm \in permutations (get_bts ts))
   (mu_inj : {in get_bts ts&, injective (build_kmapping_from_seq_alt [seq Bnode (mkHinput an.1 an.2) | an <- zip perm (iota 0 (size perm))])}) :
@@ -859,12 +896,6 @@ Section IsoCan.
             by apply: inj_get_bts_inj_ts mu_inj.
       Qed.
 
-    (*   Lemma aux_term (perm ps : seq B) :  *)
-    (*     perm \in permutations ps -> *)
-    (*    [seq Bnode (mkHinput an.1 an.2) | an <- zip perm (iota 0 (size perm))] *)
-    (* \in [seq [seq Bnode (mkHinput an.1 an.2) | an <- i] *)
-    (*        | i <- [seq zip s (iota 0 (size s)) | s <- permutations ps]]. *)
-
       Lemma uniq_k_mapping_res (ts : rdf_graph I B L) : uniq (k_mapping_alt ts).
       Proof.
       case: ts => ts uniq_ts /=; rewrite /k_mapping_alt.
@@ -879,12 +910,6 @@ Section IsoCan.
       move/mapP : mem=> /= [x /mapP[/= perm bin ->]] ->.
       suffices mu_inj : {in get_bts ts&, injective (build_kmapping_from_seq_alt [seq Bnode (mkHinput an.1 an.2) | an <- zip perm (iota 0 (size perm))])}.
       apply auto_iso_rel_perm=> //.
-        (* apply uniq_perm. *)
-        (*   + by rewrite map_inj_in_uniq // uniq_get_bts. *)
-        (*   + by rewrite uniq_get_bts. *)
-        (*   + suffices rt_inj: {in ts &, injective (relabeling_triple (build_kmapping_from_seq_alt u))}. *)
-        (*       by rewrite -(get_bs_map _ (all_bnodes_ts _)); apply eq_mem_pmap=> b; rewrite bnodes_ts_relabel_mem. *)
-        (*     by apply: inj_get_bts_inj_ts mu_inj. *)
       apply labeled_perm_inj=> //. apply/mapP; exists (zip perm (iota 0 (size perm)))=> //; apply /mapP; exists perm=> //.
                                   (* REFACTOR THIS *)
       Qed.
@@ -999,8 +1024,6 @@ Section IsoCan.
              move=> g1 g2; split.
              + by apply same_res_impl_iso_mapping; rewrite /mapping_is_iso_mapping; apply kmapping_iso_out.
              +
-               (* case: g1=> ts1 ug1; case: g2=> ts2 ug2. rewrite /iso /==> isog1g2. *)
-               (* rewrite /k_mapping /=. *)
                move=> isog1g2.
                have: iso (k_mapping g1) (k_mapping g2).
                by apply: iso_can_trans _ isog1g2; rewrite /mapping_is_iso_mapping; apply kmapping_iso_out.
@@ -1021,63 +1044,28 @@ Section IsoCan.
                move=> _ _ trpl. (* relabeling 1 and 2 are not nil *)
                rewrite !mem_permutations in mem_perm1 mem_perm2.
                case: isog1g2=> mu. rewrite /is_iso_ts. move=> /and3P[iso12 urel1 peq].
-               rewrite -(relabeling_seq_triple_rel_mem _ (perm_mem peq)).
+               (* rewrite -(relabeling_seq_triple_rel_mem _ (perm_mem peq)). *)
                rewrite /relabeling_seq_triple.
                apply /mapP/mapP=> /=.
-               move=> [t tints1 -> /=].
-               exists (relabeling_triple mu t).
-               by apply /mapP; exists t.
-               rewrite -relabeling_triple_comp /build_kmapping_from_seq_alt.
-               apply relabeling_triple_ext=> b1 /=.
-               suffices mem_has : has (eqb_b_hterm b1)[seq Bnode (mkHinput an.1 an.2) | an <- zip bperm1 (iota 0 (size bperm1))].
-               have ->: has (eqb_b_hterm (mu b1)) [seq Bnode (mkHinput an.1 an.2) | an <- zip bperm2 (iota 0 (size bperm2))]. admit.
-               rewrite mem_has; congr to_string_nat.
-               set nthx :=  (nth (Bnode (mkHinput b1 n0))
-       [seq Bnode (mkHinput an.1 an.2) | an <- zip bperm1 (iota 0 (size bperm1))]
-       (find (eqb_b_hterm b1)
-          [seq Bnode (mkHinput an.1 an.2) | an <- zip bperm1 (iota 0 (size bperm1))])). 
-               (* rewrite (lookup_hash__relabeling). *)
+               (* exists (relabeling_triple mu t). *)
+               (* by apply perm_mem in peq; rewrite -peq; apply /mapP; exists t. *)
+               (* rewrite -relabeling_triple_comp. *)
+               (* apply triple_inj=> //=; case: t tints1=> s p o sib pii //=. *)
+               (* move=> /mem_ts_mem_triple_bts. *)
+               (* case: s sib=> //=b sib sin. *)
+               (* congr Bnode. *)
+               (* rewrite /is_pre_iso_ts in iso12. *)
+               (* have:  perm_eq [seq mu i | i <- bperm1] bperm2. *)
+               (* apply : perm_trans _ _. *)
+               (* apply (perm_map mu) in mem_perm1. *)
+               (* apply mem_perm1. *)
+               (* apply: perm_trans _ _. *)
+               (* apply iso12. *)
+               (* rewrite perm_sym; apply mem_perm2. *)
+               (* apply (perm_map nu) in iso12. *)
+               (* rewrite -map_comp can_munu in iso12. *)
 
-               rewrite relabeling_triple_ext.
-               (* === *)
-               rewrite /is_pre_iso_ts perm_sym in iso12.
-               have p2map := perm_trans mem_perm2 iso12.
-               (*   ==== *)
-               apply triple_inj=> /=.
-               case: t tints1=> /= s ? ? sib ? .
-               case: s sib=> //= b ? tin.
-               congr Bnode.
-               rewrite /build_kmapping_from_seq_alt.
-               suffices mem_has : has (eqb_b_hterm b)[seq Bnode (mkHinput an.1 an.2) | an <- zip bperm1 (iota 0 (size bperm1))].
-               have ->: has (eqb_b_hterm (mu b)) [seq Bnode (mkHinput an.1 an.2) | an <- zip bperm2 (iota 0 (size bperm2))]. admit.
-               rewrite mem_has.
-               congr to_string_nat.
-               rewrite /lookup_hash_default_.
-               apply (nth_find (Bnode (mkHinput b n0))) in mem_has.
-               move: mem_has.
-               set myb :=  (nth (Bnode (mkHinput b n0))
-       [seq Bnode (mkHinput an.1 an.2) | an <- zip bperm1 (iota 0 (size bperm1))]
-       (find (eqb_b_hterm b) [seq Bnode (mkHinput an.1 an.2) | an <- zip bperm1 (iota 0 (size bperm1))])).
-       
-               case e : nth (Bnode (mkHinput b n0))
-      [seq Bnode (mkHinput an.1 an.2) | an <- zip bperm1 (iota 0 (size bperm1))]
-      (find (eqb_b_hterm b) [seq Bnode (mkHinput an.1 an.2) | an <- zip bperm1 (iota 0 (size bperm1))])=> //= t s n.
-               case 
-               apply /nthP.
-
-
-               maf
-               suffices: (nth (Bnode (mkHinput (mu b) n0))
-       [seq Bnode (mkHinput an.1 an.2) | an <- zip bperm2 (iota 0 (size bperm2))]
-       (find (eqb_b_hterm (mu b))
-          [seq Bnode (mkHinput an.1 an.2) | an <- zip bperm2 (iota 0 (size bperm2))])) = relabeling_hterm mu ( (nth (Bnode (mkHinput b n0))
-       [seq Bnode (mkHinput an.1 an.2) | an <- zip bperm1 (iota 0 (size bperm1))]
-       (find (eqb_b_hterm b) [seq Bnode (mkHinput an.1 an.2) | an <- zip bperm1 (iota 0 (size bperm1))])) 
-
-                                                                                          ).
-               rewrite /lookup_hash_default_. maf
-               rewrite (nth_map (mkHinput b n0)).
-               rewrite 
+               Admitted.
 
       Lemma all_kmaps_bijective g : List.Forall (fun mu => bijective mu) [seq build_kmapping_from_seq i
                                                                          | i <- [seq mapi (app_n mark_bnode) i

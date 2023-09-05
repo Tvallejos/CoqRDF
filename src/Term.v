@@ -240,6 +240,19 @@ Section EqTerm.
   Lemma mem_get_bs_undup (s: seq (term I B L)) : get_bs (undup s) =i get_bs s.
   Proof. move=> x; rewrite /get_bs !mem_pmap. apply eq_mem_map. exact: mem_undup. Qed.
 
+  Lemma get_bs_nil ts : get_bs ts = [::] <-> all (fun t=> get_b_term t == None) ts.
+  Proof. by elim: ts=> [//| [] tlts IHts]. Qed.
+
+  Lemma get_b_term_is_b trm : (negb (is_bnode trm)) <-> get_b_term trm = None.
+  Proof. by case trm. Qed.
+
+  Lemma get_bs_nil_all_not_b ts : reflect (get_bs ts = [::]) (all (fun t=> negb (is_bnode t)) ts).
+  Proof. elim: ts=> [//| []a l ihtl]; first by apply Bool.ReflectT.
+         + by apply ihtl.
+         + by apply ihtl.
+         + by apply Bool.ReflectF.
+  Qed.
+
 End EqTerm.
 
 Definition term_canChoiceMixin (I B L : choiceType) :=

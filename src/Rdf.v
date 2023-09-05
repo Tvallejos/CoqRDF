@@ -389,10 +389,28 @@ Section Rdf.
         Lemma uniq_get_bts ts : uniq (get_bts ts).
         Proof. by rewrite uniq_get_bs. Qed.
 
+        Lemma undup_idem_get_bs ts : undup (get_bts ts) = get_bts ts.
+        Proof. by rewrite undup_get_bsC. Qed.
+
         Lemma bterm_eq_mem_get_bts (b: B) ts :
           (@Bnode I B L b) \in terms_ts ts ->
                                b \in get_bs (bnodes_ts ts).
         Proof. by apply bterm_eq_mem_get_bs. Qed.
+
+        Lemma is_ground_get_bts ts : is_ground_ts ts <-> (get_bts ts) = [::].
+        Proof. split; rewrite /is_ground_ts/get_bts.
+               elim: ts=> [//| a l IHl] /= /andP[ghd gtl].
+               suffices ghd_nil : bnodes_triple a = [::].
+                 by rewrite /= bnodes_ts_cons ghd_nil /= -undup_get_bs IHl //.
+               by apply/eqP; rewrite -is_ground_triple_bnodes_nil.
+               move=> /get_bs_nil_all_not_b.
+               elim: ts=> [//| a l IHl] /=.
+                 rewrite bnodes_ts_cons all_undup all_cat is_ground_not_bnode=> /andP[hdnil tlnil].
+                 apply/andP; split; last by apply IHl.
+                 move: hdnil. rewrite /bnodes_triple/terms_triple.
+                 by case a=> [[]]s []p []o ? ? //; rewrite filter_undup all_undup.
+        Qed.
+
 
         Lemma perm_relabel_bnodes_ts ts1 ts2 mu :
           perm_eq [seq relabeling_term mu i | i <- bnodes_ts ts1] (bnodes_ts ts2) =

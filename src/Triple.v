@@ -225,6 +225,9 @@ Section OperationsOnTriples.
          by case: s; case: p; case: o.
   Qed.
 
+  Lemma is_ground_triple_bnodes_nil t : is_ground_triple t = (bnodes_triple t == [::]).
+  Proof. by rewrite -Obnodes_groundtriple; case (bnodes_triple t). Qed.
+
   Canonical triple_predType2 := PredType (pred_of_seq \o (bnodes_triple)).
 
   (* Variable t : triple I B L. *)

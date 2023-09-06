@@ -1183,10 +1183,10 @@ Section IsoCan.
         by rewrite size_iota.
         by rewrite size_iota.
         move=> b1 s0 b1in.
-        have x0 : term I (hash_alt nat_countType B) L. exact:  Bnode (mkHinput b1 0).
-        apply/ (has_nthP x0).
+        apply/ (has_nthP (Bnode (mkHinput b1 0))).
         exists (index b1 s0).
         by rewrite size_map size_zip size_iota minn_refl index_mem.
+        rewrite nth_mapzip /= ?size_iota // nth_index // eqxx.
 
 
       Lemma all_kmaps_bijective g : List.Forall (fun mu => bijective mu) [seq build_kmapping_from_seq i

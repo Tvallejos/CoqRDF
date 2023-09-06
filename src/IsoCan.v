@@ -1082,33 +1082,31 @@ Section IsoCan.
         rewrite /mu2/cand2 => trpl /=.
         have eqsize : size (map mu pg1) = size pg1 by rewrite size_map.
         (*  *)
-        apply/mapP/mapP=> /= [[t tin ->]|t] .
+        apply/mapP/mapP=> /= [[t tin ->]|[t tin ->]] .
         exists (relabeling_triple mu t); first by apply perm_mem in peq; rewrite -peq; apply map_f.
         have mu_inj : {in pg1 &, injective mu}. by move=> x y xin yin; apply (is_pre_iso_inj piso12); rewrite -pg1mem.
-        case : t tin=> [[]]//s []p []o// sib pii tin //=; apply triple_inj=> //=.
-        (*  *)
-        congr Bnode.
-        suffices oin : o \in pg1.
+        suffices build_modulo_map : forall b, b \in pg1 ->
+          build_kmapping_from_seq_alt [seq Bnode (mkHinput an.1 an.2) | an <- zip pg1 (iota 0 (size pg1))] b =
+  build_kmapping_from_seq_alt
+    [seq Bnode (mkHinput an.1 an.2) | an <- zip [seq mu i | i <- pg1] (iota 0 (size [seq mu i | i <- pg1]))]
+    (mu b).
+        case : t tin=> [[]]//s []p []o// sib pii tin //=;
+        apply triple_inj=> //=; congr Bnode;
+        rewrite build_modulo_map //;
+        rewrite pg1mem; apply (mem_ts_mem_triple_bts tin);
+        rewrite /bnodes_triple filter_undup mem_undup /= ?in_cons ?eqxx ?orbT //.
         suffices upg1 : uniq pg1.
-        rewrite (out_of_build oin upg1).
-        rewrite out_of_build.
-        congr to_string_nat.
-        rewrite !nth_iota.
+        move=> b bin.
+        rewrite (out_of_build bin upg1) out_of_build.
+        congr to_string_nat; rewrite !nth_iota.
         rewrite index_map_in //.
         by rewrite index_mem; apply map_f.
         by rewrite index_mem.
         by apply map_f.
         by rewrite map_inj_in_uniq.
         by rewrite pg1uniq uniq_get_bts.
-        have oin : Bnode o \in bnodes_triple {|
-                                   subject := Iri s;
-                                   predicate := Iri p;
-                                   object := Bnode o;
-                                   subject_in_IB := sib;
-                                   predicate_in_I := pii
-                                 |}.
-        by rewrite /bnodes_triple filter_undup /= in_cons eqxx.
-        by rewrite pg1mem; apply (mem_ts_mem_triple_bts tin oin).
+        + have : t \in (relabeling_seq_triple mu g1) by apply perm_mem in peq; rewrite peq.
+
 
 
       Lemma all_kmaps_bijective g : List.Forall (fun mu => bijective mu) [seq build_kmapping_from_seq i

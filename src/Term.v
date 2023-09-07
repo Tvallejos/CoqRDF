@@ -345,3 +345,16 @@ Canonical my_term_OrderType (disp: unit) (I B L : orderType disp) :=
 Canonical my_termPOrderType (disp: unit) (I B L : orderType disp) :=
   Eval hnf in Order.Total.porderType (@my_term_OrderType disp I B L).
 
+Section problem.
+  Variable disp : unit.
+  Variables I B L : orderType disp.
+  Variables t1 t2 : (term I B L).
+  Fail Check t1 < t2.
+  (* In environment *)
+  (* I, B, L : orderType tt *)
+  (* t1, t2 : term I B L *)
+  (* The term "t1" has type "term I B L" while it is expected to have type "Order.POrder.sort ?T". *)
+  Fail Check t1 <= t2.
+
+End problem.
+

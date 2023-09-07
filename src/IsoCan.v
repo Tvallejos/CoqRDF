@@ -1106,8 +1106,7 @@ Section IsoCan.
         by rewrite map_inj_in_uniq.
         by rewrite pg1uniq uniq_get_bts.
         + have : t \in (relabeling_seq_triple mu g1) by apply perm_mem in peq; rewrite peq.
-
-
+          Admitted.
 
       Lemma all_kmaps_bijective g : List.Forall (fun mu => bijective mu) [seq build_kmapping_from_seq i
                                                                          | i <- [seq mapi (app_n mark_bnode) i

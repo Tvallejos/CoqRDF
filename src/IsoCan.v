@@ -953,18 +953,10 @@ Section IsoCan.
 
       Lemma permutations_neq_nil (T : eqType) (s : seq T) : permutations s != [::].
       Proof. suffices: size (permutations s) != 0 by rewrite size_neq0.
-             (* rewrite size_permutations. *)
-             (* elim: s=> [//| a l IHl]. *)
-      Admitted.
-             (* rewrite size_permutations /=. *)
-             (* rewrite -lt0n //. Abott. *)
-        (*      Set Printing All. *)
-        (*      apply lt0n_neq0.//.  *)
-
-        (* elim: s=> [| a l IHl]; first by rewrite empty_permutations. *)
-        (*      have /permutationsE: (0 < size (a :: l)) by []. *)
-        (*      move=> peq. *)
-        (*      rewrite /=. *)
+             suffices : s \in permutations s.
+               by case : (permutations s).
+             by rewrite mem_permutations perm_refl.
+      Qed.
 
       Lemma k_mapping_nil_is_nil ts: k_mapping_alt ts = [::] -> ts = [::].
         Proof.

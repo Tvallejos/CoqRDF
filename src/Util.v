@@ -77,15 +77,6 @@ Proof. elim: l x0 => [ | t ts IHts] x0; first by left.
        - by right; rewrite intail orbT.
 Qed.
 
-Lemma min_seq (disp : unit) (T: orderType disp) (s: seq T) (hd:T) :
-  exists (minimum: T), forall (t: T), t \in (hd::s) -> (<=%O minimum t).
-Proof. elim: (hd::s)=> [| a t [minimum IHts]]; first by exists hd=> t; rewrite in_nil.
-                                                        + case e: (<=%O minimum a); [exists minimum | exists a]
-                                                               => a0; rewrite in_cons; case/orP=> [/eqP ->| /IHts ain] //.
-                                                        - have /Order.POrderTheory.ltW amin: (<%O a minimum). admit.
-                                                          apply (Order.POrderTheory.le_trans amin ain).
-Admitted.
-
 Lemma foldl_max (disp: unit) (T: porderType disp) (l: seq T) (x0 : T) :
   foldl Order.max x0 l = x0 \/ foldl Order.max x0 l \in l.
 Proof. elim: l x0 => [ | t ts IHts] x0; first by left.
@@ -246,6 +237,17 @@ Proof. suffices: f (ssval arg) \in (map f s). by apply SeqSub.
        by apply (map_f f); apply (ssvalP arg).
 Qed.
 
+Lemma size_neq0 (T : eqType) (s : seq T): (size s != 0) = (s != [::]).
+Proof. by congr negb; apply size_eq0. Qed.
+
+Lemma permutations_neq_nil (T : eqType) (s : seq T) : permutations s != [::].
+Proof. suffices: size (permutations s) != 0 by rewrite size_neq0.
+       suffices : s \in permutations s.
+         by case : (permutations s).
+       by rewrite mem_permutations perm_refl.
+Qed.
+
+
 Fixpoint someT_to_T {T : Type} (os : seq (option T)) : seq T :=
   match os with
   | nil => nil
@@ -287,26 +289,6 @@ Proof. rewrite neq_lt !leNgt=> /orP[] lxy; rewrite lxy -leNgt /=; apply /eqP.
        by apply ltW.
        rewrite leNgt negbK; apply/eqP; rewrite eq_sym; apply /eqP.
        by apply lt_gtF.
-Qed.
-
-Lemma max_distr_foldl disp (T: porderType disp) (l : seq T) (x y : T) :
-  foldl Order.max (Order.max x y) l = Order.max y (foldl Order.max x l).
-Proof. elim: l=> [//| hd t IHt] /=.
-       (*  Error: The LHS of Order.TotalTheory.leNgt *)
-       (* (_ <= _) *)
-       (* does not match any subterm of the goal *)
-       (* rewrite Order.POrderTheory.maxEle Order.POrderTheory.maxElt Order.TotalTheory.leNgt; case: (y < x). *)
-       (* Error: The LHS of max_sym *)
-       (*     (Order.max _ _) *)
-       (* does not match any subterm of the goal *)
-       (* rewrite max_sym. *)
-Admitted.
-
-Lemma foldl_foldl_max disp (T: orderType disp) (l : seq T) (x0 : T) :
-  foldl Order.max x0 l == foldr Order.max x0 l.
-Proof. elim: l x0=> [//| hd t IHt] x0 /=.
-       have <- :  ((foldl Order.max x0 t) = (foldr Order.max x0 t)). by apply /eqP; apply IHt.
-       by rewrite max_distr_foldl.
 Qed.
 
 Lemma has_not_default T (s : seq T) p :

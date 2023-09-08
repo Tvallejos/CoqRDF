@@ -920,9 +920,6 @@ Section IsoCan.
           (build_kmapping_from_seq (mapi (app_n mark_bnode) s) b').
       Proof. by rewrite (eqb_b_hterm_trans eb eb'). Qed.
 
-      Lemma size_neq0 (T : eqType) (s : seq T): (size s != 0) = (s != [::]).
-      Proof. by congr negb; apply size_eq0. Qed.
-
       Lemma map_kmap b n s :
         (build_kmapping_from_seq s b) = n ->
         (has (eqb_b_hterm b) s) ->
@@ -939,23 +936,6 @@ Section IsoCan.
           move=> /= has_tl /=; rewrite has_tl=> eq IHtl.
           have IHtl' := IHtl eq isT tl' f injF eqtl.
           by rewrite eqtl -has_map_eqbb ?has_tl in IHtl'; last by apply injF.
-      Qed.
-
-      (* Lemma lt0_size_permutations (T : eqType) (s : seq T) : 0 < size (permutations s). *)
-      (* Proof. elim: s=> [//|a l IHl]. *)
-      (*        suffices lt : size (permutations l) <= size (permutations (a :: l)). *)
-      (*          by apply: Order.POrderTheory.lt_le_trans IHl lt. *)
-      (*          rewrite /permutations /=. rewrite /seq.perms_rec. *)
-      (*          Admitted. *)
-             (* rewrite !size_permutations. *)
-             (* apply lt_trans. *)
-
-
-      Lemma permutations_neq_nil (T : eqType) (s : seq T) : permutations s != [::].
-      Proof. suffices: size (permutations s) != 0 by rewrite size_neq0.
-             suffices : s \in permutations s.
-               by case : (permutations s).
-             by rewrite mem_permutations perm_refl.
       Qed.
 
       Lemma k_mapping_nil_is_nil ts: k_mapping_alt ts = [::] -> ts = [::].

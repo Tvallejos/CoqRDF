@@ -1033,41 +1033,38 @@ Section IsoCan.
                 map (fun an : B * nat => Bnode (mkHinput an.1 an.2))) \o
                (fun s : seq B => zip s (iota 0 (size s)))) i
           | i <- permutations (get_bts g2)].
-        move=> isokg1kg2.
-        suffices eq_can : (forall c1 : seq (triple I B L),
-  c1 \in cand1 -> exists c' : seq (triple I B L), c' \in cand2 /\ c1 =i c').
-          by move=> ?; rewrite (eq_mem_foldl_max_rdf eq_can).
-        move=> c1 /mapP[/= pg1 pinperm  ->].
-        have /perm_mem pg1mem : perm_eq pg1 (get_bts g1) by rewrite -mem_permutations.
-        have /perm_uniq pg1uniq : perm_eq pg1 (get_bts g1) by rewrite -mem_permutations.
-        rewrite mem_permutations in pinperm.
-        rewrite /iso/iso_ts/is_iso_ts/is_pre_iso_ts in isog1g2.
-        move : isog1g2=> [mu /and3P[piso12 urel peq]].
-        apply (perm_map mu) in pinperm.
-        have := (perm_trans pinperm piso12).
-        rewrite -mem_permutations.
-        set mu2 := (build_kmapping_from_seq_alt \o
-                    map (fun an : B * nat => Bnode (mkHinput an.1 an.2)) \o
-                   (fun s : seq B => zip s (iota 0 (size s)))) (map mu pg1).
-        move=> peqg2; exists (relabeling_seq_triple mu2 g2).
-        split; first by apply/mapP; exists (map mu pg1).
-        rewrite /mu2/cand2 => trpl /=.
-        have eqsize : size (map mu pg1) = size pg1 by rewrite size_map.
-        (*  *)
-        apply/mapP/mapP=> /= [[t tin ->]|[t tin ->]] .
-        exists (relabeling_triple mu t); first by apply perm_mem in peq; rewrite -peq; apply map_f.
-        have mu_inj : {in pg1 &, injective mu}. by move=> x y xin yin; apply (is_pre_iso_inj piso12); rewrite -pg1mem.
-        suffices build_modulo_map : forall b, b \in pg1 ->
-          build_kmapping_from_seq_alt [seq Bnode (mkHinput an.1 an.2) | an <- zip pg1 (iota 0 (size pg1))] b =
+        move=> /iso_structure/orP[/andP[/eqP -> /eqP ->] // |/andP[]].
+        move: (foldl_max cand1 [::]) (foldl_max cand2 [::]) =>[-> //| kg1inc1 ] [-> //| kg2inc2].
+        move/mapP : kg1inc1=> [/= p].
+        set maxisocans_g1 :=  relabeling_seq_triple
+                                (build_kmapping_from_seq_alt [seq Bnode (mkHinput an.1 an.2) | an <- zip p (iota 0 (size p))]) g1.
+        move=> [pperm1 eq]. rewrite eq.
+        rewrite /iso/iso_ts in isog1g2.
+        move : isog1g2=> [mu /and3P[pisoP urel peq]].
+        move=> maxg1neqnil kg2neqnil trpl .
+        (* suffices max_is_max : all (fun c => <=%O c maxisocans_g1) cand1. *)
+        set c2_cand := relabeling_seq_triple
+                     (build_kmapping_from_seq_alt
+                        [seq Bnode (mkHinput an.1 an.2) | an <- zip (map mu p) (iota 0 (size (map mu p)))]) g2.
+        (* suffices c2_is_max : all (fun c=> <=%O c c2_cand) cand2. *)
+         suffices -> : foldl Order.max [::] cand2 =i c2_cand.
+              rewrite /c2_cand /maxisocans_g1.
+              apply/mapP/mapP=> /= [[t tin ->]|[t tin ->]] .
+              exists (relabeling_triple mu t); first by apply perm_mem in peq; rewrite -peq; apply map_f.
+              (*  *)
+              have pg1_mem : p =i get_bts g1. by rewrite mem_permutations in pperm1; move/perm_mem : pperm1.
+              have mu_inj : {in p &, injective mu}. by move=> x y xin yin; apply (is_pre_iso_inj pisoP); rewrite -pg1_mem.
+        suffices build_modulo_map : forall b, b \in p ->
+          build_kmapping_from_seq_alt [seq Bnode (mkHinput an.1 an.2) | an <- zip p (iota 0 (size p))] b =
   build_kmapping_from_seq_alt
-    [seq Bnode (mkHinput an.1 an.2) | an <- zip [seq mu i | i <- pg1] (iota 0 (size [seq mu i | i <- pg1]))]
+    [seq Bnode (mkHinput an.1 an.2) | an <- zip [seq mu i | i <- p] (iota 0 (size [seq mu i | i <- p]))]
     (mu b).
-        case : t tin=> [[]]//s []p []o// sib pii tin //=;
+        case : t tin=> [[]]//s []p' []o// sib pii tin //=;
         apply triple_inj=> //=; congr Bnode;
         rewrite build_modulo_map //;
-        rewrite pg1mem; apply (mem_ts_mem_triple_bts tin);
+        rewrite pg1_mem; apply (mem_ts_mem_triple_bts tin);
         rewrite /bnodes_triple filter_undup mem_undup /= ?in_cons ?eqxx ?orbT //.
-        suffices upg1 : uniq pg1.
+        suffices upg1 : uniq p.
         move=> b bin.
         rewrite (out_of_build bin upg1) out_of_build.
         congr to_string_nat; rewrite !nth_iota.
@@ -1076,9 +1073,46 @@ Section IsoCan.
         by rewrite index_mem.
         by apply map_f.
         by rewrite map_inj_in_uniq.
-        by rewrite pg1uniq uniq_get_bts.
-        + have : t \in (relabeling_seq_triple mu g1) by apply perm_mem in peq; rewrite peq.
-          Admitted.
+        by move: pperm1; rewrite mem_permutations => /perm_uniq ->; rewrite uniq_get_bts.
+        (* CASE MU P *)
+        apply perm_mem in peq.
+        rewrite -peq in tin.
+        move/mapP : tin=> /=[tg1 tg1in ->].
+              exists tg1=> //.
+              (*  *)
+              have pg1_mem : p =i get_bts g1. by rewrite mem_permutations in pperm1; move/perm_mem : pperm1.
+              have mu_inj : {in p &, injective mu}. by move=> x y xin yin; apply (is_pre_iso_inj pisoP); rewrite -pg1_mem.
+        suffices build_modulo_map : forall b, b \in p ->
+          build_kmapping_from_seq_alt [seq Bnode (mkHinput an.1 an.2) | an <- zip p (iota 0 (size p))] b =
+  build_kmapping_from_seq_alt
+    [seq Bnode (mkHinput an.1 an.2) | an <- zip [seq mu i | i <- p] (iota 0 (size [seq mu i | i <- p]))]
+    (mu b).
+        case : tg1 tg1in=> [[]]//s []p' []o// sib pii tin //=;
+        apply triple_inj=> //=; congr Bnode;
+        rewrite build_modulo_map //;
+        rewrite pg1_mem; apply (mem_ts_mem_triple_bts tin);
+        rewrite /bnodes_triple filter_undup mem_undup /= ?in_cons ?eqxx ?orbT //.
+        suffices upg1 : uniq p.
+        move=> b bin.
+        rewrite (out_of_build bin upg1) out_of_build.
+        congr to_string_nat; rewrite !nth_iota.
+        rewrite index_map_in //.
+        by rewrite index_mem; apply map_f.
+        by rewrite index_mem.
+        by apply map_f.
+        by rewrite map_inj_in_uniq.
+        by move: pperm1; rewrite mem_permutations => /perm_uniq ->; rewrite uniq_get_bts.
+        move=> /= c.
+        move/mapP : kg2inc2=> /=[p2 p2g2 eqc2]; rewrite eqc2 /c2_cand=> {c2_cand}.
+        suffices -> : p2 = (map mu p). by [].
+        rewrite !mem_permutations in p2g2 pperm1.
+        apply (perm_map mu) in pperm1.
+        rewrite /is_pre_iso_ts in pisoP.
+        have mupg2 := perm_trans pperm1 pisoP.
+        move=> {c2_cand}.
+        rewrite /maxisocans_g1 in eq.
+        rewrite /= in eq eqc2.
+        Admitted.
 
       Lemma all_kmaps_bijective g : List.Forall (fun mu => bijective mu) [seq build_kmapping_from_seq i
                                                                          | i <- [seq mapi (app_n mark_bnode) i

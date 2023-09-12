@@ -1109,7 +1109,6 @@ Section IsoCan.
         apply (perm_map mu) in pperm1.
         rewrite /is_pre_iso_ts in pisoP.
         have mupg2 := perm_trans pperm1 pisoP.
-        move=> {c2_cand}.
         rewrite /maxisocans_g1 in eq.
         rewrite /= in eq eqc2.
         Admitted.

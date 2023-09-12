@@ -1,4 +1,5 @@
 From mathcomp Require Import all_ssreflect.
+
 Set Implicit Arguments.
 Unset Strict Implicit.
 Unset Printing Implicit Defensive.
@@ -255,6 +256,8 @@ Section EqTerm.
 
 End EqTerm.
 
+Fact term_display : unit. exact tt. Qed.
+
 Definition term_canChoiceMixin (I B L : choiceType) :=
   PcanChoiceMixin (@pcancel_code_decode I B L).
 
@@ -269,8 +272,9 @@ Canonical term_countType (I B L : countType) :=
 Definition term_canPOrderMixin (I B L : countType) :=
   PcanPOrderMixin (@pickleK (term_countType I B L)).
 
-Canonical term_POrderType (disp : unit) (I B L : countType) :=
-  Eval hnf in POrderType disp (term_countType I B L) (term_canPOrderMixin I B L).
+Canonical term_POrderType (I B L : countType) :=
+  Eval hnf in POrderType term_display (term I B L) (term_canPOrderMixin I B L).
+
 
 Section OrderTerm.
   Variable disp : unit.
@@ -339,22 +343,11 @@ Definition term_leOrderMixin :=
 
 End OrderTerm.
 
-Canonical my_term_OrderType (disp: unit) (I B L : orderType disp) :=
-  Eval hnf in OrderOfChoiceType disp (@term_leOrderMixin disp I B L).
-
-Canonical my_termPOrderType (disp: unit) (I B L : orderType disp) :=
-  Eval hnf in Order.Total.porderType (@my_term_OrderType disp I B L).
-
 Section problem.
-  Variable disp : unit.
-  Variables I B L : orderType disp.
+
+  Variables I B L : countType.
   Variables t1 t2 : (term I B L).
-  Fail Check t1 < t2.
-  (* In environment *)
-  (* I, B, L : orderType tt *)
-  (* t1, t2 : term I B L *)
-  (* The term "t1" has type "term I B L" while it is expected to have type "Order.POrder.sort ?T". *)
-  Fail Check t1 <= t2.
+  Check t1 <= t2.
 
 End problem.
 

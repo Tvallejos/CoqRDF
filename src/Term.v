@@ -131,16 +131,16 @@ Section CodeTerm.
 
   Definition code_term trm : GenTree.tree (I + B + L)%type :=
     match trm with
-    | Iri i => GenTree.Node 0 (GenTree.Leaf (inl (inl i)) :: nil)
-    | Lit l => GenTree.Node 1 (GenTree.Leaf (inr l) :: nil)
-    | Bnode name => GenTree.Node 2 (GenTree.Leaf (inl (inr name)) :: nil)
+    | Iri i => GenTree.Leaf (inl (inl i))
+    | Lit l => GenTree.Leaf (inr l)
+    | Bnode name => GenTree.Leaf (inl (inr name))
     end.
 
   Definition decode_term (x : GenTree.tree (I + B + L)) : option (term I B L) :=
     match x with
-    | GenTree.Node 0 (GenTree.Leaf (inl (inl i)) :: nil) => Some (Iri i)
-    | GenTree.Node 1 (GenTree.Leaf (inr l) :: nil) =>  Some (Lit l)
-    | GenTree.Node 2 (GenTree.Leaf (inl (inr name)) :: nil) => Some (Bnode name)
+    | GenTree.Leaf (inl (inl i)) => Some (Iri i)
+    | GenTree.Leaf (inr l) =>  Some (Lit l)
+    | GenTree.Leaf (inl (inr name)) => Some (Bnode name)
     | _ => None
     end.
 
@@ -343,11 +343,61 @@ Definition term_leOrderMixin :=
 
 End OrderTerm.
 
-Section problem.
+Section issue.
 
-  Variables I B L : countType.
-  Variables t1 t2 : (term I B L).
-  Check t1 <= t2.
+Canonical my_term_OrderType (I B L : orderType tt) :=
+  Eval hnf in OrderOfChoiceType term_display (@term_leOrderMixin tt I B L).
 
-End problem.
+Canonical my_termPOrderType (I B L : orderType tt) :=
+  Eval hnf in Order.Total.porderType (@my_term_OrderType I B L).
+
+  Check max_foldlP :
+    forall [disp : unit] [T : orderType disp] [l : seq T] [x y : T],
+      foldl Order.max x l = y -> (x <= y) && all (<=%O^~ y) l.
+
+  (* This works for ordinary order types*)
+  Section fold_all.
+    Variables T : (orderType tt).
+    Variables t1 t2 : T.
+    Variable ts : seq T.
+    Hypothesis P : (foldl Order.max t1 ts = t2).
+    Check (max_foldlP P) : (t1 <= t2) && all (<=%O^~ t2) ts.
+  End fold_all.
+
+  Section fold_all_term.
+    Variables I B L : (orderType tt).
+
+    (* the inference does not work here *)
+    Variables t1 t2 : (term I B L).
+    Variable trms : seq (term I B L).
+    Fail Hypothesis P : (foldl Order.max t1 trms = t2).
+    Fail Check (max_foldlP P) : (t1 <= t2) && all (<=%O^~ t2) trms.
+
+    (* it if I use the terms' orderType directly *)
+    Variable trms' : seq (my_term_OrderType I B L).
+    Variables t1' t2' : (my_term_OrderType I B L).
+    Hypothesis P' : (foldl Order.max t1' trms' = t2').
+    Check (max_foldlP P') : (t1' <= t2') && all (<=%O^~ t2') trms'.
+
+    (* if I mix terms' orderType and the plain one it also works *)
+    (* note that only t1' is of type my_term_OrderType *)
+    Hypothesis P'' : (foldl Order.max t1' trms = t2).
+    Check (max_foldlP P'').
+    (* max_foldlP P'' *)
+    (*      : (t1' <= t2) && all (<=%O^~ t2) trms *)
+
+    Fail Check (max_foldlP P'') : (t1' <= t2) && all (<=%O^~ t2) trms.
+    (* The command has indeed failed with message: *)
+    (* In environment *)
+    (* I, B, L : orderType tt *)
+    (* t1, t2 : term I B L *)
+    (* trms : seq (term I B L) *)
+    (* t1' : my_term_OrderType I B L *)
+    (* P'' : foldl Order.max t1' trms = t2 *)
+    (* x : ?T *)
+    (* The term "t2" has type "term I B L" while it is expected to have type "Order.POrder.sort ?T". *)
+
+  End fold_all_term.
+
+End issue.
 

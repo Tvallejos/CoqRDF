@@ -1021,7 +1021,7 @@ Section IsoCan.
         split=> [| isog1g2]; first by apply same_res_impl_iso_mapping; rewrite /mapping_is_iso_mapping; apply kmapping_iso_out.
         have: iso (k_mapping g1) (k_mapping g2).
         by apply: iso_can_trans _ isog1g2; rewrite /mapping_is_iso_mapping; apply kmapping_iso_out.
-        rewrite /k_mapping/k_mapping_alt rdf_perm_mem_eq rdf_mem_eq_graph /iso /==> /=.
+        rewrite /k_mapping/k_mapping_alt/eqb_rdf rdf_perm_mem_eq rdf_mem_eq_graph /iso /==> /=.
         rewrite -!map_comp.
         set cand1 :=
        [seq ((((relabeling_seq_triple (B2:=B))^~ g1 \o build_kmapping_from_seq_alt) \o

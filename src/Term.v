@@ -165,27 +165,10 @@ Section EqTerm.
 
   Lemma eqb_eq trm1 trm2 : (trm1 == trm2) = eqb_term trm1 trm2.
   Proof.
-    rewrite /eq_op/Equality.op/code_term.
-    (*      case trm1=> []x; case trm2=> []y//=. *)
-    (*      case e: (x == y); first by move: e=> /eqP[]->; rewrite eqxx. *)
-    (*      move: e. *)
-    (*      apply contraPF. move=> /eqP[->]; rewrite eqxx. apply /eqP.  *)
-    (*      apply: contraTnot _. *)
-    (*      move=> []/eqP; rewrite e. done. *)
-    (*      injection. *)
-    (*      congr GenTree.Node _ . *)
-    (*      move: e. *)
-    (*      apply contraPneq. *)
-    (*      rewrite eq_sym in e. *)
-    (*      move: e=> /eqP/=. []. ->; rewrite eqxx. *)
-         case e: (eqb_term trm1 trm2); move: e; case trm1; case trm2=> //x y /=.
-         by move=> /eqP ->; rewrite eqxx.
-         by move=> /eqP ->; rewrite eqxx.
-         by move=> /eqP ->; rewrite eqxx.
-         by move=> H; apply /eqP; move=> []z; rewrite z eqxx in H.
-         by move=> H; apply /eqP; move=> []z; rewrite z eqxx in H.
-         by move=> H; apply /eqP; move=> []z; rewrite z eqxx in H.
-  Qed.
+    apply /idP/idP.
+      + by move=> /eqP ->; case: trm2=> ? /=; rewrite eqxx.
+      + by case: trm1; case:trm2 => //= t1 t2 /eqP ->; rewrite eqxx.
+    Qed.
 
   Definition get_b_term (t : (term I B L)) : option B :=
     if t is Bnode b then Some b else None.

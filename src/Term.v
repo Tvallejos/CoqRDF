@@ -129,19 +129,18 @@ Section CodeTerm.
 
   Implicit Type trm : term I B L.
 
-  Definition code_term trm : GenTree.tree (I + B + L)%type :=
+  Definition code_term trm : (I + B + L)%type :=
     match trm with
-    | Iri i => GenTree.Leaf (inl (inl i))
-    | Lit l => GenTree.Leaf (inr l)
-    | Bnode name => GenTree.Leaf (inl (inr name))
+    | Iri i => (inl (inl i))
+    | Lit l => (inr l)
+    | Bnode name => (inl (inr name))
     end.
 
-  Definition decode_term (x : GenTree.tree (I + B + L)) : option (term I B L) :=
+  Definition decode_term (x : (I + B + L)) : option (term I B L) :=
     match x with
-    | GenTree.Leaf (inl (inl i)) => Some (Iri i)
-    | GenTree.Leaf (inr l) =>  Some (Lit l)
-    | GenTree.Leaf (inl (inr name)) => Some (Bnode name)
-    | _ => None
+    | (inl (inl i)) => Some (Iri i)
+    | (inr l) =>  Some (Lit l)
+    | (inl (inr name)) => Some (Bnode name)
     end.
 
   Lemma pcancel_code_decode : pcancel code_term decode_term.

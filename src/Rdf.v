@@ -753,6 +753,9 @@ Section Rdf.
         by rewrite count_uniq_mem //; case: (mu b \in get_bts ts2).
         Qed.
 
+        Lemma is_pre_iso_ts_inj2 ts1 ts2 mu : is_pre_iso_ts ts1 ts2 mu -> {in get_bts ts1 &, injective mu}.
+        Proof. by move=> /perm_uniq equniq; apply/(in_map_injP); rewrite // equniq. Qed.
+
         Lemma is_pre_iso_inj g1 g2 mu : is_pre_iso g1 g2 mu -> {in get_b g1 &, injective mu}.
         Proof. by apply is_pre_iso_ts_inj. Qed.
 

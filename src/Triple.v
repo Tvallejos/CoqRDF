@@ -28,7 +28,7 @@ Section PolyTriple.
   Variables I B L : Type.
   Implicit Type t : triple I B L.
 
-  Remark triple_spec_correct t :
+  Remark triple_spec_wf t :
     is_in_ib (subject t) && is_in_i (predicate t) && is_in_ibl (object t).
   Proof. by case t=> ? ? []? /= -> ->. Qed.
 

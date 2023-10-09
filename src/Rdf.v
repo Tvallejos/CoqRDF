@@ -57,6 +57,9 @@ Section Rdf.
     Canonical rdf_eqType (i b l : eqType):= EqType (rdf_graph i b l) (PcanEqMixin (@pcancel_code_decode i b l)).
     Canonical rdf_predType (i b l : eqType) := PredType (pred_of_seq \o (@graph i b l)).
 
+
+    Lemma rdfE g1 g2 : (g1 == g2) = ((graph g1) == (graph g2)). by []. Qed.
+
     Remark eq_eqb_rdf g1 g2 : g1 == g2 -> eqb_rdf g1 g2.
     Proof. by move=> /eqP ->; rewrite eqb_rdf_refl. Qed.
 

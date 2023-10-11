@@ -9,7 +9,7 @@ Section Sets.
   (* Defining some sets for IRIs, blank nodes and literals. *)
 
   Inductive Iex :=
-  | Is_a
+  | isA
   | Sonata
   | Year.
 
@@ -52,7 +52,7 @@ Section Prelude.
 
   Definition eqb_i (i1 i2 : Iex) :=
     match (i1, i2) with
-    | (Is_a, Is_a) | (Sonata,Sonata) | (Year,Year) => true
+    | (isA, isA) | (Sonata,Sonata) | (Year,Year) => true
     | (_,_) => false
     end.
 
@@ -101,8 +101,8 @@ Section TermsEx.
   Definition L (l : Lex) {B : Type} := @Lit Iex B Lex l.
   Definition Bn {B : Type} := @Bnode Iex B Lex.
 
-  Definition is_a1 := @I Is_a B1ex.
-  Definition is_a2 := @I Is_a B2ex.
+  Definition isA1 := @I isA B1ex.
+  Definition isA2 := @I isA B2ex.
   Definition sonata1 := @I Sonata B1ex.
   Definition sonata2 := @I Sonata B2ex.
   Definition year {B : Type} := @I Year B.
@@ -112,11 +112,11 @@ Section TermsEx.
   Definition n1781 {B : Type} := @L (num 1781) B.
 
 
-  Example relabeling_an_iri : (relabeling_term mu is_a1) == is_a1. by []. Qed.
+  Example relabeling_an_iri : (relabeling_term mu isA1) == isA1. by []. Qed.
 
-  Example relabeling_a_blank_node : (relabeling_term mu b) == Bn C. by []. Qed.
+  Example relabeling_a_blank_node : (relabeling_term mu b) == c. by []. Qed.
 
-  Example relabeling_blank_node_type : (relabeling_term nu b) == Bn F. by []. Qed.
+  Example relabeling_blank_node_type : (relabeling_term nu b) == f. by []. Qed.
 
 End TermsEx.
 
@@ -130,15 +130,15 @@ Section TripleEx.
   Definition tr_b1 := triple iE b1E lE.
   Definition tr_b2 := triple iE b2E lE.
 
-  Definition b_is_a_sonata : tr_b1. by refine (@mkTriple _ b is_a1 sonata1 _ _). Defined.
-  Definition f_is_a_sonata : tr_b2. by refine (@mkTriple _ f is_a2 sonata2 _ _). Defined.
-  Definition c_is_a_sonata : tr_b1. by refine (@mkTriple _ c is_a1 sonata1 _ _). Defined.
+  Definition b_isA_sonata : tr_b1. by refine (@mkTriple _ b isA1 sonata1 _ _). Defined.
+  Definition f_isA_sonata : tr_b2. by refine (@mkTriple _ f isA2 sonata2 _ _). Defined.
+  Definition c_isA_sonata : tr_b1. by refine (@mkTriple _ c isA1 sonata1 _ _). Defined.
   Definition f_year_1781 : tr_b2. by refine (@mkTriple _ f year n1781 _ _). Defined.
   Definition b_year_1781 : tr_b1. by refine (@mkTriple _ b year n1781 _ _). Defined.
 
-  Example relabeling_a_triple_eq : relabeling_triple mu b_is_a_sonata == c_is_a_sonata. by []. Qed.
+  Example relabeling_a_triple_eq : relabeling_triple mu b_isA_sonata == c_isA_sonata. by []. Qed.
 
-  Example relabeling_a_triple_neq : relabeling_triple nu b_is_a_sonata == f_year_1781 = false. by []. Qed.
+  Example relabeling_a_triple_neq : relabeling_triple nu b_isA_sonata == f_year_1781 = false. by []. Qed.
 
 End TripleEx.
 Section GraphEx.
@@ -148,10 +148,10 @@ Section GraphEx.
   Definition RDF_b1 := rdf_graph iE b1E lE.
   Definition RDF_b2 := rdf_graph iE b2E lE.
 
-  Definition BSonataG : RDF_b1. by refine (@mkRdfGraph _ _ _ [:: b_is_a_sonata; b_year_1781] _). Defined.
+  Definition BSonataG : RDF_b1. by refine (@mkRdfGraph _ _ _ [:: b_isA_sonata; b_year_1781] _). Defined.
   Definition relabeled_G : RDF_b2. by refine (@relabeling _ _ _ _ nu BSonataG _). Defined.
-  Definition BSonataG_perm : RDF_b1. by refine (@mkRdfGraph _ _ _ [:: b_year_1781 ; b_is_a_sonata ] _). Defined.
-  Definition FSonataG : RDF_b2. by refine (@mkRdfGraph _ _ _ [:: f_is_a_sonata; f_year_1781] _). Defined.
+  Definition BSonataG_perm : RDF_b1. by refine (@mkRdfGraph _ _ _ [:: b_year_1781 ; b_isA_sonata ] _). Defined.
+  Definition FSonataG : RDF_b2. by refine (@mkRdfGraph _ _ _ [:: f_isA_sonata; f_year_1781] _). Defined.
 
   Example graphs_eq : eqb_rdf BSonataG BSonataG_perm. by []. Qed.
   Example graphs_relabel_eq : eqb_rdf relabeled_G FSonataG. by []. Qed.

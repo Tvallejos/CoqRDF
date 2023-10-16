@@ -92,8 +92,8 @@ Section Prelude.
   Canonical b1E := Eval hnf in EqType B1ex (EqMixin b1_eqP).
   Canonical b2E := Eval hnf in EqType B2ex (EqMixin b2_eqP).
   Canonical lE := Eval hnf in  EqType Lex (EqMixin l_eqP).
-  Canonical strE := Eval hnf in EqType string (EqMixin str_eqP).
-  Canonical strE := Eval hnf in EqType string (EqMixin str_eqP).
+  Canonical iriE := Eval hnf in EqType string (EqMixin str_eqP).
+  Canonical litE := Eval hnf in prod_eqType iriE iriE.
 
 
 End Prelude.
@@ -161,76 +161,76 @@ Section TripleStr.
   Definition mkTriple {B : Type} := @mkTriple iri_t B lit_t.
 
   (* type aliases *)
-  Definition tr_b1 := triple strE nat lit_t.
-  Definition tr_b2 := triple strE b1E lit_t.
+  Definition tr_b1 := triple iriE nat litE.
+  Definition tr_b2 := triple iriE b1E litE.
 
   Definition z_isA_sonata : tr_b1. by refine (@mkTriple _ z isA_nat sonata _ _). Defined.
-  Definition a_isA_sonata : tr_b2. by refine (@mkTriple _ (Bn A) isA_b sonata_b _ _). Defined.
+  Definition b_isA_sonata : tr_b2. by refine (@mkTriple _ (Bn B) isA_b sonata_b _ _). Defined.
   Definition o_isA_sonata : tr_b1. by refine (@mkTriple _ (Bn 1) isA_nat sonata _ _). Defined.
-  Definition a_year_1781 : tr_b2. by refine (@mkTriple _ a year n1781 _ _). Defined.
+  Definition b_year_1781 : tr_b2. by refine (@mkTriple _ (Bn B) year n1781 _ _). Defined.
   Definition o_year_1781 : tr_b1. by refine (@mkTriple _ (Bn 1) year n1781 _ _). Defined.
 
   Example relabeling_a_triple_eq : relabeling_triple mu z_isA_sonata == o_isA_sonata. by []. Qed.
 
-  Example relabeling_a_triple_neq : relabeling_triple nu z_isA_sonata == a_year_1781 = false. by []. Qed.
+  Example relabeling_a_triple_neq : relabeling_triple nu z_isA_sonata == b_year_1781 = false. by []. Qed.
 
 End TripleStr.
 Section GraphStr.
   (* Defining some graphs and testing relabeling and equality on them. *)
 
   (* type aliases *)
-  Definition RDF_b1 := rdf_graph strE nat_eqType lit_t.
-  Definition RDF_b2 := rdf_graph strE b1E lit_t.
+  Definition RDF_b1 := rdf_graph iriE nat_eqType litE.
+  Definition RDF_b2 := rdf_graph iriE b1E litE.
 
-  Definition BSonataG : RDF_b1. by refine (@mkRdfGraph _ _ _ [:: b_isA_sonata; b_year_1781] _). Defined.
+  Definition BSonataG : RDF_b1. by refine (@mkRdfGraph _ _ _ [:: o_isA_sonata; o_year_1781] _). Defined.
   Definition relabeled_G : RDF_b2. by refine (@relabeling _ _ _ _ nu BSonataG _). Defined.
-  Definition BSonataG_perm : RDF_b1. by refine (@mkRdfGraph _ _ _ [:: b_year_1781 ; b_isA_sonata ] _). Defined.
-  Definition FSonataG : RDF_b2. by refine (@mkRdfGraph _ _ _ [:: f_isA_sonata; f_year_1781] _). Defined.
+  Definition BSonataG_perm : RDF_b1. by refine (@mkRdfGraph _ _ _ [:: o_year_1781 ; o_isA_sonata ] _). Defined.
+  Definition FSonataG : RDF_b2. by refine (@mkRdfGraph _ _ _ [:: b_isA_sonata; b_year_1781] _). Defined.
 
   Example graphs_eq : eqb_rdf BSonataG BSonataG_perm. by []. Qed.
-  Example graphs_relabel_eq : eqb_rdf relabeled_G FSonataG. by []. Qed.
+  Example graphs_relabel_eq : eqb_rdf relabeled_G FSonataG. rewrite /eqb_rdf/relabeled_G/FSonataG/=. by []. Qed.
   Example graphs_prop_neq : BSonataG == empty_rdf_graph = false. by []. Qed.
 
-End GraphEx.
+End GraphStr.
 
-Section TripleEx.
+(* Section TripleEx. *)
 
-  (* Defining some triples and testing relabeling and equality on them. *)
+(*   (* Defining some triples and testing relabeling and equality on them. *) *)
 
-  Definition mkTriple {B : Type} := @mkTriple Iex B Lex.
+(*   Definition mkTriple {B : Type} := @mkTriple Iex B Lex. *)
 
-  (* type aliases *)
-  Definition tr_b1 := triple iE b1E lE.
-  Definition tr_b2 := triple iE b2E lE.
+(*   (* type aliases *) *)
+(*   Definition tr_b1 := triple iE b1E lE. *)
+(*   Definition tr_b2 := triple iE b2E lE. *)
 
-  Definition b_isA_sonata : tr_b1. by refine (@mkTriple _ b isA1 sonata1 _ _). Defined.
-  Definition f_isA_sonata : tr_b2. by refine (@mkTriple _ f isA2 sonata2 _ _). Defined.
-  Definition c_isA_sonata : tr_b1. by refine (@mkTriple _ c isA1 sonata1 _ _). Defined.
-  Definition f_year_1781 : tr_b2. by refine (@mkTriple _ f year n1781 _ _). Defined.
-  Definition b_year_1781 : tr_b1. by refine (@mkTriple _ b year n1781 _ _). Defined.
+(*   Definition b_isA_sonata : tr_b1. by refine (@mkTriple _ b isA1 sonata1 _ _). Defined. *)
+(*   Definition f_isA_sonata : tr_b2. by refine (@mkTriple _ f isA2 sonata2 _ _). Defined. *)
+(*   Definition c_isA_sonata : tr_b1. by refine (@mkTriple _ c isA1 sonata1 _ _). Defined. *)
+(*   Definition f_year_1781 : tr_b2. by refine (@mkTriple _ f year n1781 _ _). Defined. *)
+(*   Definition b_year_1781 : tr_b1. by refine (@mkTriple _ b year n1781 _ _). Defined. *)
 
-  Example relabeling_a_triple_eq : relabeling_triple mu b_isA_sonata == c_isA_sonata. by []. Qed.
+(*   Example relabeling_a_triple_eq : relabeling_triple mu b_isA_sonata == c_isA_sonata. by []. Qed. *)
 
-  Example relabeling_a_triple_neq : relabeling_triple nu b_isA_sonata == f_year_1781 = false. by []. Qed.
+(*   Example relabeling_a_triple_neq : relabeling_triple nu b_isA_sonata == f_year_1781 = false. by []. Qed. *)
 
-End TripleEx.
-Section GraphEx.
-  (* Defining some graphs and testing relabeling and equality on them. *)
+(* End TripleEx. *)
+(* Section GraphEx. *)
+(*   (* Defining some graphs and testing relabeling and equality on them. *) *)
 
-  (* type aliases *)
-  Definition RDF_b1 := rdf_graph iE b1E lE.
-  Definition RDF_b2 := rdf_graph iE b2E lE.
+(*   (* type aliases *) *)
+(*   Definition RDF_b1 := rdf_graph iE b1E lE. *)
+(*   Definition RDF_b2 := rdf_graph iE b2E lE. *)
 
-  Definition BSonataG : RDF_b1. by refine (@mkRdfGraph _ _ _ [:: b_isA_sonata; b_year_1781] _). Defined.
-  Definition relabeled_G : RDF_b2. by refine (@relabeling _ _ _ _ nu BSonataG _). Defined.
-  Definition BSonataG_perm : RDF_b1. by refine (@mkRdfGraph _ _ _ [:: b_year_1781 ; b_isA_sonata ] _). Defined.
-  Definition FSonataG : RDF_b2. by refine (@mkRdfGraph _ _ _ [:: f_isA_sonata; f_year_1781] _). Defined.
+(*   Definition BSonataG : RDF_b1. by refine (@mkRdfGraph _ _ _ [:: b_isA_sonata; b_year_1781] _). Defined. *)
+(*   Definition relabeled_G : RDF_b2. by refine (@relabeling _ _ _ _ nu BSonataG _). Defined. *)
+(*   Definition BSonataG_perm : RDF_b1. by refine (@mkRdfGraph _ _ _ [:: b_year_1781 ; b_isA_sonata ] _). Defined. *)
+(*   Definition FSonataG : RDF_b2. by refine (@mkRdfGraph _ _ _ [:: f_isA_sonata; f_year_1781] _). Defined. *)
 
-  Example graphs_eq : eqb_rdf BSonataG BSonataG_perm. by []. Qed.
-  Example graphs_relabel_eq : eqb_rdf relabeled_G FSonataG. by []. Qed.
-  Example graphs_prop_neq : BSonataG == empty_rdf_graph = false. by []. Qed.
+(*   Example graphs_eq : eqb_rdf BSonataG BSonataG_perm. by []. Qed. *)
+(*   Example graphs_relabel_eq : eqb_rdf relabeled_G FSonataG. by []. Qed. *)
+(*   Example graphs_prop_neq : BSonataG == empty_rdf_graph = false. by []. Qed. *)
 
-End GraphEx.
+(* End GraphEx. *)
 
 
 

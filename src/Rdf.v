@@ -11,6 +11,8 @@ Section Rdf.
                                            ugraph : uniq graph
                                          }.
 
+  Definition mkRdf {I B L : eqType} (s : seq (triple I B L)) := @mkRdfGraph I B L (undup s) (undup_uniq s).
+
   Section EqRdf.
 
     Lemma rdf_inj (I B L : eqType) (g1 g2 : rdf_graph I B L) :
@@ -41,6 +43,7 @@ Section Rdf.
     End CodeRdf.
     Variables I B L : eqType.
     Implicit Type g : rdf_graph I B L.
+
 
     Definition eqb_rdf g1 g2 : bool :=
       perm_eq (graph g1) (graph g2).
@@ -179,6 +182,11 @@ Section Rdf.
       (B1 B2 : eqType) (mu : B1 -> B2)
       (g : rdf_graph I B1 L)  (urel : uniq (relabeling_seq_triple mu (graph g))): rdf_graph I B2 L:=
       mkRdfGraph urel.
+
+    Definition relabeling_undup
+      (B1 B2 : eqType) (mu : B1 -> B2)
+      (g : rdf_graph I B1 L) : rdf_graph I B2 L:=
+      mkRdf (relabeling_seq_triple mu (graph g)).
 
     Section Relabeling_graph.
 

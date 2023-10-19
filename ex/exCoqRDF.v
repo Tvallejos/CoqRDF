@@ -35,7 +35,7 @@ Section Maps.
   Definition mu (b : nat) : nat :=
     match b with
     | 0 => 1
-    | _ => 0
+    | _ => b
     end.
 
   Definition nu (b: nat) : B1ex :=
@@ -131,65 +131,59 @@ Section TermsStr.
   (* Defining some terms and testing relabeling and equality on them. *)
   Definition iri_t := string.
   Definition lit_t := (string * string)%type.
-  Definition I (i : iri_t) {B : Type} := @Iri iri_t B lit_t i.
-  Definition L (l : lit_t) {B : Type} := @Lit iri_t B lit_t l.
-  Definition Bn {B : Type}:= @Bnode iri_t B lit_t.
+  Definition bn_t := nat.
 
-  Definition isA_nat := (@I "isA" nat).
-  Definition isA_b := (@I "isA" B1ex).
-  Definition sonata := (@I "sonata" nat).
-  Definition sonata_b := (@I "sonata" B1ex).
-  Definition year {B : Type} := @I "year" B.
-  (* Definition year {B : Type} := @I Year B. *)
-  Definition a := Bn A.
-  Definition z := Bn 0.
-  Definition f := Bn 5.
-  Definition n1781 {B : Type} := @L ("number","1781") B.
+  Definition I  := @Iri iri_t bn_t lit_t.
+  Definition L  := @Lit iri_t bn_t lit_t.
+  Definition Bn := @Bnode iri_t bn_t lit_t.
+
+  (* Definition isA := I "isA". *)
+  (* Definition sonata := I "sonata". *)
+  (* Definition year := I "year". *)
+
+  (* Definition a := Bn A. *)
+  (* Definition z := Bn 0. *)
+  (* Definition f := Bn 5. *)
+  (* Definition n1781 {B : Type} := @L ("number","1781") B. *)
 
 
-  Example relabeling_an_iri : (relabeling_term mu (@I "isA" nat)) == (@I "isA" nat). by []. Qed.
+  Example relabeling_an_iri : (relabeling_term mu (I "isA")) == (I "isA") = true. by []. Qed.
 
-  Example relabeling_a_blank_node : (relabeling_term mu (Bn 0)) == (Bn 1). by []. Qed.
+  Example relabeling_a_blank_node : (relabeling_term mu (Bn 0)) == (Bn 1) = true. by []. Qed.
 
-  Example relabeling_blank_node_type : (relabeling_term nu (Bn 0)) == (Bn A). by []. Qed.
+  Example relabeling_a_literal : (relabeling_term mu (L ("number","1781"))) == (I "1781") = false. by []. Qed.
 
 End TermsStr.
 Section TripleStr.
 
   (* Defining some triples and testing relabeling and equality on them. *)
 
-  Definition mkTriple {B : Type} := @mkTriple iri_t B lit_t.
+  Definition mkTriple := @mkTriple iri_t bn_t lit_t.
 
   (* type aliases *)
-  Definition tr_b1 := triple iriE nat litE.
-  Definition tr_b2 := triple iriE b1E litE.
+  Definition tr_t := triple iriE bn_t litE.
 
-  Definition z_isA_sonata : tr_b1. by refine (@mkTriple _ z isA_nat sonata _ _). Defined.
-  Definition b_isA_sonata : tr_b2. by refine (@mkTriple _ (Bn B) isA_b sonata_b _ _). Defined.
-  Definition o_isA_sonata : tr_b1. by refine (@mkTriple _ (Bn 1) isA_nat sonata _ _). Defined.
-  Definition b_year_1781 : tr_b2. by refine (@mkTriple _ (Bn B) year n1781 _ _). Defined.
-  Definition o_year_1781 : tr_b1. by refine (@mkTriple _ (Bn 1) year n1781 _ _). Defined.
+  Definition z_isA_sonata : tr_t. by refine (@mkTriple (Bn 0) (I "isA") (I "sonata") _ _). Defined.
+  Definition o_isA_sonata : tr_t. by refine (@mkTriple  (Bn 1) (I "isA") (I "sonata") _ _). Defined.
+  Definition o_year_1781 : tr_t. by refine (@mkTriple  (Bn 1) (I "year") (L ("number","1781")) _ _). Defined.
 
   Example relabeling_a_triple_eq : relabeling_triple mu z_isA_sonata == o_isA_sonata. by []. Qed.
-
-  Example relabeling_a_triple_neq : relabeling_triple nu z_isA_sonata == b_year_1781 = false. by []. Qed.
 
 End TripleStr.
 Section GraphStr.
   (* Defining some graphs and testing relabeling and equality on them. *)
 
   (* type aliases *)
-  Definition RDF_b1 := rdf_graph iriE nat_eqType litE.
-  Definition RDF_b2 := rdf_graph iriE b1E litE.
+  Definition RDF_t := rdf_graph iriE nat_eqType litE.
 
-  Definition BSonataG : RDF_b1. by refine (@mkRdfGraph _ _ _ [:: o_isA_sonata; o_year_1781] _). Defined.
-  Definition relabeled_G : RDF_b2. by refine (@relabeling _ _ _ _ nu BSonataG _). Defined.
-  Definition BSonataG_perm : RDF_b1. by refine (@mkRdfGraph _ _ _ [:: o_year_1781 ; o_isA_sonata ] _). Defined.
-  Definition FSonataG : RDF_b2. by refine (@mkRdfGraph _ _ _ [:: b_isA_sonata; b_year_1781] _). Defined.
+  Definition OSonataG := mkRdf [:: o_isA_sonata; o_year_1781].
+  Definition OSonataG_perm := mkRdf [:: o_year_1781 ; o_isA_sonata ].
+  Definition ZSonataG := mkRdf [:: z_isA_sonata; o_year_1781].
+  Definition relabeled_Z := (relabeling_undup mu ZSonataG).
 
-  Example graphs_eq : eqb_rdf BSonataG BSonataG_perm. by []. Qed.
-  Example graphs_relabel_eq : eqb_rdf relabeled_G FSonataG. rewrite /eqb_rdf/relabeled_G/FSonataG/=. by []. Qed.
-  Example graphs_prop_neq : BSonataG == empty_rdf_graph = false. by []. Qed.
+  Example graphs_eq : eqb_rdf OSonataG OSonataG_perm = true. by []. Qed.
+  Example graphs_relabel_eq : eqb_rdf relabeled_Z OSonataG = true. by []. Qed.
+  Example graphs_prop_neq : ZSonataG == empty_rdf_graph = false. by []. Qed.
 
 End GraphStr.
 

@@ -1034,5 +1034,117 @@ The term "g1" has type "rdf_graph I B L" while it is expected to have type
     End FinTypeRdf.
 
   End CountRdf.
+
+Section OrderRdf.
+  Variable disp : unit.
+  Variables I B L : orderType disp.
+
+  Definition le_triple := @le_triple disp I B L.
+
+  Fixpoint le_st_fix (x y : seq (triple I B L)) :=
+      match (x,y) with
+      | (nil,nil)=> true
+      | (x::xs,y::ys) => if x == y
+                      then le_st_fix xs ys
+                      else le_triple x y
+      | (nil,_::_) => true
+      | (_::_,nil) => false
+      end.
+
+  Definition le_st : rel (seq (triple I B L)) :=
+    fun x y => le_st_fix x y.
+
+  Definition le_rdf : rel (rdf_graph I B L) :=
+    fun x y => le_st x y.
+
+  Definition lt_st : rel (seq (triple I B L)) :=
+    fun x y => (negb (x == y)) && (le_st x y).
+
+  Definition lt_rdf : rel (rdf_graph I B L) :=
+    fun x y => (negb (x == y)) && (le_st x y).
+
+  (* Infimum *)
+  Definition meet_st : (seq (triple I B L)) -> seq (triple I B L) -> seq (triple I B L) :=
+    fun x y => (if lt_st x y then x else y).
+
+  Definition meet_rdf : (rdf_graph I B L) -> (rdf_graph I B L) -> (rdf_graph I B L) :=
+    fun x y => (if lt_st x y then x else y).
+
+  (* Supremum *)
+  Definition join_st : seq (triple I B L) -> seq (triple I B L) -> seq (triple I B L) :=
+    fun x y => (if lt_st x y then y else x).
+
+  Definition join_rdf : (rdf_graph I B L) -> (rdf_graph I B L) -> (rdf_graph I B L) :=
+    fun x y => (if lt_st x y then y else x).
+
+  Lemma lt_st_def : forall x y, lt_st x y = (y != x) && (le_st x y).
+  Proof. by move=> x y; rewrite eq_sym. Qed.
+
+  Lemma lt_rdf_def : forall x y, lt_rdf x y = (y != x) && (le_rdf x y).
+  Proof. by move=> x y; apply lt_st_def. Qed.
+
+  Lemma meet_st_def : forall x y, meet_st x y = (if lt_st x y then x else y).
+  Proof. by []. Qed.
+  Lemma meet_rdf_def : forall x y, meet_rdf x y = (if lt_rdf x y then x else y).
+  Proof. by []. Qed.
+
+  Lemma joinst_def : forall x y, join_st x y = (if lt_st x y then y else x).
+  Proof. by []. Qed.
+  Lemma join_rdf_def : forall x y, join_rdf x y = (if lt_rdf x y then y else x).
+  Proof. by []. Qed.
+
+  Lemma le_st_total : total le_st.
+  Proof. elim=> [|tx txs IHtx] [| ty txy]=> //=.
+         case e: (tx == ty); rewrite (eq_sym ty tx) e; first by apply: IHtx.
+         + exact: le_total.
+  Qed.
+
+  Lemma le_rdf_total : total le_rdf.
+  Proof. by move=> x y; apply: le_st_total. Qed.
+
+  Lemma lt_st_neq_total sx sy : sx != sy -> lt_st sx sy || lt_st sy sx.
+  Proof. rewrite !lt_st_def /negb eq_sym=> -> /=; exact: le_st_total. Qed.
+  Lemma lt_rdf_neq_total g h : g != h -> lt_rdf g h || lt_rdf h g.
+  Proof. rewrite !lt_rdf_def /negb eq_sym=> -> /=; exact: le_rdf_total. Qed.
+
+  Lemma le_st_antisym sx sy : le_st sx sy && le_st sy sx -> sx == sy.
+    elim: sx sy=> [| x xs IHxs] [| y ys] //=.
+    case e : (x == y); rewrite (eq_sym y x) e.
+      + by rewrite (eqP e)=> /IHxs/eqP ->.
+      + by move=> /le_triple_antisym; rewrite e.
+  Qed.
+
+  Lemma le_rdf_antisym g h : le_rdf g h && le_rdf h g -> g == h.
+  Proof. by apply le_st_antisym. Qed.
+
+  Lemma le_st_anti : antisymmetric le_st.
+  Proof. by move=> sx sy /le_st_antisym/eqP ->. Qed.
+
+  Lemma le_rdf_anti : antisymmetric le_rdf.
+  Proof. by move=> x y /le_st_anti/rdf_inj ->. Qed.
+
+  Lemma le_st_trans : transitive le_st.
+  Proof. elim=> [| x sx IHsx] [| y sy] [| z sz] //=.
+         repeat (case : ifP=> // /eqP ?; subst)=> //.
+         + by apply IHsx.
+         + rewrite /le_triple=> le1 le2.
+           suffices /eqP contra : x == z.
+             by subst.
+           by apply le_triple_antisym; rewrite /le_triple in le1, le2; rewrite le1 le2.
+         + apply le_triple_trans.
+  Qed.
+
+  Lemma le_rdf_trans : transitive le_rdf.
+  Proof. by move=> x y z; apply le_st_trans. Qed.
+
+Definition rdf_leOrderMixin :=
+  Eval hnf in
+    @LeOrderMixin (@rdf_choiceType I B L)
+      le_rdf lt_rdf meet_rdf join_rdf
+      lt_rdf_def meet_rdf_def join_rdf_def
+      le_rdf_anti le_rdf_trans le_rdf_total.
+
+End OrderRdf.
+
 End Rdf.
 

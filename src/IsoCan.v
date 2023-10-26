@@ -895,6 +895,19 @@ Section IsoCan.
           by apply/mapP; exists (zip perm (iota 0 (size perm)))=> //; apply /mapP; exists perm=> //.
         Qed.
 
+     Lemma all_kmap_preiso (ts : seq (triple I B L)) (uniq_ts : uniq ts):
+       forall u, u \in [seq [seq Bnode (mkHinput an.1 an.2) | an <- i]
+                       | i <- [seq zip s (iota 0 (size s)) | s <- permutations (get_bts ts)]] ->
+                  is_pre_iso_ts ts
+                    (relabeling_seq_triple (build_kmapping_from_seq_alt u) ts)
+                    (build_kmapping_from_seq_alt u).
+     Proof.
+      move=> u /mapP /= [x /mapP[/= perm bin ->]] ->.
+      suffices mu_inj : {in get_bts ts&, injective (build_kmapping_from_seq_alt [seq Bnode (mkHinput an.1 an.2) | an <- zip perm (iota 0 (size perm))])}.
+        by apply auto_iso_rel_perm.
+      by apply (labeled_perm_inj uniq_ts (candidate_in_perm bin)).
+     Qed.
+
       Lemma uniq_k_mapping_res (ts : rdf_graph I B L) : uniq (k_mapping_alt ts).
       Proof.
       case: ts => ts uniq_ts /=; rewrite /k_mapping_alt.
@@ -906,10 +919,7 @@ Section IsoCan.
       suffices relab_uniq : all uniq relab.
         by case: (foldl_max relab [::])=> [-> //|]; apply: (allP relab_uniq).
       apply /allP; rewrite /relab/build_kmap -map_comp=> t /mapP[u mem ->] {relab build_kmap}; apply uniq_relabeling_pre_iso=> //.
-      move/mapP : mem=> /= [x /mapP[/= perm bin ->]] ->.
-      suffices mu_inj : {in get_bts ts&, injective (build_kmapping_from_seq_alt [seq Bnode (mkHinput an.1 an.2) | an <- zip perm (iota 0 (size perm))])}.
-        by apply auto_iso_rel_perm.
-      by apply (labeled_perm_inj uniq_ts (candidate_in_perm bin)).
+      by apply all_kmap_preiso.
       Qed.
 
       Definition k_mapping (g : rdf_graph I B L) : rdf_graph I B L :=
@@ -947,23 +957,17 @@ Section IsoCan.
         Qed.
 
       Lemma kmapping_iso_out g: iso g (k_mapping g).
-      Proof. rewrite /mapping_is_iso_mapping/k_mapping/iso/iso_ts/is_iso_ts.
-             have := uniq_k_mapping_res g.
-             case : g=> ts uts /=.
-             rewrite /k_mapping_alt.
-             case : (foldl_max ([seq relabeling_seq_triple mu0 ts
-                   | mu0 <- [seq build_kmapping_from_seq_alt i
-                               | i <- [seq [seq Bnode (mkHinput an.1 an.2) | an <- i]
-                                         | i <- [seq zip s (iota 0 (size s))
-                                               | s <- permutations (get_bts ts)]]]]) [::]).
-             by move=> /k_mapping_nil_is_nil=> ts_nil; exists id; rewrite ts_nil.
-             rewrite /= -map_comp=> /mapP /=[s sin H]; rewrite H.
-             move=> ukres; exists (build_kmapping_from_seq_alt s).
-             suffices preiso : is_pre_iso_ts ts (relabeling_seq_triple (build_kmapping_from_seq_alt s) ts) (build_kmapping_from_seq_alt s).
-               by apply ts_pre_iso_iso=> //.
-             move/mapP : sin=> /=[bn /mapP[/= perm inperm ->] ->].
-             apply auto_iso_rel_perm=> //.
-        by apply: labeled_perm_inj=> //; apply candidate_in_perm.
+      Proof.
+      rewrite /mapping_is_iso_mapping/k_mapping/iso/iso_ts/is_iso_ts.
+      have := uniq_k_mapping_res g.
+      case : g=> ts uts /=; rewrite /k_mapping_alt.
+      set isocans := (map (fun mu=> relabeling_seq_triple mu ts) _).
+      case : (foldl_max isocans [::]); rewrite /isocans{isocans}/= ; first by move=> /k_mapping_nil_is_nil -> _; exists id.
+      rewrite -map_comp=> /mapP/=[s sin ->] ukres.
+      exists (build_kmapping_from_seq_alt s).
+      suffices preiso : is_pre_iso_ts ts (relabeling_seq_triple (build_kmapping_from_seq_alt s) ts) (build_kmapping_from_seq_alt s).
+        by apply ts_pre_iso_iso=> //.
+      by apply all_kmap_preiso.
       Qed.
 
       Lemma iso_structure (ts1 ts2: seq (triple I B L)) :

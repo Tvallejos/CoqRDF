@@ -1019,6 +1019,17 @@ Section IsoCan.
         by rewrite find_index_eqbb ?size_iota // nth_mapzip ?size_iota //.
       Qed.
 
+      Definition build_map_k p :=
+        (build_kmapping_from_seq_alt [seq Bnode (mkHinput an.1 an.2) | an <- zip p (iota 0 (size p))]).
+
+      Axiom isocan_auto_symmetry : forall g h mu, is_iso_ts g h mu ->
+                                             forall q, q \in permutations (get_bts h) ->
+                                                        (k_mapping_alt h) = relabeling_seq_triple (build_map_k q) h ->
+                                                        forall p, p \in permutations (get_bts g) ->
+                                                                   (k_mapping_alt g) = relabeling_seq_triple (build_map_k p) g ->
+                                                                   (relabeling_seq_triple (build_map_k q) h) =i
+                                                                                                                (relabeling_seq_triple (build_map_k (map mu p)) h).
+
       Lemma iso_can_kmapping : isocanonical_mapping k_mapping.
       Proof.
         split=> [|g1 g2]; first by apply kmapping_iso_out.
@@ -1042,7 +1053,7 @@ Section IsoCan.
         move/mapP : kg1inc1=> [/= p].
         set maxisocans_g1 :=  relabeling_seq_triple
                                 (build_kmapping_from_seq_alt [seq Bnode (mkHinput an.1 an.2) | an <- zip p (iota 0 (size p))]) g1.
-        move=> [pperm1 eq]. rewrite eq.
+        move=> pperm1 eq; rewrite eq.
         rewrite /iso/iso_ts in isog1g2.
         move : isog1g2=> [mu /and3P[pisoP urel peq]].
         move=> maxg1neqnil kg2neqnil trpl .
@@ -1106,16 +1117,21 @@ Section IsoCan.
         by apply map_f.
         by rewrite map_inj_in_uniq.
         by move: pperm1; rewrite mem_permutations => /perm_uniq ->; rewrite uniq_get_bts.
-        move=> /= c.
-        move/mapP : kg2inc2=> /=[p2 p2g2 eqc2]; rewrite eqc2 /c2_cand=> {c2_cand}.
-        suffices -> : p2 = (map mu p). by [].
-        rewrite !mem_permutations in p2g2 pperm1.
-        apply (perm_map mu) in pperm1.
-        rewrite /is_pre_iso_ts in pisoP.
-        have mupg2 := perm_trans pperm1 pisoP.
-        rewrite /maxisocans_g1 in eq.
-        rewrite /= in eq eqc2.
-        Admitted.
+        move/mapP : kg2inc2=> /=[q qin maxisocanh].
+        rewrite maxisocanh /c2_cand.
+        have maxg2 : (k_mapping_alt g2) = relabeling_seq_triple (build_map_k q) g2.
+        rewrite /k_mapping_alt.
+        rewrite /cand2 map_comp map_comp map_comp map_comp map_id in maxisocanh.
+        by rewrite maxisocanh.
+        have maxg1 : (k_mapping_alt g1) = relabeling_seq_triple (build_map_k p) g1.
+        rewrite /k_mapping_alt.
+        rewrite /maxisocans_g1/cand1 map_comp map_comp map_comp map_comp map_id in eq.
+        by rewrite eq.
+        have <- : (build_map_k q) =  (build_kmapping_from_seq_alt [seq Bnode (mkHinput an.1 an.2) | an <- zip q (iota 0 (size q))]) by [].
+        have <- : (build_map_k (map mu p)) =  (build_kmapping_from_seq_alt [seq Bnode (mkHinput an.1 an.2) | an <- zip (map mu p) (iota 0 (size (map mu p)))]) by [].
+        have isogh : is_iso_ts g1 g2 mu by rewrite /is_iso_ts pisoP urel peq.
+        by apply (@isocan_auto_symmetry _ _ _ isogh q qin maxg2 p pperm1 maxg1).
+      Qed.
 
       Lemma all_kmaps_bijective g : List.Forall (fun mu => bijective mu) [seq build_kmapping_from_seq i
                                                                          | i <- [seq mapi (app_n mark_bnode) i

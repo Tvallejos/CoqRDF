@@ -129,6 +129,18 @@ Section Rdf.
         relabeling_seq_triple mu ts1 =i relabeling_seq_triple mu ts2.
       Proof. by apply eq_mem_map. Qed.
 
+      Lemma relabeling_mem (ts1 ts2: seq (triple I B L)) (mu : B -> B) :
+        ts1 =i ts2 -> relabeling_seq_triple mu ts1 =i relabeling_seq_triple mu ts2.
+      Proof. by apply eq_mem_map. Qed.
+
+      Lemma relabeling_ext_in (B1 : eqType) (mu1 mu2 : B -> B1) (ts : seq (triple I B L)):
+        {in ts, relabeling_triple mu1 =1  relabeling_triple mu2} ->
+        relabeling_seq_triple mu1 ts =i relabeling_seq_triple mu2 ts.
+      Proof. elim: ts => [//| tr tl ihtl].
+             move=> /= eq; rewrite eq; last by rewrite mem_head.
+             by move => ?; rewrite !in_cons ihtl // => x xin; apply eq; apply mem_cons.
+      Qed.
+
       Lemma uniq_rdf_graph g : uniq g. Proof. exact: ugraph. Qed.
       Hint Resolve uniq_rdf_graph.
 

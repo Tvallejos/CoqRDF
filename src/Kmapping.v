@@ -267,19 +267,6 @@ Section Kmapping.
     Lemma build_hkp : build_kmapping_from_seq \o hash_kp = build_map_k.
     Proof. by []. Qed.
 
-    Lemma relabeling_mem (T U V: eqType)(g h: seq (triple T U V)) (mu : U -> U) :
-      g =i h -> relabeling_seq_triple mu g =i relabeling_seq_triple mu h.
-    Proof. by apply eq_mem_map. Qed.
-
-    Lemma relabeling_ext_in :
-  forall [I B L B1 : eqType] [mu1 mu2 : B -> B1] [g : seq (triple I B L)],
-  {in g, relabeling_triple mu1 =1  relabeling_triple mu2} ->
-  relabeling_seq_triple mu1 g =i relabeling_seq_triple mu2 g.
-    Proof. move=> ? ? ? ? mu nu; elim=> [//| tr tl ihtl].
-           move=> /= eq; rewrite eq; last by rewrite mem_head.
-           by move => T; rewrite !in_cons ihtl // => x xin; apply eq; apply mem_cons.
-    Qed.
-
     Lemma kmapping_can_invariant g g2 (isogg2 : iso g g2) : eqb_rdf (k_mapping g) (k_mapping g2).
     Proof.
     have := iso_isokmap (isogg2).

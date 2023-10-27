@@ -268,6 +268,22 @@ Section Kmapping.
     Lemma build_hkp : build_kmapping_from_seq \o hash_kp = build_map_k.
     Proof. by []. Qed.
 
+    Lemma relabeling_mem (T U V: eqType)(g h: seq (triple T U V)) (mu : U -> U) :
+      g =i h -> relabeling_seq_triple mu g =i relabeling_seq_triple mu h.
+    Proof. by apply eq_mem_map. Qed.
+
+    Lemma relabeling_ext_in :
+  forall [I B L B1 : eqType] [mu1 mu2 : B -> B1] [g : seq (triple I B L)],
+  {in g, relabeling_triple mu1 =1  relabeling_triple mu2} ->
+  relabeling_seq_triple mu1 g =i relabeling_seq_triple mu2 g.
+    Proof. move=> ? ? ? ? mu nu; elim=> [//| tr tl ihtl].
+           move=> /= eq; rewrite eq; last by rewrite mem_head.
+           by move => T; rewrite !in_cons ihtl // => x xin; apply eq; apply mem_cons.
+    Qed.
+
+    (* Lemma rel_bk_in_perm p : *)
+    (*   relabeling_seq_triple p, (build_map_k p) g =i relabeling_seq_triple (build_map_k [seq mu i | i <- p] \o mu) g. *)
+
     Lemma kmapping_can_invariant g g2 (isogg2 : iso g g2) : eqb_rdf (k_mapping g) (k_mapping g2).
     Proof.
     have := iso_isokmap (isogg2).
@@ -278,72 +294,40 @@ Section Kmapping.
     move=> /iso_structure/orP[/andP[/eqP -> /eqP ->] // |/andP[]].
     move: (foldl_max cand1 [::]) (foldl_max cand2 [::]) =>[-> //| kg1inc1 ] [-> //| kg2inc2] _ _.
     move/mapP : kg1inc1=> [/= p].
-    set maxisocans_g1 :=  relabeling_seq_triple (build_map_k p) g.
     move=> pperm1 eq; rewrite eq.
     move : isogg2=> [mu /and3P[pisoP urel peq]] trpl.
     set c2_cand := relabeling_seq_triple (build_map_k (map mu p)) g2.
-    suffices -> : foldl Order.max [::] cand2 =i c2_cand.
-      rewrite /c2_cand /maxisocans_g1.
-      apply/mapP/mapP=> /= [[t tin ->]|[t tin ->]] .
-      exists (relabeling_triple mu t); first by apply perm_mem in peq; rewrite -peq; apply map_f.
-      (*  *)
-      have pg1_mem : p =i get_bts g. by rewrite mem_permutations in pperm1; move/perm_mem : pperm1.
-      have mu_inj : {in p &, injective mu}. by move=> x y xin yin; apply (is_pre_iso_inj pisoP); rewrite -pg1_mem.
-      (* rewrite -relabeling_triple_comp. *)
-      (* apply relabeling_triple_ext. *)
-      suffices build_modulo_map :
-        forall b, b \in p -> (build_map_k p) b = build_map_k (map mu p) (mu b).
-        case : t tin=> [[]]//s []p' []o// sib pii tin //=;
+    move/mapP : kg2inc2=> /=[q qin maxisocanh]; rewrite maxisocanh.
+    have pg1_mem : p =i get_bts g. by rewrite mem_permutations in pperm1; move/perm_mem : pperm1.
+    have mu_inj : {in p &, injective mu}. by move=> x y xin yin; apply (is_pre_iso_inj pisoP); rewrite -pg1_mem.
+    suffices -> : relabeling_seq_triple (build_map_k q) g2 =i c2_cand.
+    rewrite /c2_cand.
+      suffices -> : relabeling_seq_triple (build_map_k [seq mu i | i <- p]) g2 =i
+                   relabeling_seq_triple ((build_map_k [seq mu i | i <- p]) \o mu) g.
+        suffices eq1: {in g, relabeling_triple (build_map_k p) =1 relabeling_triple ((build_map_k (map mu p) \o mu))}.
+          by rewrite (relabeling_ext_in eq1).
+        suffices build_modulo_map :
+          forall b, b \in p -> (build_map_k p) b = build_map_k (map mu p) (mu b).
+          by case=> [[]]//s []p' []o// sib pii tin //=;
                         apply triple_inj=> //=; congr Bnode;
                                           rewrite build_modulo_map //;
                                             rewrite pg1_mem; apply (mem_ts_mem_triple_bts tin);
                                           rewrite /bnodes_triple filter_undup mem_undup /= ?in_cons ?eqxx ?orbT //.
-      suffices upg1 : uniq p.
-        move=> b bin.
-        rewrite /build_map_k (out_of_build bin upg1) out_of_build.
-        (* refacto out of build *)
-        congr to_string_nat; rewrite !nth_iota.
-        rewrite index_map_in //.
-        by rewrite index_mem; apply map_f.
-        by rewrite index_mem.
-        by apply map_f.
-        by rewrite map_inj_in_uniq.
-      by move: pperm1; rewrite mem_permutations => /perm_uniq ->; rewrite uniq_get_bts.
-      (* CASE MU P *)
-      apply perm_mem in peq.
-      rewrite -peq in tin.
-      move/mapP : tin=> /=[tg1 tg1in ->].
-      exists tg1=> //.
-      (*  *)
-      have pg1_mem : p =i get_bts g. by rewrite mem_permutations in pperm1; move/perm_mem : pperm1.
-      have mu_inj : {in p &, injective mu}. by move=> x y xin yin; apply (is_pre_iso_inj pisoP); rewrite -pg1_mem.
-      suffices build_modulo_map :
-        forall b, b \in p -> (build_map_k p) b = (build_map_k (map mu p)) (mu b).
-      case : tg1 tg1in=> [[]]//s []p' []o// sib pii tin //=;
-                          apply triple_inj=> //=; congr Bnode;
-                                            rewrite build_modulo_map //;
-                                              rewrite pg1_mem; apply (mem_ts_mem_triple_bts tin);
-                                            rewrite /bnodes_triple filter_undup mem_undup /= ?in_cons ?eqxx ?orbT //.
-      suffices upg1 : uniq p.
-        move=> b bin.
-        rewrite /build_map_k (out_of_build bin upg1) out_of_build.
-        congr to_string_nat; rewrite !nth_iota.
-        rewrite index_map_in //.
-        by rewrite index_mem; apply map_f.
-        by rewrite index_mem.
-        by apply map_f.
-        by rewrite map_inj_in_uniq.
-      by move: pperm1; rewrite mem_permutations => /perm_uniq ->; rewrite uniq_get_bts.
-    move/mapP : kg2inc2=> /=[q qin maxisocanh].
-    rewrite maxisocanh /c2_cand.
+        suffices upg1 : uniq p.
+          move=> b bin; rewrite /build_map_k (out_of_build bin upg1) out_of_build.
+          (* refacto out of build *)
+          congr to_string_nat; rewrite !nth_iota; first by rewrite index_map_in //.
+          by rewrite index_mem; apply map_f.
+          by rewrite index_mem.
+          by apply map_f.
+          by rewrite map_inj_in_uniq.
+        by move: pperm1; rewrite mem_permutations => /perm_uniq ->; rewrite uniq_get_bts.
+      by rewrite -relabeling_seq_triple_comp; apply: relabeling_mem=> x; rewrite (perm_mem peq).
+    rewrite /c2_cand.
     have maxg2 : (k_mapping_ts g2) = relabeling_seq_triple (build_map_k q) g2.
-    rewrite /k_mapping_ts.
-    rewrite /cand2 map_comp map_comp map_comp map_comp map_id in maxisocanh.
-    by rewrite maxisocanh.
+    by rewrite /k_mapping_ts; rewrite /cand2 map_comp map_comp map_comp map_comp map_id in maxisocanh.
     have maxg1 : (k_mapping_ts g) = relabeling_seq_triple (build_map_k p) g.
-    rewrite /k_mapping_ts.
-    rewrite /maxisocans_g1/cand1 map_comp map_comp map_comp map_comp map_id in eq.
-    by rewrite eq.
+    by rewrite /k_mapping_ts; rewrite /cand1 map_comp map_comp map_comp map_comp map_id in eq.
     have isogh : is_iso_ts g g2 mu by rewrite /is_iso_ts pisoP urel peq.
     by apply (@isocan_auto_symmetry _ _ _ isogh q qin maxg2 p pperm1 maxg1).
     Qed.

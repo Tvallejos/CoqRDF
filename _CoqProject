@@ -5,6 +5,7 @@
 ./src/Triple.v
 ./src/Rdf.v
 ./src/IsoCan.v
+./src/Kmapping.v
 #./src/Maps.v
 #./src/examples/TermExamples.v
 #./src/examples/RdfExamples.v

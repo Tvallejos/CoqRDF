@@ -1,0 +1,389 @@
+From mathcomp Require Import all_ssreflect.
+Set Implicit Arguments.
+Unset Strict Implicit.
+Unset Printing Implicit Defensive.
+From RDF Require Export Rdf Triple Term Util IsoCan.
+
+Section Kmapping.
+  Variable I B L : countType.
+  Hypothesis to_string_nat : nat -> B.
+  Hypothesis to_string_nat_inj : injective to_string_nat.
+
+
+  Definition hn := (hash nat B).
+  Definition hterm := (term I hn L).
+  Definition HBnode p := @Bnode I hn L (mkHinput p.1 p.2).
+
+  Definition n0 := 0%N.
+
+  Definition init_bnode_nat (b : B) : (hash nat B) := mkHinput b n0.
+
+  Lemma init_bnode_nat_inj : injective init_bnode_nat.
+  Proof. by move=> x y []. Qed.
+
+
+  Definition build_kmapping_from_seq (trms : seq hterm) : B -> B :=
+    fun b =>
+      if has (eqb_b_hterm b) trms then
+        let the_bnode := nth (HBnode (b,n0)) trms (find (eqb_b_hterm b) trms) in
+        to_string_nat (lookup_hash_default_ n0 the_bnode)
+      else
+        b.
+
+  Definition build_map_k p := build_kmapping_from_seq [seq HBnode an | an <- zip p (iota 0 (size p))].
+
+  Definition k_mapping_alt (ts : seq (triple I B L)) : seq (triple I B L) :=
+    let perms :=  permutations (get_bts ts) in
+    let all_maps := map
+                      (map HBnode)
+                      (map (fun s=> zip s (iota 0 (size s))) perms)
+    in
+    let mus := map build_kmapping_from_seq all_maps in
+    let isocans := map (fun mu => (relabeling_seq_triple mu ts)) mus in
+    foldl Order.max [::] isocans.
+
+  Lemma nil_minimum (ts: seq (triple I B L)) : [::] <= ts.
+  Proof. by case ts. Qed.
+
+  Lemma minn_refl n : minn n n = n.
+  Proof. by rewrite /minn; case e: (_ < _)%N. Qed.
+
+  Lemma nth_mapzip (T1 T2 : Type) (S0 T0 : eqType) (x0 : S0) (y0 : T0) [s : seq S0] [t : seq T0] (i : nat) :
+    size s = size t -> nth (@Bnode T1 (hash T0 S0) T2 (mkHinput x0 y0)) [seq Bnode (mkHinput an.1 an.2) | an <- zip s t ] i = Bnode (mkHinput (nth x0 s i) (nth y0 t i)).
+  Proof.
+    move=> eqsize.
+    case/orP : (leqVgt (size t) i)=> leq.
+    + suffices notin : (size [seq Bnode (mkHinput an.1 an.2) | an <- zip s t] <= i)%N.
+      by rewrite !nth_default // eqsize.
+      by move=> ? ? ; rewrite size_map size_zip eqsize minn_refl.
+      by rewrite (nth_map (x0,y0)) ?size_zip ?eqsize ?minn_refl // ; congr Bnode; apply/eqP; rewrite eq_i_ch /= nth_zip //= !eqxx.
+  Qed.
+
+  Lemma get_bts_in_l_perm (ts : seq (triple I B L)) (u : seq hterm)
+    (mem : u \in [seq [seq HBnode an | an <- i]
+                 | i <- [seq zip s (iota 0 (size s)) | s <- permutations (get_bts ts)]]):
+    forall b, b \in get_bts ts -> has (eqb_b_hterm b) u.
+  Proof.
+    move=> b bin.
+    move/mapP : mem=> [/= bns /mapP[/= bs]]. rewrite mem_permutations=> /perm_mem peq -> ->.
+    rewrite seq.has_map /=.
+    apply/hasP=> /=.
+    have eqsize : size bs = size (iota 0 (size bs)) by rewrite size_iota.
+    rewrite -peq in bin.
+    have [/= st [stin [<- [t2 t2eq]]]]:= in_zip_l eqsize bin.
+    by exists st.
+  Qed.
+
+  Lemma find_index_eqbb (U V T : countType) bs s (bn : B) :
+    size s = size bs ->
+    find (@eqb_b_hterm U B V T bn) [seq Bnode (mkHinput an.1 an.2) | an <- zip bs s] = index bn bs.
+  Proof.
+    elim: bs s => [| a l IHl]; first by move=> ?; rewrite zip0s.
+    by case =>  [//| b l2] /= [eqsize_tl]; rewrite eq_sym IHl //.
+  Qed.
+
+  Lemma nth_bperms (ts : seq (triple I B L))
+    (uniq_ts : uniq ts) (bn : B) db dn
+    (bin : bn \in get_bts ts) (u : seq hterm)
+    (mem : u \in  [seq [seq HBnode an | an <- i]
+                  | i <- [seq zip s (iota 0 (size s)) | s <- permutations (get_bts ts)]]) :
+    exists n : nat, nth (HBnode (db ,dn)) u (find (eqb_b_hterm bn) u) = HBnode (bn, n).
+  Proof.
+  move/mapP : mem=> [/= bns /mapP[/= bs]].
+  rewrite mem_permutations=> peq_bs bnseq ueq; rewrite ueq bnseq.
+  have permbs := perm_mem peq_bs.
+  have uniqbs := perm_uniq peq_bs.
+  suffices H1 :
+    (find (eqb_b_hterm bn) [seq Bnode (mkHinput an.1 an.2) | an <- zip bs (iota 0 (size bs))]) =
+      (index bn bs).
+    suffices H2 : forall [S0 T0 : eqType] (x : S0) (y : T0) [s : seq S0] [t : seq T0] (i : nat),
+        size s = size t -> nth (Bnode (mkHinput x y)) [seq Bnode (mkHinput an.1 an.2) | an <- zip s t ] i = Bnode (mkHinput (nth x s i) (nth y t i)).
+      exists (index bn bs).
+      rewrite H2; last by rewrite size_iota.
+      congr Bnode.
+      rewrite H1 //; apply/eqP; rewrite eq_i_ch /=; apply /andP; split; apply/eqP.
+      + by rewrite nth_index // permbs.
+      + by rewrite nth_iota // index_mem permbs //.
+    by apply nth_mapzip.
+  by move=> ? ?; apply: find_index_eqbb; rewrite size_iota.
+  Qed.
+
+  Lemma in_perm_luh_inj (ts : seq (triple I B L))
+    (u : seq hterm) :
+    u \in [seq [seq HBnode an | an <- i]
+          | i <- [seq zip s (iota 0 (size s)) | s <- permutations (get_bts ts)]] ->
+          {in u&, injective (lookup_hash_default_ n0)}.
+  Proof.
+  move => /mapP[tgd_perm tgin ->] /=.
+  move=> ht1 ht2 /mapP[tgd_instx tgdinsxin ->] /mapP[tgd_insty tgdinsyin ->].
+  move/mapP : tgin=> [aperm pinperm tgdeq].
+  rewrite tgdeq in tgdinsxin tgdinsyin.
+  move=> /= eq2; congr Bnode.
+  suffices minnrefl s : minn (size s) (size s) = size s.
+    have eqsize : size aperm = size (iota 0 (size aperm)) by rewrite size_iota.
+    move/nthP : tgdinsxin=> /= /(_ tgd_instx)[xn]; rewrite size_zip -eqsize minnrefl=> sizex.
+    move: eq2; case : tgd_instx=> /= tagx1 tagx2 eq2.
+    rewrite nth_zip // => /eqP; rewrite xpair_eqE=> /andP[/eqP x1nth /eqP x2nth].
+    move/nthP : tgdinsyin=> /= /(_ tgd_insty)[yn]; rewrite size_zip -eqsize minnrefl=> sizey.
+    move: eq2; case: tgd_insty=> /= tagy1 tagy2 eq2.
+    rewrite nth_zip // => /eqP; rewrite xpair_eqE=> /andP[/eqP y1nth /eqP y2nth].
+    rewrite -x2nth -y2nth in eq2.
+    rewrite -x1nth{x1nth} -x2nth{x2nth} -y1nth{y1nth} -y2nth{y2nth}.
+    move: eq2; rewrite (set_nth_default tagx2); last by rewrite -eqsize.
+    move=> /eqP; rewrite nth_uniq //; rewrite -?eqsize //; last by apply iota_uniq.
+    by move=> /eqP ->; apply/eqP; rewrite eq_i_ch /= eqxx andbC /= (set_nth_default tagx1) //.
+  by move=> ?; apply minn_refl.
+  Qed.
+
+  Lemma labeled_perm_inj
+    (ts : seq (triple I B L)) (uniq_ts : uniq ts)
+    u (mem : u \in [seq [seq HBnode an | an <- i]
+                   | i <- [seq zip s (iota 0 (size s))
+                         | s <- permutations (get_bts ts)]]) :
+    {in get_bts ts &, injective (build_kmapping_from_seq u)}.
+  Proof.
+  move=> x y xin yin; rewrite /build_kmapping_from_seq.
+  suffices mem_has: forall b, b \in get_bts ts -> has (eqb_b_hterm b) u.
+    rewrite !mem_has // => /to_string_nat_inj.
+    set dflt := HBnode (y,n0).
+    have ->: (nth (HBnode (x,n0)) u (find (eqb_b_hterm x) u)) = (nth dflt u (find (eqb_b_hterm x) u)) by rewrite (set_nth_default (HBnode (x,n0))) // -has_find mem_has.
+    move: (nth_bperms uniq_ts y n0 xin mem) (nth_bperms uniq_ts y n0 yin mem)=> [n eqnnthx] [m eqmnthy].
+    rewrite eqnnthx eqmnthy.
+    suffices J: {in u&, injective (lookup_hash_default_ n0)}.
+      move=> /J; rewrite -eqnnthx -eqmnthy.
+      move : (mem_has x xin) (mem_has y yin); rewrite !has_find=> nthxin nthyin.
+      by rewrite !mem_nth // => /(_ isT isT); rewrite eqnnthx eqmnthy; move=> [->].
+    by apply (in_perm_luh_inj mem).
+  by apply get_bts_in_l_perm.
+  Qed.
+
+  Lemma auto_iso_rel_perm (ts : seq (triple I B L))
+    (uts : uniq ts) (perm : seq B)
+    (inperm : perm \in permutations (get_bts ts))
+    (mu_inj : {in get_bts ts&, injective (build_map_k perm)}):
+    is_pre_iso_ts ts (relabeling_seq_triple (build_map_k perm) ts) (build_map_k perm).
+  Proof.
+  apply uniq_perm.
+  + by rewrite map_inj_in_uniq // uniq_get_bts.
+  + by rewrite uniq_get_bts.
+  + suffices rt_inj: {in ts &, injective (relabeling_triple (build_map_k perm))}.
+    by rewrite -(get_bs_map _ (all_bnodes_ts _)); apply eq_mem_pmap=> b; rewrite bnodes_ts_relabel_mem.
+  by apply: inj_get_bts_inj_ts mu_inj.
+  Qed.
+
+  Lemma candidate_in_perm (ts : seq (triple I B L)) perm
+    (bin : perm \in permutations (get_bts ts)) :
+    [seq (HBnode an) | an <- zip perm (iota 0 (size perm))]
+      \in [seq [seq HBnode an | an <- i]
+          | i <- [seq zip s (iota 0 (size s)) | s <- permutations (get_bts ts)]].
+  Proof.
+    by apply/mapP; exists (zip perm (iota 0 (size perm)))=> //; apply /mapP; exists perm=> //.
+  Qed.
+
+  Lemma all_kmap_preiso (ts : seq (triple I B L)) (uniq_ts : uniq ts):
+    forall u, u \in [seq [seq HBnode an | an <- i]
+               | i <- [seq zip s (iota 0 (size s)) | s <- permutations (get_bts ts)]] ->
+               is_pre_iso_ts ts
+                 (relabeling_seq_triple (build_kmapping_from_seq u) ts)
+                 (build_kmapping_from_seq u).
+  Proof.
+    move=> u /mapP /= [x /mapP[/= perm bin ->]] ->.
+    suffices mu_inj : {in get_bts ts&, injective (build_map_k perm)}.
+      by apply auto_iso_rel_perm.
+    by apply (labeled_perm_inj uniq_ts (candidate_in_perm bin)).
+  Qed.
+
+  Lemma uniq_k_mapping_res (ts : rdf_graph I B L) : uniq (k_mapping_alt ts).
+  Proof.
+    case: ts => ts uniq_ts /=; rewrite /k_mapping_alt.
+    set perm_bs := permutations _.
+    set tg_labels_perm := [seq zip s (iota 0 (size s)) | s <- perm_bs].
+    set label_perm := [seq [seq HBnode an | an <- i] | i <- tg_labels_perm].
+    set build_kmap := [seq build_kmapping_from_seq i | i <- label_perm].
+    set relab := [seq relabeling_seq_triple mu ts | mu <- build_kmap].
+    suffices relab_uniq : all uniq relab.
+      by case: (foldl_max relab [::])=> [-> //|]; apply: (allP relab_uniq).
+    apply /allP; rewrite /relab/build_kmap -map_comp=> t /mapP[u mem ->] {relab build_kmap}; apply uniq_relabeling_pre_iso=> //.
+    by apply all_kmap_preiso.
+  Qed.
+
+  Definition k_mapping (g : rdf_graph I B L) : rdf_graph I B L :=
+    @mkRdfGraph I B L (k_mapping_alt (graph g)) (uniq_k_mapping_res g).
+
+  Section Kmapping_isocan.
+
+    Lemma k_mapping_nil_is_nil ts: k_mapping_alt ts = [::] -> ts = [::].
+    Proof.
+      move=> /max_foldl_minimum /orP[]//.
+      + rewrite -map_comp /= !map_nil_is_nil => /eqP.
+        by apply contra_eq; rewrite permutations_neq_nil.
+      + by rewrite -map_comp=> /mapP[/=xs /mapP[/= a ain]] -> => /eqP; rewrite eq_sym=> /eqP/relabeling_seq_triple_is_nil ->.
+    Qed.
+
+    Lemma kmapping_iso_out g: iso g (k_mapping g).
+    Proof.
+      rewrite /mapping_is_iso_mapping/k_mapping/iso/iso_ts/is_iso_ts.
+      have := uniq_k_mapping_res g.
+      case : g=> ts uts /=; rewrite /k_mapping_alt.
+      set isocans := (map (fun mu=> relabeling_seq_triple mu ts) _).
+      case : (foldl_max isocans [::]); rewrite /isocans{isocans}/= ; first by move=> /k_mapping_nil_is_nil -> _; exists id.
+      rewrite -map_comp=> /mapP/=[s sin ->] ukres.
+      exists (build_kmapping_from_seq s).
+      suffices preiso : is_pre_iso_ts ts (relabeling_seq_triple (build_kmapping_from_seq s) ts) (build_kmapping_from_seq s).
+      by apply ts_pre_iso_iso=> //.
+      by apply all_kmap_preiso.
+    Qed.
+
+    Lemma iso_structure (ts1 ts2: seq (triple I B L)) :
+      iso_ts ts1 ts2 -> ((ts1 == [::]) && (ts2 == [::]) || (ts1 != [::]) && (ts2 != [::])).
+    Proof.
+      rewrite /iso_ts/is_iso_ts /=; move=> [? /and3P [_ _]] ; case: ts1=> [|h1 tl1].
+      + by rewrite relabeling_seq_triple_nil perm_sym=> /perm_nilP ->.
+      + by apply contraTneq=> -> ; apply /perm_nilP.
+    Qed.
+
+    Lemma build_from_nil (ts : seq (triple I B L)) :
+      relabeling_seq_triple (build_kmapping_from_seq [::]) ts = ts.
+    Proof. by elim: ts=> [//| a l IHl]; by rewrite /= relabeling_triple_id IHl. Qed.
+
+    Lemma index_map_in [T1 T2 : eqType] [f : T1 -> T2] (s : seq T1) :
+      {in s&, injective f} -> forall (x : T1), x \in s -> index (f x) [seq f i | i <- s] = index x s.
+    Proof. elim: s => [//| a t IHtl] inj_f x xin /=.
+           case : ifP; first by move/eqP/inj_f; rewrite in_cons eqxx /==> /(_ isT) -> //; rewrite eqxx.
+           case : ifP; first by move/eqP=> ->; rewrite eqxx //.
+           move=> neq fneq; rewrite IHtl //.
+           by move=> ? ? xinn yinn; apply inj_f; rewrite in_cons ?xinn ?yinn orbT.
+           by move: xin; rewrite in_cons eq_sym neq /=.
+    Qed.
+
+    Lemma eqb_b_hterm_memP (b : B) (s : seq B) : b \in s ->
+                                                       forall U V,
+                                                         has (@eqb_b_hterm U B V nat_countType b) [seq Bnode (mkHinput an.1 an.2) | an <- zip s (iota 0 (size s))].
+    Proof.
+      move=> b1in ? ?; apply/ (has_nthP (Bnode (mkHinput b 0))).
+      exists (index b s).
+      by rewrite size_map size_zip size_iota minn_refl index_mem.
+      by rewrite nth_mapzip /= ?size_iota // nth_index // eqxx.
+    Qed.
+
+    Lemma out_of_build b s :
+      b \in s -> uniq s ->
+            build_kmapping_from_seq [seq HBnode an | an <- zip s (iota 0 (size s))] b =
+              to_string_nat (nth 0 (iota 0 (size s)) (index b s)).
+    Proof.
+      move=> bin ubs.
+      rewrite /build_kmapping_from_seq (eqb_b_hterm_memP bin); congr to_string_nat.
+      by rewrite find_index_eqbb ?size_iota // nth_mapzip ?size_iota //.
+    Qed.
+
+
+    Axiom isocan_auto_symmetry : forall g h mu, is_iso_ts g h mu ->
+                                           forall q, q \in permutations (get_bts h) ->
+                                                      (k_mapping_alt h) = relabeling_seq_triple (build_map_k q) h ->
+                                                      forall p, p \in permutations (get_bts g) ->
+                                                                 (k_mapping_alt g) = relabeling_seq_triple (build_map_k p) g ->
+                                                                 (relabeling_seq_triple (build_map_k q) h) =i
+                                                                                                              (relabeling_seq_triple (build_map_k (map mu p)) h).
+
+    Lemma iso_can_kmapping : isocanonical_mapping k_mapping.
+    Proof.
+      split=> [|g1 g2]; first by apply kmapping_iso_out.
+      split=> [| isog1g2]; first by apply same_res_impl_iso_mapping; rewrite /mapping_is_iso_mapping; apply kmapping_iso_out.
+      have: iso (k_mapping g1) (k_mapping g2).
+      by apply: iso_can_trans _ isog1g2; rewrite /mapping_is_iso_mapping; apply kmapping_iso_out.
+      rewrite /k_mapping/k_mapping_alt/eqb_rdf rdf_perm_mem_eq rdf_mem_eq_graph /iso /==> /=.
+      rewrite -!map_comp.
+      set cand1 :=
+        [seq (((relabeling_seq_triple (B2:=B))^~ g1 \o build_kmapping_from_seq) \o
+                (map HBnode \o (fun s : seq B => zip s (iota 0 (size s))))) i
+        | i <- permutations (get_bts g1)].
+      set cand2 :=
+        [seq (((relabeling_seq_triple (B2:=B))^~ g2 \o build_kmapping_from_seq) \o
+                (map HBnode \o (fun s : seq B => zip s (iota 0 (size s))))) i
+        | i <- permutations (get_bts g2)].
+      move=> /iso_structure/orP[/andP[/eqP -> /eqP ->] // |/andP[]].
+      move: (foldl_max cand1 [::]) (foldl_max cand2 [::]) =>[-> //| kg1inc1 ] [-> //| kg2inc2].
+      move/mapP : kg1inc1=> [/= p].
+      set maxisocans_g1 :=  relabeling_seq_triple
+                              (build_kmapping_from_seq [seq HBnode an | an <- zip p (iota 0 (size p))]) g1.
+      move=> pperm1 eq; rewrite eq.
+      rewrite /iso/iso_ts in isog1g2.
+      move : isog1g2=> [mu /and3P[pisoP urel peq]].
+      move=> maxg1neqnil kg2neqnil trpl .
+      set c2_cand := relabeling_seq_triple
+                       (build_kmapping_from_seq
+                          [seq HBnode an | an <- zip (map mu p) (iota 0 (size (map mu p)))]) g2.
+      suffices -> : foldl Order.max [::] cand2 =i c2_cand.
+      rewrite /c2_cand /maxisocans_g1.
+      apply/mapP/mapP=> /= [[t tin ->]|[t tin ->]] .
+      exists (relabeling_triple mu t); first by apply perm_mem in peq; rewrite -peq; apply map_f.
+      (*  *)
+      have pg1_mem : p =i get_bts g1. by rewrite mem_permutations in pperm1; move/perm_mem : pperm1.
+      have mu_inj : {in p &, injective mu}. by move=> x y xin yin; apply (is_pre_iso_inj pisoP); rewrite -pg1_mem.
+      suffices build_modulo_map : forall b, b \in p ->
+                                             build_kmapping_from_seq [seq HBnode an | an <- zip p (iota 0 (size p))] b =
+                                               build_kmapping_from_seq
+                                                 [seq HBnode an | an <- zip [seq mu i | i <- p] (iota 0 (size [seq mu i | i <- p]))]
+                                                 (mu b).
+      case : t tin=> [[]]//s []p' []o// sib pii tin //=;
+                      apply triple_inj=> //=; congr Bnode;
+                                        rewrite build_modulo_map //;
+                                          rewrite pg1_mem; apply (mem_ts_mem_triple_bts tin);
+                                        rewrite /bnodes_triple filter_undup mem_undup /= ?in_cons ?eqxx ?orbT //.
+      suffices upg1 : uniq p.
+      move=> b bin.
+      rewrite (out_of_build bin upg1) out_of_build.
+      congr to_string_nat; rewrite !nth_iota.
+      rewrite index_map_in //.
+      by rewrite index_mem; apply map_f.
+      by rewrite index_mem.
+      by apply map_f.
+      by rewrite map_inj_in_uniq.
+      by move: pperm1; rewrite mem_permutations => /perm_uniq ->; rewrite uniq_get_bts.
+      (* CASE MU P *)
+      apply perm_mem in peq.
+      rewrite -peq in tin.
+      move/mapP : tin=> /=[tg1 tg1in ->].
+      exists tg1=> //.
+      (*  *)
+      have pg1_mem : p =i get_bts g1. by rewrite mem_permutations in pperm1; move/perm_mem : pperm1.
+      have mu_inj : {in p &, injective mu}. by move=> x y xin yin; apply (is_pre_iso_inj pisoP); rewrite -pg1_mem.
+      suffices build_modulo_map : forall b, b \in p ->
+                                             build_kmapping_from_seq [seq HBnode an | an <- zip p (iota 0 (size p))] b =
+                                               build_kmapping_from_seq
+                                                 [seq HBnode an | an <- zip [seq mu i | i <- p] (iota 0 (size [seq mu i | i <- p]))]
+                                                 (mu b).
+      case : tg1 tg1in=> [[]]//s []p' []o// sib pii tin //=;
+                          apply triple_inj=> //=; congr Bnode;
+                                            rewrite build_modulo_map //;
+                                              rewrite pg1_mem; apply (mem_ts_mem_triple_bts tin);
+                                            rewrite /bnodes_triple filter_undup mem_undup /= ?in_cons ?eqxx ?orbT //.
+      suffices upg1 : uniq p.
+      move=> b bin.
+      rewrite (out_of_build bin upg1) out_of_build.
+      congr to_string_nat; rewrite !nth_iota.
+      rewrite index_map_in //.
+      by rewrite index_mem; apply map_f.
+      by rewrite index_mem.
+      by apply map_f.
+      by rewrite map_inj_in_uniq.
+      by move: pperm1; rewrite mem_permutations => /perm_uniq ->; rewrite uniq_get_bts.
+      move/mapP : kg2inc2=> /=[q qin maxisocanh].
+      rewrite maxisocanh /c2_cand.
+      have maxg2 : (k_mapping_alt g2) = relabeling_seq_triple (build_map_k q) g2.
+      rewrite /k_mapping_alt.
+      rewrite /cand2 map_comp map_comp map_comp map_comp map_id in maxisocanh.
+      by rewrite maxisocanh.
+      have maxg1 : (k_mapping_alt g1) = relabeling_seq_triple (build_map_k p) g1.
+      rewrite /k_mapping_alt.
+      rewrite /maxisocans_g1/cand1 map_comp map_comp map_comp map_comp map_id in eq.
+      by rewrite eq.
+      have <- : (build_map_k q) =  (build_kmapping_from_seq [seq HBnode an | an <- zip q (iota 0 (size q))]) by [].
+      have <- : (build_map_k (map mu p)) =  (build_kmapping_from_seq [seq HBnode an | an <- zip (map mu p) (iota 0 (size (map mu p)))]) by [].
+      have isogh : is_iso_ts g1 g2 mu by rewrite /is_iso_ts pisoP urel peq.
+      by apply (@isocan_auto_symmetry _ _ _ isogh q qin maxg2 p pperm1 maxg1).
+    Qed.
+
+  End Kmapping_isocan.
+
+End Kmapping.

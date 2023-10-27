@@ -9,7 +9,7 @@ Section HashedData.
 
   (* A type for a data (t : T) paired with its current hash (h : H) *)
 
-  Variables (H T : Type).
+  Variables (H T: Type).
 
   Inductive hash  := Hash of T * H.
 
@@ -394,7 +394,6 @@ Section IsoCan.
 
     Section Partition.
 
-      (* change for finset *)
       Fixpoint partitionate (f : hterm -> bool) (s : seq hterm) : seq hterm * seq hterm :=
         match s with
         | nil => (nil, nil)
@@ -494,8 +493,7 @@ Section IsoCan.
         Definition new_hash_bwd (s p o : hterm) gacc : option ((hash B) * (hash B)) :=
           new_hash o p s gacc hbwd.
 
-        Axiom todo : forall {t}, t.
-
+        Axiom todo: forall {T : Type}, T.
         (* Algorithm 1, lines 12-17
        update the hashes of blank nodes using the neighborhood
        it hashes differently outgoing edges from incoming ones *)
@@ -628,10 +626,6 @@ Section IsoCan.
         (* first approach *)
         Definition justDistinguish g :=
           isoCanonicalTemplate g id id distinguish.
-
-        Lemma distinguish_preserves_isomorphism g : iso (justDistinguish g) g.
-        Proof.
-        Admitted.
 
         Definition isoCanonicalNoIter g :=
           isoCanonicalTemplate g update_bnodes update_bnodes distinguish.
@@ -978,15 +972,6 @@ Section IsoCan.
           + by apply contraTneq=> -> ; apply /perm_nilP.
       Qed.
 
-      Lemma eq_mem_foldl_max [disp : unit] [T : orderType disp] [l1 l2 : seq T] [x y : T]:
-        l1 =i l2 -> foldl Order.max x l1 = foldl Order.max x l2.
-      Proof. Admitted.
-
-      Lemma eq_mem_foldl_max_rdf [l1 l2 : seq (seq (triple I B L))] :
-        (forall c1, c1 \in l1 -> exists c', c' \in l2 /\ c1 =i c') ->
-        foldl Order.max [::] l1 =i foldl Order.max [::] l2.
-      Proof. Admitted.
-
       Lemma build_from_nil (ts : seq (triple I B L)) :
         relabeling_seq_triple (build_kmapping_from_seq_alt [::]) ts = ts.
       Proof. by elim: ts=> [//| a l IHl]; by rewrite /= relabeling_triple_id IHl. Qed.
@@ -1133,83 +1118,8 @@ Section IsoCan.
         by apply (@isocan_auto_symmetry _ _ _ isogh q qin maxg2 p pperm1 maxg1).
       Qed.
 
-      Lemma all_kmaps_bijective g : List.Forall (fun mu => bijective mu) [seq build_kmapping_from_seq i
-                                                                         | i <- [seq mapi (app_n mark_bnode) i
-                                                                                | i <- permutations (bnodes (init_hash g))]].
-      Proof.
-        have map2Listmap U V (f : U -> V) (s : seq U) : map f s = List.map f s. admit.
-        have nth2Listnth U (d : U) (s : seq U) n : nth d s n = List.nth n s d. admit.
-        have size2Listlength U (s : seq U) : List.length s = size s. admit.
-        rewrite !map2Listmap !List.Forall_map.
-        suffices step s : perm_eq s (bnodes (init_hash g)) -> bijective (build_kmapping_from_seq (mapi (app_n mark_bnode) s)).
-        apply/List.Forall_nth=> i d lti. apply: step. rewrite -mem_permutations -nth2Listnth. apply: mem_nth.
-        by rewrite -size2Listlength; apply/ltP.
-        (* by using k_mapping_seq_uniq_perm_eq *)
-        admit.
-      Admitted.
-
-      Section experiment.
-
-      Lemma all_kmaps_local_bijective g : List.Forall (fun mu => {in (get_b g) , bijective mu}) [seq build_kmapping_from_seq i
-                                                                         | i <- [seq mapi (app_n mark_bnode) i
-                                                                                | i <- permutations (bnodes (init_hash g))]].
-      Proof.
-        have map2Listmap U V (f : U -> V) (s : seq U) : map f s = List.map f s. admit.
-        have nth2Listnth U (d : U) (s : seq U) n : nth d s n = List.nth n s d. admit.
-        have size2Listlength U (s : seq U) : List.length s = size s. admit.
-        rewrite !map2Listmap !List.Forall_map.
-        suffices step s : perm_eq s (bnodes (init_hash g)) -> {in (get_b g), bijective (build_kmapping_from_seq (mapi (app_n mark_bnode) s))}.
-        apply/List.Forall_nth=> i d lti. apply: step. rewrite -mem_permutations -nth2Listnth. apply: mem_nth.
-        by rewrite -size2Listlength; apply/ltP.
-        have ext_pred_bij: forall (T1 T2 : eqType) (d1 d2: {pred T1}) (f : T1 -> T2), {in d1, bijective f} -> d1 =i d2 -> {in d2, bijective f}.
-        admit.
-        have mem_hash_unhash : perm_eq s (bnodes (init_hash g)) -> (get_b g) =i (forget_hashes (get_bs s)).
-        admit.
-        move=> /mem_hash_unhash peq.
-        have bij_fget: {in (forget_hashes (get_bs s)), bijective (build_kmapping_from_seq (mapi (app_n mark_bnode) s))}.
-        (* the hard one *)
-        admit.
-
-        have mem_eq_sym: forall (T: eqType) (d1 d2: {pred T}), d1 =i d2 -> d2 =i d1. by move=> T d1 d2 d12 x;  rewrite d12.
-        eapply ext_pred_bij. apply bij_fget. apply mem_eq_sym.
-      Admitted.
-
-      End experiment.
-
     End Kmapping.
 
   End IsoCanAlgorithm.
-
-  (* Section Example. *)
-  (*   (* From Coq Require Import Strings.String. *) *)
-  (*   Require Import Strings.Ascii. *)
-  (*   Variables (b : seq ascii) (p : nat). *)
-  (*   Definition B_ := (@Bnode nat (seq ascii) nat b). *)
-  (*   Definition P := (@Iri nat (seq ascii) nat p). *)
-  (*   Lemma inib : is_in_ib B_. *)
-  (*   Proof. by []. Qed. *)
-
-  (*   Lemma ini : is_in_i P. Proof. by []. Qed. *)
-  (*   (* Check nat : countType. *) *)
-
-  (*   Definition t := mkTriple B_ inib ini. *)
-  (*   Definition g := @mkRdfGraph _ _ _ [:: t] todo. *)
-  (*   Variable h:countType. *)
-  (*   Variable h0 h1 h2 h3 h4: h. *)
-  (*   Check g. *)
-  (*   (* Open *) *)
-  (*   Open Scope char_scope. *)
-  (*   Check ascii. *)
-  (*   Definition berror := [:: "e"; "r"; "r"; "o"; "r"] : seq ascii. *)
-  (*   About Countable.pack. *)
-  (*   About Countable.mixin_of. *)
-  (*   Variable ascii_countMixin : Countable.mixin_of ascii. *)
-  (*   Fail Canonical ascii_countType := Eval hnf in CountType ascii ascii_countMixin. *)
-  (*   (* CountType ascii ascii_countMixin. *) *)
-
-  (*   Fail Compute isoCanonicalise h0 h1 h2 h3 h4 berror g . *)
-
-  (* End Example. *)
-
 
 End IsoCan.

@@ -872,8 +872,8 @@ Section Rdf.
       Section Isocanonical.
 
         Definition isocanonical_mapping (M : rdf_graph I B L -> rdf_graph I B L) :=
-          forall g, iso g (M g) /\
-                 (forall g1 g2, eqb_rdf (M g1) (M g2) <-> iso g1 g2).
+          (forall g, iso g (M g)) /\
+            (forall g1 g2, eqb_rdf (M g1) (M g2) <-> iso g1 g2).
 
         Definition mapping_is_iso_mapping (M : rdf_graph I B L -> rdf_graph I B L) := forall g, iso g (M g).
 
@@ -958,6 +958,13 @@ Section Rdf.
 
     Lemma empty_min g : Order.max g (@empty_rdf_graph I B L) = g.
     Proof. by case: g=> g'; case: g'=> [//|h t] us; rewrite Order.POrderTheory.maxElt. Qed.
+
+    Lemma nil_minimum (ts: seq (triple I B L)) : [::] <= ts.
+  Proof. by case ts. Qed.
+
+  Lemma minn_refl n : minn n n = n.
+  Proof. by rewrite /minn; case e: (_ < _)%N. Qed.
+
 
     (* assia : this requires rewriting relabeling function(. cf error message
 The term "g1" has type "rdf_graph I B L" while it is expected to have type

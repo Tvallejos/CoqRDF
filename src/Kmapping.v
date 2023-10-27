@@ -242,22 +242,21 @@ Section Kmapping.
 
     Lemma out_of_build b s :
       b \in s -> uniq s ->
-            build_kmapping_from_seq [seq HBnode an | an <- zip s (iota 0 (size s))] b =
-              to_string_nat (nth 0 (iota 0 (size s)) (index b s)).
+            (build_map_k s) b = to_string_nat (nth 0 (iota 0 (size s)) (index b s)).
     Proof.
       move=> bin ubs.
-      rewrite /build_kmapping_from_seq (eqb_b_hterm_memP bin); congr to_string_nat.
+      rewrite /build_map_k/build_kmapping_from_seq (eqb_b_hterm_memP bin); congr to_string_nat.
       by rewrite find_index_eqbb ?size_iota // nth_mapzip ?size_iota //.
     Qed.
 
 
-    Axiom isocan_auto_symmetry : forall g h mu, is_iso_ts g h mu ->
-                                           forall q, q \in permutations (get_bts h) ->
-                                                      (k_mapping_ts h) = relabeling_seq_triple (build_map_k q) h ->
-                                                      forall p, p \in permutations (get_bts g) ->
-                                                                 (k_mapping_ts g) = relabeling_seq_triple (build_map_k p) g ->
-                                                                 (relabeling_seq_triple (build_map_k q) h) =i
-                                                                                                              (relabeling_seq_triple (build_map_k (map mu p)) h).
+    Axiom isocan_auto_symmetry :
+      forall g h mu, is_iso_ts g h mu ->
+                forall q, q \in permutations (get_bts h) ->
+                           (k_mapping_ts h) = relabeling_seq_triple (build_map_k q) h ->
+                           forall p, p \in permutations (get_bts g) ->
+                                      (k_mapping_ts g) = relabeling_seq_triple (build_map_k p) g ->
+                                      (relabeling_seq_triple (build_map_k q) h) =i (relabeling_seq_triple (build_map_k (map mu p)) h).
 
     Lemma iso_isokmap g h (igh: iso g h) : iso (k_mapping g) (k_mapping h).
     Proof. by apply: iso_can_trans _ igh; rewrite /mapping_is_iso_mapping; apply kmapping_iso_out. Qed.
@@ -280,9 +279,6 @@ Section Kmapping.
            move=> /= eq; rewrite eq; last by rewrite mem_head.
            by move => T; rewrite !in_cons ihtl // => x xin; apply eq; apply mem_cons.
     Qed.
-
-    (* Lemma rel_bk_in_perm p : *)
-    (*   relabeling_seq_triple p, (build_map_k p) g =i relabeling_seq_triple (build_map_k [seq mu i | i <- p] \o mu) g. *)
 
     Lemma kmapping_can_invariant g g2 (isogg2 : iso g g2) : eqb_rdf (k_mapping g) (k_mapping g2).
     Proof.
@@ -314,8 +310,7 @@ Section Kmapping.
                                             rewrite pg1_mem; apply (mem_ts_mem_triple_bts tin);
                                           rewrite /bnodes_triple filter_undup mem_undup /= ?in_cons ?eqxx ?orbT //.
         suffices upg1 : uniq p.
-          move=> b bin; rewrite /build_map_k (out_of_build bin upg1) out_of_build.
-          (* refacto out of build *)
+          move=> b bin; rewrite (out_of_build bin upg1) out_of_build.
           congr to_string_nat; rewrite !nth_iota; first by rewrite index_map_in //.
           by rewrite index_mem; apply map_f.
           by rewrite index_mem.

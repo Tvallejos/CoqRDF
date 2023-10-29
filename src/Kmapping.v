@@ -167,7 +167,7 @@ Section Kmapping.
     by apply (labeled_perm_inj uniq_ts (candidate_in_perm bin)).
   Qed.
 
-  Lemma uniq_k_mapping_res (ts : rdf_graph I B L) : uniq (k_mapping_ts ts).
+  Lemma uniq_k_mapping (ts : rdf_graph I B L) : uniq (k_mapping_ts ts).
   Proof.
     case: ts => ts uniq_ts /=; rewrite /k_mapping_ts.
     set perm_bs := permutations _.
@@ -182,7 +182,7 @@ Section Kmapping.
   Qed.
 
   Definition k_mapping (g : rdf_graph I B L) : rdf_graph I B L :=
-    @mkRdfGraph I B L (k_mapping_ts (graph g)) (uniq_k_mapping_res g).
+    @mkRdfGraph I B L (k_mapping_ts (graph g)) (uniq_k_mapping g).
 
   Section Kmapping_isocan.
 
@@ -197,7 +197,7 @@ Section Kmapping.
     Lemma kmapping_iso_out g: iso g (k_mapping g).
     Proof.
       rewrite /mapping_is_iso_mapping/k_mapping/iso/iso_ts/is_iso_ts.
-      have := uniq_k_mapping_res g.
+      have := uniq_k_mapping g.
       case : g=> ts uts /=; rewrite /k_mapping_ts.
       set isocans := (map (fun mu=> relabeling_seq_triple mu ts) _).
       case : (foldl_max isocans [::]); rewrite /isocans{isocans}/= ; first by move=> /k_mapping_nil_is_nil -> _; exists id.

@@ -52,7 +52,6 @@ Canonical hin_POrderType (H T : countType) :=
 
 
 Section IsoCan.
-
   Variable I B L: countType.
 
   Implicit Type trm : term I B L.

@@ -90,13 +90,6 @@ Section Poly.
       Proof. by []. Qed.
   End blank_node_mapping.
 
-  (* Definition relabeling_term_alt B1 B2 (μ : (trm : term I B1 L) : term I B2 L := *)
-  (*   match trm with *)
-  (*   | Bnode name => Bnode (μ name) *)
-  (*   | Iri i => Iri i *)
-  (*   | Lit l => Lit l *)
-  (*   end. *)
-
   Lemma relabeling_term_id (trm : term I B L) : relabeling_term id trm = trm.
   Proof. by case: trm. Qed.
 
@@ -268,9 +261,9 @@ Section OrderTerm.
       | Iri ix, Iri iy => ix <= iy
       | Bnode bx, Bnode By => bx <= By
       | Lit lx, Lit ly => lx <= ly
+      | Bnode _, Iri _=> true
+      | Bnode _, Lit _=> true
       | Iri _, Lit _ => true
-      | Iri _, Bnode _ => true
-      | Lit _, Bnode _ => true
       | _,_ => false
       end.
 

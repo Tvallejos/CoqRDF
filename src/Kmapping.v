@@ -10,21 +10,10 @@ Section Kmapping.
   Hypothesis to_string_nat : nat -> B.
   Hypothesis to_string_nat_inj : injective to_string_nat.
 
-  (* Hypothesis le_triple : rel (triple I B L). *)
-  (* Hypothesis le_total : total le_triple. *)
-  (* Hypothesis le_triple_anti : antisymmetric le_triple. *)
-  (* Hypothesis le_triple_trans : transitive le_triple. *)
-  Import Order.Theory.
-
-(* literals should be of Datatype type, is not important for the moment*)
-  Open Scope order_scope.
-
-  Check Order.NatOrder.orderType.
   Notation hn := (hash Order.NatOrder.orderType B).
-  (* Notation hnF := (hin_OrderType Order.NatOrder.orderType B). *)
   Notation hterm := (term I hn L).
-  (* Definition HBnode p := @Bnode I hn L (Hash p). *)
   Definition HBnode p := @Bnode I hn L (mkHinput p.1 p.2).
+
   Notation le_triple := (@Rdf.le_triple disp _ I L B).
   Notation join_st := (@Rdf.join_st disp _ I L B).
   Notation le_triple_total := (@Triple.le_total disp disp I L B).
@@ -49,10 +38,7 @@ Section Kmapping.
   Definition hash_kp p := [seq HBnode an | an <- zip p (iota 0 (size p))].
   Definition build_map_k p := build_kmapping_from_seq (hash_kp p).
 
-  Definition k_mapping_ts
-    (* (ts : ts_OrderType I L B) *)
-    (ts : seq (triple I B L))
-    : seq (triple I B L) :=
+  Definition k_mapping_ts (ts : seq (triple I B L)) : seq (triple I B L) :=
     let perms :=  permutations (get_bts ts) in
     let all_maps := map
                       (map HBnode)
@@ -61,7 +47,6 @@ Section Kmapping.
     let mus := map build_kmapping_from_seq all_maps in
     let isocansK := map (fun mu => (relabeling_seq_triple mu ts)) mus in
     let isocans := map (sort le_triple) isocansK in
-    (* let isocansts := map (@Order.Total.porderType tt (ts_OrderType I L B)) isocans in *)
     foldl join_st [::] isocans.
 
   Lemma get_bts_in_l_perm (ts : seq (triple I B L)) (u : seq hterm)
@@ -190,11 +175,8 @@ Section Kmapping.
     by apply (labeled_perm_inj uniq_ts (candidate_in_perm bin)).
   Qed.
 
-  (* Lemma join_st_Etotal (x y : (seq (triple I B L))) : join_st x y = Order.max x y. *)
 
-
-
-  Lemma foldl_max_st (l : seq (seq (triple I B L))) (x0 : (seq (triple I B L))): 
+  Lemma foldl_max_st (l : seq (seq (triple I B L))) (x0 : (seq (triple I B L))):
     foldl join_st x0 l = x0 \/ foldl join_st x0 l \in l.
   Proof. elim: l x0 => [//| t ts IHts] x0; first by left.
        + rewrite in_cons /=; case: (IHts (join_st x0 t))=> [ -> |intail] /=.
@@ -223,7 +205,6 @@ Section Kmapping.
        by move=> H <-; rewrite in_cons H orbT.
   Qed.
 
-
   Lemma uniq_k_mapping (ts : rdf_graph I B L) : uniq (k_mapping_ts ts).
   Proof.
     case: ts => ts uniq_ts /=; rewrite /k_mapping_ts.
@@ -246,25 +227,25 @@ Section Kmapping.
 
   Section Kmapping_isocan.
 
-    Lemma sort_cons (T : Type) (leT : rel T) : total leT -> transitive leT ->
-    forall (s1 s2 : seq T) (x : T),
-    sort leT s1 = x :: s2 -> s2 = sort leT s2.
-  Proof. move=> tot trans s1 s2 x eq.
-    suffices /sorted_sort : sorted leT s2.
-      by move=> /(_ trans) ->.
-    have:= sort_sorted tot s1.
-    by rewrite eq -cat1s=> /cat_sorted2 [_ ->].
-  Qed.
+  (*   Lemma sort_cons (T : Type) (leT : rel T) : total leT -> transitive leT -> *)
+  (*   forall (s1 s2 : seq T) (x : T), *)
+  (*   sort leT s1 = x :: s2 -> s2 = sort leT s2. *)
+  (* Proof. move=> tot trans s1 s2 x eq. *)
+  (*   suffices /sorted_sort : sorted leT s2. *)
+  (*     by move=> /(_ trans) ->. *)
+  (*   have:= sort_sorted tot s1. *)
+  (*   by rewrite eq -cat1s=> /cat_sorted2 [_ ->]. *)
+  (* Qed. *)
 
-  Lemma sort_nil (T : eqType) (leT : rel T) :
-    total leT -> transitive leT -> antisymmetric leT ->
-    forall (s1 : seq T),
-    sort leT s1 = [::] -> s1 = [::].
-  Proof.
-    move=> tot trans anti s1; suffices nil_sorted: [::] = sort leT [::].
-      by rewrite nil_sorted=> /(perm_sortP tot trans anti)/perm_nilP ->.
-    by [].
-  Qed.
+  (* Lemma sort_nil (T : eqType) (leT : rel T) : *)
+  (*   total leT -> transitive leT -> antisymmetric leT -> *)
+  (*   forall (s1 : seq T), *)
+  (*   sort leT s1 = [::] -> s1 = [::]. *)
+  (* Proof. *)
+  (*   move=> tot trans anti s1; suffices nil_sorted: [::] = sort leT [::]. *)
+  (*     by rewrite nil_sorted=> /(perm_sortP tot trans anti)/perm_nilP ->. *)
+  (*   by []. *)
+  (* Qed. *)
 
   Lemma join_nil_size (h : seq (triple I B L)) :
     (size h != 0) -> join_st [::] h != [::].
@@ -289,27 +270,21 @@ Section Kmapping.
       uniq ts1 -> uniq ts2 ->
       is_iso_ts ts1 ts2 mu -> forall (ts3 : (seq (triple I B L))), (perm_eq ts3 ts2) -> is_iso_ts ts1 ts3 mu.
     Proof. move=> u1 u2 /and3P[piso urel peq] ts3 p13.
-           apply/and3P; split.
+           apply/and3P; split=> //.
            + rewrite/is_pre_iso_ts.
              apply uniq_perm.
-             rewrite map_inj_in_uniq; first by rewrite uniq_get_bts.
-             apply (is_pre_iso_ts_inj piso).
-             by rewrite uniq_get_bts.
-             apply perm_mem in piso.
-             move=> b; rewrite piso.
-             rewrite /get_bts/get_bs.
-             apply eq_mem_pmap.
-             move=> bb; rewrite /bnodes_ts !mem_undup.
-             rewrite !mem_filter. congr (andb (is_bnode bb)).
-             rewrite /terms_ts !mem_undup.
-             apply/flatten_mapP/flatten_mapP.
-             move=> [/= t tin bbin]; by exists t=> //; rewrite (perm_mem p13) tin.
-             move=> [/= t tin bbin]; by exists t=> //; rewrite -(perm_mem p13) tin.
-            apply urel.
-            rewrite perm_sym in p13.
-            by apply (perm_trans peq p13).
+             * rewrite map_inj_in_uniq; first by rewrite uniq_get_bts.
+               by apply (is_pre_iso_ts_inj piso).
+             * by rewrite uniq_get_bts.
+             * move=> b; rewrite (perm_mem piso) /get_bts/get_bs.
+             apply eq_mem_pmap=> bb; rewrite /bnodes_ts !mem_undup.
+             rewrite !mem_filter; congr (andb (is_bnode bb)).
+             rewrite /terms_ts !mem_undup; apply/flatten_mapP/flatten_mapP.
+             by move=> [/= t tin bbin]; by exists t=> //; rewrite (perm_mem p13) tin.
+             by move=> [/= t tin bbin]; by exists t=> //; rewrite -(perm_mem p13) tin.
+            + rewrite perm_sym in p13.
+              by apply (perm_trans peq p13).
     Qed.
-
 
     Lemma kmapping_iso_out g: iso g (k_mapping g).
     Proof.
@@ -350,9 +325,9 @@ Section Kmapping.
            by move: xin; rewrite in_cons eq_sym neq /=.
     Qed.
 
-    Lemma eqb_b_hterm_memP (b : B) (s : seq B) : b \in s ->
-                                                       (* forall U V, *)
-                                                         has (eqb_b_hterm (I:=I) (L:=L) b) [seq Bnode (mkHinput an.1 an.2) | an <- zip s (iota 0 (size s))].
+    Lemma eqb_b_hterm_memP (b : B) (s : seq B) :
+      b \in s ->
+            has (eqb_b_hterm (I:=I) (L:=L) b) [seq Bnode (mkHinput an.1 an.2) | an <- zip s (iota 0 (size s))].
     Proof.
       move=> b1in ; apply/ (has_nthP (Bnode (mkHinput b 0))).
       exists (index b s).

@@ -929,12 +929,12 @@ Section Rdf.
     End Isomorphism.
 
   End EqRdf.
-  Section Relabeling_alt.
-    Variables I B L : choiceType.
-    Implicit Type g : rdf_graph I B L.
-    Definition relabeling_alt {g} (mu : {ffun (seq_sub (bnodes g)) -> B}) g1 : rdf_graph I B L. Admitted.
+  (* Section Relabeling_alt. *)
+  (*   Variables I B L : choiceType. *)
+  (*   Implicit Type g : rdf_graph I B L. *)
+  (*   Definition relabeling_alt {g} (mu : {ffun (seq_sub (bnodes g)) -> B}) g1 : rdf_graph I B L. Admitted. *)
 
-  End Relabeling_alt.
+  (* End Relabeling_alt. *)
 
 
   Definition code_ts (I B L : eqType) ts : (seq (triple I B L))%type :=
@@ -1172,14 +1172,14 @@ Definition rdf_leOrderMixin :=
       le_rdf_anti le_rdf_trans le_rdf_total.
 
 End OrderRdf.
-  Canonical ts_OrderType (d1 d2 : unit) (I L: orderType d1) (B : orderType d2)
-    := Eval hnf in OrderOfChoiceType tt (@ts_leOrderMixin d1 d2 I L B).
+Canonical ts_OrderType (d1 d2 : unit) (I L: orderType d1) (B : orderType d2)
+  := Eval hnf in OrderOfChoiceType tt (@ts_leOrderMixin d1 d2 I L B).
 
-  Canonical rdf_OrderType (d1 d2 : unit) (I L: orderType d1) (B : orderType d2)
-    := Eval hnf in OrderOfChoiceType tt (@rdf_leOrderMixin d1 d2 I L B).
+Canonical rdf_OrderType (d1 d2 : unit) (I L: orderType d1) (B : orderType d2)
+  := Eval hnf in OrderOfChoiceType tt (@rdf_leOrderMixin d1 d2 I L B).
 
 Canonical ts_OPOrderType (d1 d2 : unit) (I L : orderType d1) (B : orderType d2) :=
- Eval hnf in  Order.Total.porderType (rdf_OrderType I L B).
+  Eval hnf in  Order.Total.porderType (rdf_OrderType I L B).
 
 End Rdf.
 

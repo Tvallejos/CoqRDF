@@ -454,3 +454,22 @@ Lemma zip_uniq_proj (T1 T2 : eqType) (s1 : seq T1) (s2 : seq T2) :
          + by exists (nth td s2 (index s0 s1)); rewrite nth_zip.
   Qed.
 
+    Lemma sort_cons (T : Type) (leT : rel T) : total leT -> transitive leT ->
+    forall (s1 s2 : seq T) (x : T),
+    sort leT s1 = x :: s2 -> s2 = sort leT s2.
+  Proof. move=> tot trans s1 s2 x eq.
+    suffices /sorted_sort : sorted leT s2.
+      by move=> /(_ trans) ->.
+    have:= sort_sorted tot s1.
+    by rewrite eq -cat1s=> /cat_sorted2 [_ ->].
+  Qed.
+
+  Lemma sort_nil (T : eqType) (leT : rel T) :
+    total leT -> transitive leT -> antisymmetric leT ->
+    forall (s1 : seq T),
+    sort leT s1 = [::] -> s1 = [::].
+  Proof.
+    move=> tot trans anti s1; suffices nil_sorted: [::] = sort leT [::].
+      by rewrite nil_sorted=> /(perm_sortP tot trans anti)/perm_nilP ->.
+    by [].
+  Qed.

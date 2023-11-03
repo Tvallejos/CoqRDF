@@ -311,10 +311,6 @@ Section OrderTriple.
   Lemma lt_neq_total t1 t2 : t1 != t2 -> lt_triple t1 t2 || lt_triple t2 t1.
   Proof. by rewrite !lt_def /negb eq_sym=> -> /=; apply le_total. Qed.
 
-  Lemma lt_neq_antisym t1 t2 : t1 != t2 -> lt_triple t1 t2 == ~~ lt_triple t2 t1.
-  Proof. move=> neqT. rewrite !lt_def. rewrite {1}/negb. rewrite (eq_sym t2 t1) neqT.
-         rewrite /negb in neqT. rewrite neqT /=. Abort.
-
   Lemma le_triple_antisym t1 t2 : le_triple t1 t2 && le_triple t2 t1 -> t1 == t2.
   Proof. case: t1=> [sx px ox ? ?]; case: t2=> [sy py oy ? ?] /=.
          rewrite tripleE /=.

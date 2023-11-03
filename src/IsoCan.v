@@ -52,20 +52,11 @@ Definition hin_pair (d1 d2 : unit) (H: orderType d1) (T : orderType d2) := Order
 (* Canonical hin_POrderType (H T : countType) := *)
 (*   Eval hnf in POrderType tt (hash H T) (hin_canPOrderMixin H T). *)
 
-(* Definition hash_ord_mixin (d1 d2 : unit) (H : orderType d1) (T : orderType d2) := *)
-  (* Order.SubOrder.sub_OrderType : forall {disp : unit} {T : orderType disp} [P : {pred T}], subType P -> orderType disp *)
-  (* Eval hnf in [ SubChoice_isSubOrder of hash H T by <: ] . *)
-  (* Eval hnf in [POrder of hash H T by <: ]. *)
-
-
-(* [SubChoice_isSubOrder of U by <: ]  *)
-
 Canonical hin_OrderType (d1 d2 : unit) (H: orderType d1) (T : orderType d2) :=
   Eval hnf in Order.DefaultProdLexiOrder.prodlexi_orderType H T.
 
-Canonical hin_OrderType2 (d1 d2 : unit)(H: orderType d1) (T : orderType d2) :=
-  Eval hnf in Order.DefaultProdLexiOrder.prodlexi_orderType H T.
-  (* Eval hnf in OrderType tt (hash H T) (hin_canPOrderMixin H T). *)
+(* Canonical hin_OrderType2 (d1 d2 : unit)(H: orderType d1) (T : orderType d2) := *)
+(*   Eval hnf in Order.DefaultProdLexiOrder.prodlexi_orderType H T. *)
 
 
 Section IsoCan.

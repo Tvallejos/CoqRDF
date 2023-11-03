@@ -1055,10 +1055,11 @@ The term "g1" has type "rdf_graph I B L" while it is expected to have type
   End CountRdf.
 
 Section OrderRdf.
-  Variable disp : unit.
-  Variables I B L : orderType disp.
+  Variables d1 d2 : unit.
+  Variables I L : orderType d1.
+  Variable B : orderType d2.
 
-  Definition le_triple := @le_triple disp I B L.
+  Definition le_triple := @le_triple d1 d2 I L B.
 
   Fixpoint le_st_fix (x y : seq (triple I B L)) :=
       match (x,y) with
@@ -1107,7 +1108,7 @@ Section OrderRdf.
   Lemma meet_rdf_def : forall x y, meet_rdf x y = (if lt_rdf x y then x else y).
   Proof. by []. Qed.
 
-  Lemma joinst_def : forall x y, join_st x y = (if lt_st x y then y else x).
+  Lemma join_st_def : forall x y, join_st x y = (if lt_st x y then y else x).
   Proof. by []. Qed.
   Lemma join_rdf_def : forall x y, join_rdf x y = (if lt_rdf x y then y else x).
   Proof. by []. Qed.
@@ -1156,6 +1157,13 @@ Section OrderRdf.
   Lemma le_rdf_trans : transitive le_rdf.
   Proof. by move=> x y z; apply le_st_trans. Qed.
 
+Definition ts_leOrderMixin :=
+  Eval hnf in
+    @LeOrderMixin (@ts_choiceType I B L)
+      le_st lt_st meet_st join_st
+      lt_st_def meet_st_def join_st_def
+      le_st_anti le_st_trans le_st_total.
+
 Definition rdf_leOrderMixin :=
   Eval hnf in
     @LeOrderMixin (@rdf_choiceType I B L)
@@ -1164,6 +1172,14 @@ Definition rdf_leOrderMixin :=
       le_rdf_anti le_rdf_trans le_rdf_total.
 
 End OrderRdf.
+  Canonical ts_OrderType (d1 d2 : unit) (I L: orderType d1) (B : orderType d2)
+    := Eval hnf in OrderOfChoiceType tt (@ts_leOrderMixin d1 d2 I L B).
+
+  Canonical rdf_OrderType (d1 d2 : unit) (I L: orderType d1) (B : orderType d2)
+    := Eval hnf in OrderOfChoiceType tt (@rdf_leOrderMixin d1 d2 I L B).
+
+Canonical ts_OPOrderType (d1 d2 : unit) (I L : orderType d1) (B : orderType d2) :=
+ Eval hnf in  Order.Total.porderType (rdf_OrderType I L B).
 
 End Rdf.
 

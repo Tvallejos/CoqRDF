@@ -266,8 +266,9 @@ Section OperationsOnTriples.
 End OperationsOnTriples.
 
 Section OrderTriple.
-  Variable disp : unit.
-  Variables I B L : orderType disp.
+  Variable d1 d2 : unit.
+  Variables I L : orderType d1.
+  Variable B : orderType d2.
 
   Definition le_triple : rel (triple I B L) :=
     fun (x y : triple I B L)=>
@@ -343,11 +344,11 @@ Definition triple_leOrderMixin :=
 
 End OrderTriple.
 
-Canonical my_triple_OrderType (disp : unit) (I B L : orderType disp):=
-  Eval hnf in OrderOfChoiceType disp (@triple_leOrderMixin disp I B L).
+Canonical my_triple_OrderType (d1 d2 : unit) (I L : orderType d1) (B : orderType d2):=
+  Eval hnf in OrderOfChoiceType tt (@triple_leOrderMixin d1 d2 I L B).
 
-Canonical my_triplePOrderType (disp : unit) (I B L : orderType disp):=
-  Eval hnf in @Order.Total.porderType disp (@my_triple_OrderType disp I B L).
+Canonical my_triplePOrderType (d1 d2 : unit) (I L : orderType d1) (B : orderType d2):=
+  Eval hnf in @Order.Total.porderType tt (@my_triple_OrderType d1 d2 I L B).
 
 (* Section Relabeling_alt. *)
 

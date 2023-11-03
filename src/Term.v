@@ -252,8 +252,9 @@ Canonical term_POrderType (I B L : countType) :=
 
 
 Section OrderTerm.
-  Variable disp : unit.
-  Variables I B L : orderType disp.
+  Variable d1 d2 : unit.
+  Variables I L : orderType d1.
+  Variables B : orderType d2.
 
   Definition le_term : rel (term I B L) :=
     fun (x y : term I B L)=>
@@ -321,7 +322,7 @@ End OrderTerm.
 Section issue.
 
 Canonical my_term_OrderType (I B L : orderType tt) :=
-  Eval hnf in OrderOfChoiceType term_display (@term_leOrderMixin tt I B L).
+  Eval hnf in OrderOfChoiceType term_display (@term_leOrderMixin tt tt I B L).
 
 Canonical my_termPOrderType (I B L : orderType tt) :=
   Eval hnf in Order.Total.porderType (@my_term_OrderType I B L).
@@ -356,8 +357,8 @@ Canonical my_termPOrderType (I B L : orderType tt) :=
 
     (* if I mix terms' orderType and the plain one it also works *)
     (* note that only t1' is of type my_term_OrderType *)
-    Hypothesis P'' : (foldl Order.max t1' trms = t2).
-    Check (max_foldlP P'').
+    (* Hypothesis P'' : (foldl Order.max t1' trms = t2). *)
+    (* Check (max_foldlP P''). *)
     (* max_foldlP P'' *)
     (*      : (t1' <= t2) && all (<=%O^~ t2) trms *)
 

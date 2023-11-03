@@ -45,20 +45,38 @@ Canonical hash_countType (H T : countType) :=
 Canonical hash_subCountType (H T : countType) :=
   Eval hnf in [subCountType of hash H T].
 
+Definition hin_pair (d1 d2 : unit) (H: orderType d1) (T : orderType d2) := Order.DefaultProdLexiOrder.prodlexi_orderType H T.
+
 (* Waiting for inisight on using subtypes for automated transfer *)
-Axiom hin_canPOrderMixin : forall (H T : countType), lePOrderMixin (hash_eqType H T).
-Canonical hin_POrderType (H T : countType) :=
-  Eval hnf in POrderType tt (hash H T) (hin_canPOrderMixin H T).
+(* Axiom hin_canPOrderMixin : forall (H T : countType), lePOrderMixin (hash_eqType H T). *)
+(* Canonical hin_POrderType (H T : countType) := *)
+(*   Eval hnf in POrderType tt (hash H T) (hin_canPOrderMixin H T). *)
+
+(* Definition hash_ord_mixin (d1 d2 : unit) (H : orderType d1) (T : orderType d2) := *)
+  (* Order.SubOrder.sub_OrderType : forall {disp : unit} {T : orderType disp} [P : {pred T}], subType P -> orderType disp *)
+  (* Eval hnf in [ SubChoice_isSubOrder of hash H T by <: ] . *)
+  (* Eval hnf in [POrder of hash H T by <: ]. *)
+
+
+(* [SubChoice_isSubOrder of U by <: ]  *)
+
+Canonical hin_OrderType (d1 d2 : unit) (H: orderType d1) (T : orderType d2) :=
+  Eval hnf in Order.DefaultProdLexiOrder.prodlexi_orderType H T.
+
+Canonical hin_OrderType2 (d1 d2 : unit)(H: orderType d1) (T : orderType d2) :=
+  Eval hnf in Order.DefaultProdLexiOrder.prodlexi_orderType H T.
+  (* Eval hnf in OrderType tt (hash H T) (hin_canPOrderMixin H T). *)
 
 
 Section IsoCan.
-  Variable I B L: countType.
+  Variable disp: unit.
+  Variable I B L: orderType disp.
 
   Implicit Type trm : term I B L.
 
   Section IsoCanAlgorithm.
-
-    Variable h : countType.
+    Variable disp2 : unit.
+    Variable h : orderType disp2.
     Local Notation hash := (hash h).
 
     Variable h0 : h.

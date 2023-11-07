@@ -5,7 +5,14 @@ Unset Printing Implicit Defensive.
 From RDF Require Export Rdf Triple Term Util.
 From Coq Require Import Strings.String.
 
+Open Scope string_scope.
+Open Scope nat_scope.
+
 Section Sets.
+
+  Definition iri_t := string.
+  Definition lit_t := (string * string)%type.
+  Definition bn_t := nat.
 
   (* Defining some sets for IRIs, blank nodes and literals. *)
 
@@ -87,16 +94,14 @@ Section Prelude.
            by move=> ->; rewrite /eqb_l eqxx.
   Qed.
 
-
-  (* Canonical iE := Eval hnf in EqType Iex (EqMixin i_eqP). *)
-  Canonical b1E := Eval hnf in EqType B1ex (EqMixin b1_eqP).
-  Canonical b2E := Eval hnf in EqType B2ex (EqMixin b2_eqP).
-  Canonical lE := Eval hnf in  EqType Lex (EqMixin l_eqP).
-  Canonical iriE := Eval hnf in EqType string (EqMixin str_eqP).
-  Canonical litE := Eval hnf in prod_eqType iriE iriE.
-
-
 End Prelude.
+
+Canonical b1E := Eval hnf in EqType B1ex (EqMixin b1_eqP).
+Canonical b2E := Eval hnf in EqType B2ex (EqMixin b2_eqP).
+Canonical lE := Eval hnf in  EqType Lex (EqMixin l_eqP).
+Canonical strE := Eval hnf in EqType string (EqMixin str_eqP).
+Canonical iriE := Eval hnf in EqType iri_t (EqMixin str_eqP).
+Canonical litE := Eval hnf in [eqType of lit_t].
 
 Section TermsEx.
 
@@ -124,14 +129,9 @@ Section TermsEx.
   (* Example relabeling_blank_node_type : (relabeling_term nu b) == f. by []. Qed. *)
 
 End TermsEx.
-Open Scope string_scope.
-Open Scope nat_scope.
 Section TermsStr.
 
   (* Defining some terms and testing relabeling and equality on them. *)
-  Definition iri_t := string.
-  Definition lit_t := (string * string)%type.
-  Definition bn_t := nat.
 
   Definition I  := @Iri iri_t bn_t lit_t.
   Definition L  := @Lit iri_t bn_t lit_t.
@@ -158,14 +158,14 @@ Section TripleStr.
 
   (* Defining some triples and testing relabeling and equality on them. *)
 
-  Definition mkTriple := @mkTriple iri_t bn_t lit_t.
+  Definition mkT := @mkTriple iri_t bn_t lit_t.
 
   (* type aliases *)
-  Definition tr_t := triple iriE bn_t litE.
+  Definition tr_t := triple iri_t bn_t lit_t.
 
-  Definition z_isA_sonata : tr_t. by refine (@mkTriple (Bn 0) (I "isA") (I "sonata") _ _). Defined.
-  Definition o_isA_sonata : tr_t. by refine (@mkTriple  (Bn 1) (I "isA") (I "sonata") _ _). Defined.
-  Definition o_year_1781 : tr_t. by refine (@mkTriple  (Bn 1) (I "year") (L ("number","1781")) _ _). Defined.
+  Definition z_isA_sonata : tr_t. by refine (@mkT (Bn 0) (I "isA") (I "sonata") _ _). Defined.
+  Definition o_isA_sonata : tr_t. by refine (@mkT (Bn 1) (I "isA") (I "sonata") _ _). Defined.
+  Definition o_year_1781 : tr_t. by refine (@mkT (Bn 1) (I "year") (L ("number","1781")) _ _). Defined.
 
   Example relabeling_a_triple_eq : relabeling_triple mu z_isA_sonata == o_isA_sonata. by []. Qed.
 
@@ -174,7 +174,7 @@ Section GraphStr.
   (* Defining some graphs and testing relabeling and equality on them. *)
 
   (* type aliases *)
-  Definition RDF_t := rdf_graph iriE nat_eqType litE.
+  (* Definition RDF_t := rdf_graph iriE bnE litE. *)
 
   Definition OSonataG := mkRdf [:: o_isA_sonata; o_year_1781].
   Definition OSonataG_perm := mkRdf [:: o_year_1781 ; o_isA_sonata ].

@@ -21,7 +21,7 @@ jobs:
         # Browse URL: https://github.com/coq-community/docker-coq/wiki#supported-tags
         # to get the list of supported (coq, ocaml) versions in coqorg/coq.
         coq_version:
-          - '8.15.2'
+          - '8.17.1'
         ocaml_version:
           - '4.09.1'
           # - '4.11-flambda'
@@ -44,8 +44,8 @@ jobs:
           ocaml_version: ${{ matrix.ocaml_version }}
           before_script: |
               startGroup "Workaround permission issue"
-              whoami
-              sudo chown -R coq:coq . 
+                whoami
+                sudo chown -R coq:coq . 
               endGroup
           script: |
               startGroup "Build Coq project"
@@ -69,7 +69,7 @@ jobs:
         # Browse URL: https://hub.docker.com/r/mathcomp/mathcomp#supported-tags
         # to get the list of supported tags in mathcomp/mathcomp
         image:
-          - mathcomp/mathcomp:1.15.0-coq-8.15
+          - mathcomp/mathcomp:1.16.0-coq-8.16
           # - mathcomp/mathcomp:1.12.0-coq-8.13
           # - mathcomp/mathcomp:latest-coq-dev
           # - mathcomp/mathcomp-dev:coq-dev

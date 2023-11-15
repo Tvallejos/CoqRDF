@@ -1,13 +1,33 @@
-# rdf-model
+# CoqRDF
 [![Docker Coq Build](https://github.com/Tvallejos/rdf-model/workflows/Docker%20Coq%20Build/badge.svg?branch=main)](https://github.com/Tvallejos/rdf-model/actions?query=workflow:"Docker%20Coq%20Build")
-- [X] RDF model
-- [X] Isomorphism 
-  * [X] Relabeling (terms, triples, seq triples, rdf_graphs)
-  * [X] Graph eqb
-- [X] Isomorphism is an equivalence relation
-  * [X] Reflexive
-  * [X] Symmetric
-  * [X] Transitive
-- [ ] Isocanonical algorithm
-  * [ ] Notion
-  * [ ] Algorithm abstraction
+
+Development of the RDF model using Coq and the Mathematical Components library.
+
+## Meta
+
+- Author(s):
+  - Tomas Vallejos
+  - Assia Mahboubi
+- Compatible Coq versions: 8.17
+- Additional dependencies: 
+  - the [`Mathematical Components` Library](https://github.com/math-comp/math-comp) version 1.16
+  
+## Description
+
+This library allows mechanized reasoning about the RDF model. 
+It defines RDF graphs as duplicate-free sequences of triples; and operations on them, such as, blank node relabeling and RDF isomorphism.
+
+## Installation
+
+We recommend installing the dependencies via [OPAM](https://opam.ocaml.org/doc/Install.html) (using a fresh or up to date version of opam 2), and then build manually:
+
+```sh
+git clone https://github.com/Tvallejos/CoqRDF.git
+cd CoqRDF
+opam switch create CoqRDF 4.12.0
+eval $(opam env)
+opam pin add coq 8.17.0
+opam pin add coq-mathcomp-ssreflect 1.16.0
+make
+```
+

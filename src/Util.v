@@ -53,7 +53,8 @@ Proof.
 Qed.
 
 Lemma mem_filter_map (T : eqType) f p a (s : seq T) :
-  (forall b, p b = p (f b)) -> (a \in (map f (filter p s))) = (a \in filter p (map f s)).
+  (forall b, p b = p (f b)) ->
+  (a \in (map f (filter p s))) = (a \in filter p (map f s)).
 Proof. elim: s=> [//|h t IHts] pres.
        by case e: (p h); rewrite /= e; rewrite pres in e; rewrite e /= ?in_cons IHts //.
 Qed.
@@ -98,7 +99,10 @@ Proof. elim: s=>[//| h t IHts] /=.
 Qed.
 
 Lemma perm_undup_map_inj (T1 T2: eqType) (f : T1 -> T2) s1 s2 :
-  {in s1 &,injective f} ->  uniq s1 -> perm_eq (undup (map f s1)) s2 -> perm_eq (map f s1) s2.
+  {in s1 &,injective f} ->
+  uniq s1 ->
+  perm_eq (undup (map f s1)) s2 ->
+    perm_eq (map f s1) s2.
 Proof. move=> injf ? peq.
        have equ: uniq (undup (map f s1)) = uniq (map f s1).
        by rewrite map_inj_in_uniq // undup_uniq.
@@ -153,11 +157,6 @@ Proof.
     by rewrite in_cons=> /IHts/andP [-> ->]; rewrite !Bool.orb_true_r.
 Qed.
 
-(* Lemma in_zip_loc (S T : eqType) (ss : seq S) (ts : seq T) s t: *)
-(*   forall s0 t0, *)
-(*     (s,t) \in zip ss ts -> (s \in ss) && (t \in ts) && nth s1. *)
-(* Proof. *)
-
 Lemma in_zip_sym (S T : eqType) (ss : seq S) (ts : seq T) s t:
   (s,t) \in zip ss ts = ((t, s) \in zip ts ss).
 Proof.
@@ -180,7 +179,8 @@ Proof.
   by rewrite in_zip_sym; apply notin_zip_l.
 Qed.
 
-Lemma zip_uniq_sym (S T : eqType) (ss : seq S) (ts : seq T) : uniq (zip ss ts) = uniq (zip ts ss).
+Lemma zip_uniq_sym (S T : eqType) (ss : seq S) (ts : seq T) :
+  uniq (zip ss ts) = uniq (zip ts ss).
 Proof.
   elim: ts ss=> [[//|//]| t ts' IHts] ss.
   + case: ss => [| s ss' /=]; first by rewrite zip0s.
@@ -188,7 +188,8 @@ Proof.
     by rewrite in_zip_sym.
 Qed.
 
-Lemma zip_uniq_l (S T : eqType) (ss : seq S) (ts : seq T) : uniq ss -> uniq (zip ss ts).
+Lemma zip_uniq_l (S T : eqType) (ss : seq S) (ts : seq T) :
+  uniq ss -> uniq (zip ss ts).
 Proof.
   elim: ts ss=> [[//|//]| t' ts' IHts] ss uniq_ss.
   + case: ss uniq_ss => [| s ss]; first by rewrite zip0s.
@@ -196,12 +197,14 @@ Proof.
     by apply: IHts uniq_ss.
 Qed.
 
-Lemma zip_uniq_r (S T : eqType) (ss : seq S) (ts : seq T) : uniq ts -> uniq (zip ss ts).
+Lemma zip_uniq_r (S T : eqType) (ss : seq S) (ts : seq T) :
+  uniq ts -> uniq (zip ss ts).
 Proof.
   by rewrite zip_uniq_sym; apply zip_uniq_l.
 Qed.
 
-Lemma all_zip1 (T1 T2: Type) (s1: seq T1) (s2 : seq T2) p : all p s1 -> all (fun t=> p t.1) (zip s1 s2).
+Lemma all_zip1 (T1 T2: Type) (s1: seq T1) (s2 : seq T2) p :
+  all p s1 -> all (fun t=> p t.1) (zip s1 s2).
 Proof. elim: s1 s2=> [|hd tl IHtl] s2; first by case s2.
        + move=> /andP[phd ptl] /=. case: s2=> //= b btl.
          by rewrite phd /= IHtl.
@@ -315,8 +318,6 @@ Proof. by move=> injf x y xin /injf H /eqP; rewrite eq_sym=> /eqP/H ->. Qed.
 
 Lemma can_in_inj (T1 T2 : eqType) (f : T1 -> T2) (g : T2 -> T1) (s : seq T1) : {in s, cancel f g} -> {in s &, injective f}.
 Proof. move/can_in_pcan_in. move=> pcan. eapply pcan_in_inj. exact: pcan. Qed.
-(* from coq ssr ssrfun *)
-
 
 Lemma mem_in_map (T1 T2 : eqType) (f : T1 -> T2) (s : seq T1) : {in s, injective f} -> forall (x : T1), (f x \in [seq f i | i <- s]) = (x \in s).
 Proof. move=> H x. apply /mapP/idP; last by exists x.
@@ -454,7 +455,7 @@ Lemma zip_uniq_proj (T1 T2 : eqType) (s1 : seq T1) (s2 : seq T2) :
          + by exists (nth td s2 (index s0 s1)); rewrite nth_zip.
   Qed.
 
-    Lemma sort_cons (T : Type) (leT : rel T) : total leT -> transitive leT ->
+  Lemma sort_cons (T : Type) (leT : rel T) : total leT -> transitive leT ->
     forall (s1 s2 : seq T) (x : T),
     sort leT s1 = x :: s2 -> s2 = sort leT s2.
   Proof. move=> tot trans s1 s2 x eq.

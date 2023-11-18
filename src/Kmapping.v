@@ -227,29 +227,9 @@ Section Kmapping.
 
   Section Kmapping_isocan.
 
-  (*   Lemma sort_cons (T : Type) (leT : rel T) : total leT -> transitive leT -> *)
-  (*   forall (s1 s2 : seq T) (x : T), *)
-  (*   sort leT s1 = x :: s2 -> s2 = sort leT s2. *)
-  (* Proof. move=> tot trans s1 s2 x eq. *)
-  (*   suffices /sorted_sort : sorted leT s2. *)
-  (*     by move=> /(_ trans) ->. *)
-  (*   have:= sort_sorted tot s1. *)
-  (*   by rewrite eq -cat1s=> /cat_sorted2 [_ ->]. *)
-  (* Qed. *)
-
-  (* Lemma sort_nil (T : eqType) (leT : rel T) : *)
-  (*   total leT -> transitive leT -> antisymmetric leT -> *)
-  (*   forall (s1 : seq T), *)
-  (*   sort leT s1 = [::] -> s1 = [::]. *)
-  (* Proof. *)
-  (*   move=> tot trans anti s1; suffices nil_sorted: [::] = sort leT [::]. *)
-  (*     by rewrite nil_sorted=> /(perm_sortP tot trans anti)/perm_nilP ->. *)
-  (*   by []. *)
-  (* Qed. *)
-
-  Lemma join_nil_size (h : seq (triple I B L)) :
-    (size h != 0) -> join_st [::] h != [::].
-  Proof. by case: h=> //. Qed.
+    Lemma join_nil_size (h : seq (triple I B L)) :
+      (size h != 0) -> join_st [::] h != [::].
+    Proof. by case: h=> //. Qed.
 
     Lemma k_mapping_nil_is_nil ts: k_mapping_ts ts = [::] -> ts = [::].
     Proof.
@@ -344,15 +324,6 @@ Section Kmapping.
       by rewrite find_index_eqbb ?size_iota // nth_mapzip ?size_iota //.
     Qed.
 
-
-    Axiom isocan_auto_symmetry :
-      forall g h mu, is_iso_ts g h mu ->
-                forall q, q \in permutations (get_bts h) ->
-                           (k_mapping_ts h) = sort le_triple (relabeling_seq_triple (build_map_k q) h) ->
-                           forall p, p \in permutations (get_bts g) ->
-                                      (k_mapping_ts g) = sort le_triple (relabeling_seq_triple (build_map_k p) g) ->
-                                      (relabeling_seq_triple (build_map_k q) h) =i (relabeling_seq_triple (build_map_k (map mu p)) h).
-
     Lemma iso_isokmap g h (igh: iso g h) : iso (k_mapping g) (k_mapping h).
     Proof. by apply: iso_can_trans _ igh; rewrite /mapping_is_iso_mapping; apply kmapping_iso_out. Qed.
 
@@ -361,6 +332,14 @@ Section Kmapping.
 
     Lemma build_hkp : build_kmapping_from_seq \o hash_kp = build_map_k.
     Proof. by []. Qed.
+
+    Axiom isocan_auto_symmetry :
+      forall g h mu, is_iso_ts g h mu ->
+                forall q, q \in permutations (get_bts h) ->
+                           (k_mapping_ts h) = sort le_triple (relabeling_seq_triple (build_map_k q) h) ->
+                           forall p, p \in permutations (get_bts g) ->
+                                      (k_mapping_ts g) = sort le_triple (relabeling_seq_triple (build_map_k p) g) ->
+                                      (relabeling_seq_triple (build_map_k q) h) =i (relabeling_seq_triple (build_map_k (map mu p)) h).
 
     Lemma kmapping_can_invariant g g2 (isogg2 : iso g g2) : eqb_rdf (k_mapping g) (k_mapping g2).
     Proof.

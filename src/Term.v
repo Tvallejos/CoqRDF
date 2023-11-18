@@ -6,8 +6,6 @@ Unset Printing Implicit Defensive.
 From RDF Require Import Util.
 
 Import Order.Theory.
-
-(* literals should be of Datatype type, is not important for the moment*)
 Open Scope order_scope.
 
 Inductive term (I B L : Type) : Type :=
@@ -79,15 +77,17 @@ Section Poly.
     end.
   Section blank_node_mapping.
 
-    Lemma bnodes_to_bnodes (mu : B -> B1) (t : term I B L) : is_bnode t -> is_bnode (relabeling_term mu t).
-      Proof. by case t. Qed.
+    Lemma bnodes_to_bnodes (mu : B -> B1) (t : term I B L) :
+      is_bnode t -> is_bnode (relabeling_term mu t).
+    Proof. by case t. Qed.
 
     Variable mu : B -> B.
+
     Lemma relabeling_lit l : (relabeling_term mu (Lit l)) = Lit l.
-      Proof. by []. Qed.
+    Proof. by []. Qed.
 
     Lemma relabeling_iri i : (relabeling_term mu (Iri i)) = Iri i.
-      Proof. by []. Qed.
+    Proof. by []. Qed.
   End blank_node_mapping.
 
   Lemma relabeling_term_id (trm : term I B L) : relabeling_term id trm = trm.
@@ -250,7 +250,6 @@ Definition term_canPOrderMixin (I B L : countType) :=
 Canonical term_POrderType (I B L : countType) :=
   Eval hnf in POrderType term_display (term I B L) (term_canPOrderMixin I B L).
 
-
 Section OrderTerm.
   Variable d1 d2 : unit.
   Variables I L : orderType d1.
@@ -319,61 +318,9 @@ Definition term_leOrderMixin :=
 
 End OrderTerm.
 
-Section issue.
-
 Canonical my_term_OrderType (I B L : orderType tt) :=
   Eval hnf in OrderOfChoiceType term_display (@term_leOrderMixin tt tt I B L).
 
 Canonical my_termPOrderType (I B L : orderType tt) :=
   Eval hnf in Order.Total.porderType (@my_term_OrderType I B L).
-
-  Check max_foldlP :
-    forall [disp : unit] [T : orderType disp] [l : seq T] [x y : T],
-      foldl Order.max x l = y -> (x <= y) && all (<=%O^~ y) l.
-
-  (* This works for ordinary order types*)
-  Section fold_all.
-    Variables T : (orderType tt).
-    Variables t1 t2 : T.
-    Variable ts : seq T.
-    Hypothesis P : (foldl Order.max t1 ts = t2).
-    Check (max_foldlP P) : (t1 <= t2) && all (<=%O^~ t2) ts.
-  End fold_all.
-
-  Section fold_all_term.
-    Variables I B L : (orderType tt).
-
-    (* the inference does not work here *)
-    Variables t1 t2 : (term I B L).
-    Variable trms : seq (term I B L).
-    Fail Hypothesis P : (foldl Order.max t1 trms = t2).
-    Fail Check (max_foldlP P) : (t1 <= t2) && all (<=%O^~ t2) trms.
-
-    (* it if I use the terms' orderType directly *)
-    Variable trms' : seq (my_term_OrderType I B L).
-    Variables t1' t2' : (my_term_OrderType I B L).
-    Hypothesis P' : (foldl Order.max t1' trms' = t2').
-    Check (max_foldlP P') : (t1' <= t2') && all (<=%O^~ t2') trms'.
-
-    (* if I mix terms' orderType and the plain one it also works *)
-    (* note that only t1' is of type my_term_OrderType *)
-    (* Hypothesis P'' : (foldl Order.max t1' trms = t2). *)
-    (* Check (max_foldlP P''). *)
-    (* max_foldlP P'' *)
-    (*      : (t1' <= t2) && all (<=%O^~ t2) trms *)
-
-    Fail Check (max_foldlP P'') : (t1' <= t2) && all (<=%O^~ t2) trms.
-    (* The command has indeed failed with message: *)
-    (* In environment *)
-    (* I, B, L : orderType tt *)
-    (* t1, t2 : term I B L *)
-    (* trms : seq (term I B L) *)
-    (* t1' : my_term_OrderType I B L *)
-    (* P'' : foldl Order.max t1' trms = t2 *)
-    (* x : ?T *)
-    (* The term "t2" has type "term I B L" while it is expected to have type "Order.POrder.sort ?T". *)
-
-  End fold_all_term.
-
-End issue.
 

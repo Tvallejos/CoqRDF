@@ -228,18 +228,6 @@ Section OperationsOnTriples.
   Lemma is_ground_triple_bnodes_nil t : is_ground_triple t = (bnodes_triple t == [::]).
   Proof. by rewrite -Obnodes_groundtriple; case (bnodes_triple t). Qed.
 
-  Canonical triple_predType2 := PredType (pred_of_seq \o (bnodes_triple)).
-
-  (* Variable t : triple I B L. *)
-  (* Variable B' : eqType. *)
-  (* Variable f : finType. *)
-  (* Variable funn : {ffun f -> B'}. *)
-  (* Variable fibn : (seq_sub (@bnodes_triple B t)). *)
-  (* (* Check fibn : finType. *) *)
-  (* Variable m : {ffun (seq_sub (@bnodes_triple B t)) -> Type}. *)
-
-  (* (μ :  {ffun (seq_sub (bnodes g1)) -> B}) *)
-
   Lemma all_bnodes_triple_is_bnode t : all (@is_bnode I B L) (bnodes_triple t).
   Proof.
     case t=> s p o; rewrite /bnodes_triple/terms_triple=> _ _.
@@ -346,30 +334,3 @@ Canonical my_triple_OrderType (d1 d2 : unit) (I L : orderType d1) (B : orderType
 Canonical my_triplePOrderType (d1 d2 : unit) (I L : orderType d1) (B : orderType d2):=
   Eval hnf in @Order.Total.porderType tt (@my_triple_OrderType d1 d2 I L B).
 
-(* Section Relabeling_alt. *)
-
-(*   Variables (I B L : countType).  *)
-
-(*   (* Definition f (B1 B2 : countType) (t : triple I B1 L) (μ : {ffun (seq_sub (bnodes_triple t)) -> B2}) : *) *)
-(*   (* Variable x : seq_sub (bnodes_triple ) *) *)
-
-(*   (* Variable (t : triple I B L) (μ : {ffun (seq_sub (bnodes_triple t)) -> B}). *) *)
-(*   (* Variable (x : (seq_sub (bnodes_triple t))). *) *)
-(*   (* Check μ x. *) *)
-
-(*   (* Definition f (t : triple I B L) : (seq_sub (bnodes_triple t)). *) *)
-(*   (* Proof. exact: (seq_sub_of (bnodes_triple t)). *) *)
-
-
-
-
-(*   Definition relabeling_triple_alt (B1 B2: countType) (t : triple I B1 L) (μ : {ffun (seq_sub (bnodes_triple t)) -> B2}) : triple I B2 L:= *)
-(*     let (s, p, o, sin, pin) := t in *)
-(*     if insub s : {? x | is_bnode x} is Some ss then *)
-(*       if insub p : {? x | is_in_i x} is Some pp then *)
-(*         if insub o : {? x | is_in_i x} is Some pp then *)
-(*           todo _ *)
-(*           else todo _. *)
-(*     mkTriple (?? (μ o)) *)
-(*              ((iffLR (relabeling_term_preserves_is_in_ib μ s)) sin) *)
-(*              ((iffLR (relabeling_term_preserves_is_in_i μ p)) pin). *)

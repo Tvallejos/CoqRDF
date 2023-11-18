@@ -45,18 +45,11 @@ Canonical hash_countType (H T : countType) :=
 Canonical hash_subCountType (H T : countType) :=
   Eval hnf in [subCountType of hash H T].
 
-Definition hin_pair (d1 d2 : unit) (H: orderType d1) (T : orderType d2) := Order.DefaultProdLexiOrder.prodlexi_orderType H T.
-
-(* Waiting for inisight on using subtypes for automated transfer *)
-(* Axiom hin_canPOrderMixin : forall (H T : countType), lePOrderMixin (hash_eqType H T). *)
-(* Canonical hin_POrderType (H T : countType) := *)
-(*   Eval hnf in POrderType tt (hash H T) (hin_canPOrderMixin H T). *)
+Definition hin_pair (d1 d2 : unit) (H: orderType d1) (T : orderType d2) :=
+  Order.DefaultProdLexiOrder.prodlexi_orderType H T.
 
 Canonical hin_OrderType (d1 d2 : unit) (H: orderType d1) (T : orderType d2) :=
   Eval hnf in Order.DefaultProdLexiOrder.prodlexi_orderType H T.
-
-(* Canonical hin_OrderType2 (d1 d2 : unit)(H: orderType d1) (T : orderType d2) := *)
-(*   Eval hnf in Order.DefaultProdLexiOrder.prodlexi_orderType H T. *)
 
 
 Section IsoCan.
@@ -82,7 +75,6 @@ Section IsoCan.
 
       Definition hterm := term I (hash B) L.
 
-      (* should this be a coercion? let's see *)
       Definition term_of_hterm (ht : hterm) : term I B L :=
         match ht with
         | Iri i => Iri i
@@ -134,10 +126,12 @@ Section IsoCan.
       Definition relabeling_hterm (mu : B -> B) ht : hterm :=
         relabeling_term (mu_ext mu) ht.
 
-      Lemma eqb_b_hterm_relabel f b ht (injF: injective f): (eqb_b_hterm b ht) = (eqb_b_hterm (f b) (relabeling_hterm f ht)).
+      Lemma eqb_b_hterm_relabel f b ht (injF: injective f):
+        (eqb_b_hterm b ht) = (eqb_b_hterm (f b) (relabeling_hterm f ht)).
       Proof. by case ht=> //= name; rewrite inj_eq. Qed.
 
-      Lemma has_map_eqbb s f b (injF: injective f): has (eqb_b_hterm b) s = has (eqb_b_hterm (f b)) (map (relabeling_hterm f) s).
+      Lemma has_map_eqbb s f b (injF: injective f):
+        has (eqb_b_hterm b) s = has (eqb_b_hterm (f b)) (map (relabeling_hterm f) s).
       Proof. elim: s=> [//|hd tl IHtl] /=.
              by rewrite IHtl (@eqb_b_hterm_relabel f b).
       Qed.
@@ -178,8 +172,6 @@ Section IsoCan.
       Definition init_hash_ts (ts : seq (triple I B L)) : hts :=
         relabeling_seq_triple init_bnode ts.
 
-      (* Algorithm 1, lines 2-8
-       initializes every blank node with a known default name *)
       Definition init_hash (g : rdf_graph _ _ _) : hgraph :=
         @relabeling _ _ _ _ init_bnode g (init_hash_uniq g).
 
@@ -193,13 +185,9 @@ Section IsoCan.
       Lemma init_hash_h0 b g : Bnode b \in bnodes (init_hash g) -> current_hash b = h0.
       Proof. by apply init_hash_ts_h0. Qed.
 
-      (* updates the current hash of b by b' in all the ocurrences
-       in every triple of ts *)
       Definition replace_bnode_ts (b b': hash B) (ts : hts) : hts :=
         relabeling_seq_triple (fun a_hash => if a_hash == b then b' else a_hash) ts.
 
-      (* updates the current hash of b by b' in all the ocurrences
-       in g *)
       Definition replace_bnode (b b': hash B) (g : hgraph) us : hgraph :=
         @mkRdfGraph _ _ _ (replace_bnode_ts b b' (graph g)) us.
 
@@ -219,28 +207,41 @@ Section IsoCan.
       Proof. by case: ht=> //? /eqP ->; rewrite /eqb_b_hterm/= eqxx. Qed.
 
     End Hgraph.
-  Lemma nth_mapzip (T1 T2 : Type) (S0 T0 : eqType) (x0 : S0) (y0 : T0) [s : seq S0] [t : seq T0] (i : nat) :
-    size s = size t -> nth (@Bnode T1 (IsoCan.hash T0 S0) T2 (mkHinput x0 y0)) [seq Bnode (mkHinput an.1 an.2) | an <- zip s t ] i = Bnode (mkHinput (nth x0 s i) (nth y0 t i)).
-  Proof.
-    move=> eqsize.
-    case/orP : (leqVgt (size t) i)=> leq.
-    + suffices notin : (size [seq Bnode (mkHinput an.1 an.2) | an <- zip s t] <= i)%N.
-      by rewrite !nth_default // eqsize.
-      by move=> ? ? ; rewrite size_map size_zip eqsize minn_refl.
-      by rewrite (nth_map (x0,y0)) ?size_zip ?eqsize ?minn_refl // ; congr Bnode; apply/eqP; rewrite eq_i_ch /= nth_zip //= !eqxx.
-  Qed.
+    Lemma nth_mapzip
+      (T1 T2 : Type) (S0 T0 : eqType)
+      (x0 : S0) (y0 : T0)
+      [s : seq S0] [t : seq T0] (i : nat) :
+      size s = size t ->
+        nth (@Bnode T1 (IsoCan.hash T0 S0) T2 (mkHinput x0 y0))
+            [seq Bnode (mkHinput an.1 an.2) | an <- zip s t ]
+            i =
+        Bnode (mkHinput (nth x0 s i) (nth y0 t i)).
+    Proof.
+      move=> eqsize.
+      case/orP : (leqVgt (size t) i)=> leq.
+      + suffices notin : (size [seq Bnode (mkHinput an.1 an.2) | an <- zip s t] <= i)%N.
+        by rewrite !nth_default // eqsize.
+        by move=> ? ? ; rewrite size_map size_zip eqsize minn_refl.
+        by rewrite (nth_map (x0,y0)) ?size_zip ?eqsize ?minn_refl // ; congr Bnode; apply/eqP; rewrite eq_i_ch /= nth_zip //= !eqxx.
+    Qed.
 
-  Lemma find_index_eqbb bs s (bn : B) :
-    size s = size bs ->
-    find (eqb_b_hterm bn) [seq Bnode (mkHinput an.1 an.2) | an <- zip bs s] = index bn bs.
-  Proof.
-    elim: bs s => [| a l IHl]; first by move=> ?; rewrite zip0s.
-    by case =>  [//| b l2] /= [eqsize_tl]; rewrite eq_sym IHl //.
-  Qed.
+    Lemma find_index_eqbb bs s (bn : B) :
+      size s = size bs ->
+      find (eqb_b_hterm bn) [seq Bnode (mkHinput an.1 an.2) | an <- zip bs s] = index bn bs.
+    Proof.
+      elim: bs s => [| a l IHl]; first by move=> ?; rewrite zip0s.
+      by case =>  [//| b l2] /= [eqsize_tl]; rewrite eq_sym IHl //.
+    Qed.
 
-  Lemma hash_nth_mapzip (U V : Type) (S0 T0 : eqType) (x : S0) (y : T0) [s : seq S0] [t : seq T0] (i : nat):
-    size s = size t ->
-    nth (@Bnode U (IsoCan.hash T0 S0) V (mkHinput x y)) [seq Bnode (mkHinput an.1 an.2) | an <- zip s t ] i = Bnode (mkHinput (nth x s i) (nth y t i)).
+    Lemma hash_nth_mapzip
+      (U V : Type) (S0 T0 : eqType)
+      (x : S0) (y : T0)
+      [s : seq S0] [t : seq T0] (i : nat) :
+      size s = size t ->
+        nth (@Bnode U (IsoCan.hash T0 S0) V (mkHinput x y))
+            [seq Bnode (mkHinput an.1 an.2) | an <- zip s t ]
+            i =
+        Bnode (mkHinput (nth x s i) (nth y t i)).
   Proof. by apply nth_mapzip. Qed.
 
   End IsoCanAlgorithm.

@@ -5,7 +5,7 @@ Unset Printing Implicit Defensive.
 From RDF Require Export Rdf Triple Term Util IsoCan.
 
     Section Blabel.
-  Variable I B L: countType.
+    Variable I B L: countType.
     Variable h : countType.
     Variables h0 hfwd hbwd hmark herror: h.
     Variable b0 : B.
@@ -212,11 +212,8 @@ From RDF Require Export Rdf Triple Term Util IsoCan.
       Definition partitionate' (f : hterm -> bool) (s : seq hterm) : seq hterm * seq hterm :=
         (filter f s, filter (negb \o f) s).
 
-      (* should be parameterized by an hgraph
-         part shoud be the finset of (hash B) that shares hash in g *)
       Definition part := seq (hash B).
 
-      (* the finset of parts in g *)
       Definition partition := seq part.
 
       Definition lookup_hash := @lookup_hash I B L h.
@@ -257,7 +254,7 @@ From RDF Require Export Rdf Triple Term Util IsoCan.
        chooses the canonical part which is not trivial *)
       Fixpoint choose_part (P : partition) : part :=
         match P with
-        | nil => nil (* FIXME: is this the good way to do it? *)
+        | nil => nil
         | cons p t => if is_trivial p then choose_part t else p
         end.
 
@@ -286,9 +283,6 @@ From RDF Require Export Rdf Triple Term Util IsoCan.
         Definition htriple := @htriple I B L h.
 
         Axiom todo: forall {T : Type}, T.
-
-      (* Definition replace_bnode (b b': hash B) (g : hgraph) us : hgraph := *)
-      (*   @mkRdfGraph _ _ _ (replace_bnode_ts b b' (graph g)) us. *)
 
         Definition replace_bnode := @replace_bnode I B L h.
 
@@ -326,8 +320,7 @@ From RDF Require Export Rdf Triple Term Util IsoCan.
         Definition hashNodes_initialized (g : hgraph) : hgraph :=
           iterate g (size (graph g)).
 
-        (* need the lemma stating hashNodes terminates without
-       getting out of fuel *)
+        (* requires the lemma stating hashNodes terminates without getting out of fuel *)
         (* Algorithm 1*)
         Definition hashNodes (g : rdf_graph _ _ _) : hgraph :=
           hashNodes_initialized (init_hash g).

@@ -1,10 +1,11 @@
-From mathcomp Require Import all_ssreflect fingraph.
+From mathcomp Require Import all_ssreflect.
 Set Implicit Arguments.
 Unset Strict Implicit.
 Unset Printing Implicit Defensive.
-
 Import Order.Theory.
 Open Scope order_scope.
+
+(* Lemmas complementing math-comp theories *)
 
 Lemma all_undup (T : eqType) (s : seq T) p : all p (undup s) = all p s.
 Proof.
@@ -34,10 +35,7 @@ Qed.
 
 Lemma map_undup_idem (T1 T2: eqType) (f : T1 -> T2) (s : seq T1):
   map f (undup (undup s)) = map f (undup s).
-Proof. elim: s=> [//|h t IHts] /=.
-       case e: (h \in t); first by rewrite IHts.
-       by move: e; rewrite -mem_undup /= -IHts=> ->.
-Qed.
+Proof. congr (map f); exact: undup_idem. Qed.
 
 Lemma undup_cat_r (T: eqType) (s q : seq T) :
   undup (s ++ undup q) = undup (s ++ q).
@@ -473,4 +471,14 @@ Lemma zip_uniq_proj (T1 T2 : eqType) (s1 : seq T1) (s2 : seq T2) :
     move=> tot trans anti s1; suffices nil_sorted: [::] = sort leT [::].
       by rewrite nil_sorted=> /(perm_sortP tot trans anti)/perm_nilP ->.
     by [].
+  Qed.
+
+  Lemma index_map_in [T1 T2 : eqType] [f : T1 -> T2] (s : seq T1) :
+    {in s&, injective f} -> forall (x : T1), x \in s -> index (f x) [seq f i | i <- s] = index x s.
+  Proof. elim: s => [//| a t IHtl] inj_f x xin /=.
+         case : ifP; first by move/eqP/inj_f; rewrite in_cons eqxx /==> /(_ isT) -> //; rewrite eqxx.
+         case : ifP; first by move/eqP=> ->; rewrite eqxx //.
+         move=> neq fneq; rewrite IHtl //.
+         by move=> ? ? xinn yinn; apply inj_f; rewrite in_cons ?xinn ?yinn orbT.
+         by move: xin; rewrite in_cons eq_sym neq /=.
   Qed.

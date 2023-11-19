@@ -4,9 +4,34 @@ Set Implicit Arguments.
 Unset Strict Implicit.
 Unset Printing Implicit Defensive.
 From RDF Require Import Util.
-
 Import Order.Theory.
 Open Scope order_scope.
+
+(******************************************************************************)
+(* This file defines RDF terms by parameterizing three types for its          *)
+(* IRIs, blank nodes, and literals.                                           *)
+(*                                                                            *)
+(* The definitions and theories of terms are divided in sections,             *)
+(* which are organized by the required hypothesis to develop the theories     *)
+(* of different operations.                                                   *)
+(*                                                                            *)
+(* For terms we define:                                                       *)
+(*                                                                            *)
+(*  ** Predicates                                                             *)
+(*       is_iri trm             ==  the term trm is an IRI.                   *)
+(*       is_bnode trm           ==  the term trm is a blank node.             *)
+(*       is_lit trm             ==  the term trm is a literal.                *)
+(*       eqb_term trm1 trm2     ==  trm1 compares equal to trm2.              *)
+(*       lt_term trm1 trm2      ==  trm1 is less than trm2.                   *)
+(*       le_term trm1 trm2      ==  trm1 is less than or equal to trm2.       *)
+(*       meet_term trm1 trm2    ==  the meet of trm1 and trm2.                *)
+(*       join_term trm1 trm2    ==  the join of trm1 and trm2.                *)
+(*                                                                            *)
+(*  ** Blank node relabeling                                                  *)
+(*       relabeling_term mu trm ==  trm relabeled under mu if trm is a        *)
+(*                                  blank node, trm otherwise.                *)
+(*                                                                            *)
+(******************************************************************************)
 
 Inductive term (I B L : Type) : Type :=
 | Iri (id: I)

@@ -4,6 +4,39 @@ Unset Strict Implicit.
 Unset Printing Implicit Defensive.
 From RDF Require Import Term Util.
 
+(******************************************************************************)
+(* This file defines RDF triples by parameterizing three types for its        *)
+(* IRIs, blank nodes, and literals.                                           *)
+(* Every triple is well-formed, that is:                                      *)
+(*   * its subject is an IRI or a blank node                                  *)
+(*   * its predicate is an IRI and its object                                 *)
+(*   * its object is an IRI, a blank node or a literal.                       *)
+(*                                                                            *)
+(* The definitions and theories of triples are divided in sections,           *)
+(* which are organized by the required hypothesis to develop the theories     *)
+(* of different operations.                                                   *)
+(*                                                                            *)
+(* For triples we define:                                                     *)
+(*                                                                            *)
+(*  ** Predicates                                                             *)
+(*       trm \in t              == trm is either the subject, predicate,      *)
+(*                                    or object of t.                         *)
+(*       is_ground_triple t     == every term in t is not a blank node        *)
+(*       lt_triple t1 t2        == t1 is less than or equal to t2.            *)
+(*       le_triple t1 t2        == t1 is less than or equal to t2.            *)
+(*       meet_triple t1 t2      == the meet of t1 and t2.                     *)
+(*       join_triple t1 t2      == the join of t1 and t2.                     *)
+(*                                                                            *)
+(*  ** Blank node relabeling                                                  *)
+(*       relabeling_triple mu t == the relabeling of every term of t under mu *)
+(*                                                                            *)
+(*  ** Projections                                                            *)
+(*       terms_triple t         == the duplicate free sequence of terms in t  *)
+(*       bnodes_triple t        == the duplicate free sequence of terms in t, *)
+(*                                 which are blank nodes                      *)
+(*                                                                            *)
+(******************************************************************************)
+
 Record triple (I B L : Type) :=
   mkTriple
     { subject : (term I B L)
@@ -166,9 +199,9 @@ Section OperationsOnTriples.
   Lemma tripleE t1 t2 : t1 == t2 = [&& (subject t1) == (subject t2),
         (predicate t1) == (predicate t2) &
           (object t1) == (object t2)].
-  Proof. case e: [&& subject t1 == subject t2, predicate t1 == predicate t2 & object t1 == object t2].
-         by move/and3P : e=> [/eqP eqs /eqP eqp /eqP eqo]; apply /eqP; apply triple_inj.
-         by move/negP : e=> H; apply /negP; apply: contra_not H=> /eqP/triple_case.
+  Proof. apply /idP/idP.
+         by move=> /eqP/triple_case.
+         by move/and3P => [/eqP eqs /eqP eqp /eqP eqo]; apply /eqP; apply triple_inj.
   Qed.
 
   Corollary tripleNeqs t1 t2 : subject t1 != subject t2 -> t1 != t2.

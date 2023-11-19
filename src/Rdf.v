@@ -4,6 +4,58 @@ Unset Strict Implicit.
 Unset Printing Implicit Defensive.
 From RDF Require Import Triple Term Util.
 
+(******************************************************************************)
+(* This file defines RDF graphs by parameterizing three types for its         *)
+(* IRIs, blank nodes, and literals.                                           *)
+(* We model RDF graphs using sequences of triples                             *)
+(* Every RDF graph is well-formed, that is:                                   *)
+(*   * every triple in the graph is well formed                               *)
+(*   * every triple in the grpah appears only once                            *)
+(*                                                                            *)
+(* The definitions and theories of triples are divided in sections,           *)
+(* which are organized by the required hypothesis to develop the theories     *)
+(* of different operations.                                                   *)
+(*                                                                            *)
+(* For sequences of triples we define:                                        *)
+(*                                                                            *)
+(*  ** Predicates                                                             *)
+(*      under the lexicographic comparison of le_triple                       *)
+(*       lt_st ts1 ts2        ==   ts1 is less than or equal to ts2           *)
+(*       le_st ts1 ts2        ==   ts1 is less than or equal to ts2           *)
+(*       meet_st ts1 ts2      ==   the meet of t1 and ts2.                    *)
+(*       join_st ts1 ts2      ==   the join of t1 and ts2.                    *)
+(*                                                                            *)
+(* For RDF graphs we define:                                                  *)
+(*                                                                            *)
+(*  ** Predicates                                                             *)
+(*       eqb_rdf g1 g2        ==  g1 compares equal to g2 under set equality  *)
+(*       t \in g              ==  t is a member of the underlying             *)
+(*                                sequence of g                               *)
+(*       is_ground g          ==  every triple in g is ground                 *)
+(*       is_pre_iso g1 g2 mu  ==  the blank nodes of g1 and g2 are in a       *)
+(*                                one-to-one correspondence under mu          *)
+(*       is_iso g1 g2 mu      ==  mu is a pre-isomorphism preserving          *)
+(*                                adyacency                                   *)
+(*                                                                            *)
+(*  ** Blank node relabeling                                                  *)
+(*       relabeling mu g      == the relabeling of every triple of g under mu *)
+(*                                                                            *)
+(*  ** Projections                                                            *)
+(*       terms g              == the duplicate free sequence of the terms in  *)
+(*                               the triples of g                             *)
+(*       bnodes g             == the duplicate free sequence of the terms in  *)
+(*                               the triples of g, which are blank nodes      *)
+(*                                                                            *)
+(* ** Propositions                                                            *)
+(*      isocanonical_mapping M  == M is a map from graphs to graphs which     *)
+(*                                 1. returns graphs which are isomorphic to  *)
+(*                                    the input graph                         *)
+(*                                 2. for two graphs g and h, M returns       *)
+(*                                    set-equal graphs under M if and and only*)
+(*                                    if g and h are isomorphic               *)
+(*                                                                            *)
+(******************************************************************************)
+
 Section Rdf.
 
   Record rdf_graph (I B L : eqType) :=
@@ -873,7 +925,7 @@ Section Rdf.
         - exact: eqb_rdf_get_b.
       Qed.
 
-      Definition iso_sym g1 g2 : iso g1 g2 <-> iso g2 g1.
+      Lemma iso_sym g1 g2 : iso g1 g2 <-> iso g2 g1.
       Proof.
         suffices imp h1 h2 : iso h1 h2 -> iso h2 h1 by split; exact: imp.
         case=> mu /and3P[pre_iso_mu uniq_relab perm_relab].
@@ -885,7 +937,7 @@ Section Rdf.
         apply: perm_trans perm_relab _; rewrite relabeling_triple_map_comp map_id_in //.
       Qed.
 
-      Definition iso_trans g1 g2 g3 : iso g1 g2 -> iso g2 g3 -> iso g1 g3.
+      Lemma iso_trans g1 g2 g3 : iso g1 g2 -> iso g2 g3 -> iso g1 g3.
       Proof. rewrite /iso/is_iso; move=> [mu12 /and3P[pre_iso12 urel12 perm12]] [mu23 /and3P[pre_iso23 urel23 perm23]].
              exists (mu23 \o mu12).
              suffices ucomp: uniq (relabeling_seq_triple (mu23 \o mu12) g1).

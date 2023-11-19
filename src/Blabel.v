@@ -4,6 +4,17 @@ Unset Strict Implicit.
 Unset Printing Implicit Defensive.
 From RDF Require Export Rdf Triple Term Util IsoCan.
 
+
+(******************************************************************************)
+(*                                                                            *)
+(*          This file is completely independent from the other modules,       *)
+(*          and is not described in the thesis document.                      *)
+(*          It is still work in progress.                                     *)
+(*                                                                            *)
+(*          Hogan Blabel algorithm rewritten in a functional style            *)
+(*                                                                            *)
+(******************************************************************************)
+
     Section Blabel.
     Variable I B L: countType.
     Variable h : countType.

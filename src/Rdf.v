@@ -1087,7 +1087,7 @@ Section OrderRdf.
   Variables I L : orderType d1.
   Variable B : orderType d2.
 
-  Definition le_triple := @le_triple d1 d2 I L B.
+  Notation le_triple := (@le_triple d1 d2 I L B).
 
   Fixpoint le_st_fix (x y : seq (triple I B L)) :=
       match (x,y) with
@@ -1144,7 +1144,7 @@ Section OrderRdf.
   Lemma le_st_total : total le_st.
   Proof. elim=> [|tx txs IHtx] [| ty txy]=> //=.
          case e: (tx == ty); rewrite (eq_sym ty tx) e; first by apply: IHtx.
-         + exact: le_total.
+         + exact: le_triple_total.
   Qed.
 
   Lemma le_rdf_total : total le_rdf.
@@ -1175,10 +1175,10 @@ Section OrderRdf.
   Proof. elim=> [| x sx IHsx] [| y sy] [| z sz] //=.
          repeat (case : ifP=> // /eqP ?; subst)=> //.
          + by apply IHsx.
-         + rewrite /le_triple=> le1 le2.
+         + move=> le1 le2.
            suffices /eqP contra : x == z.
              by subst.
-           by apply le_triple_antisym; rewrite /le_triple in le1, le2; rewrite le1 le2.
+           by apply le_triple_antisym; rewrite le1 le2.
          + apply le_triple_trans.
   Qed.
 
@@ -1199,7 +1199,131 @@ Definition rdf_leOrderMixin :=
       lt_rdf_def meet_rdf_def join_rdf_def
       le_rdf_anti le_rdf_trans le_rdf_total.
 
+  Definition join_stA : associative join_st.
+  Proof. move=> x y z; rewrite /join_st !(fun_if, if_arg).
+         repeat (try case : ifP); move=> //.
+         + rewrite !lt_st_def.
+           move=> /andP[nzy leyz].
+           rewrite Bool.andb_false_iff.
+           rewrite /negb. case: ifP. by move=> /eqP ->.
+           move=> contra; case=> //.
+           case: ifP. by move=> /eqP ->.
+           move=> nyx nlexz /andP[_ lexy] _.
+           move: (le_st_total x z). rewrite nlexz /==> lezx.
+           have lexz := (le_st_trans lexy leyz).
+           by apply le_st_anti; apply /andP ; split=> //.
+
+         + rewrite !lt_st_def.
+           move=> /andP[nzy leyz].
+           rewrite Bool.andb_false_iff.
+           rewrite /negb. case: ifP. by move=> /eqP ->.
+           move=> contra; case=> //.
+           case: ifP. by move=> /eqP eqxy; move: leyz; rewrite eqxy=> ->.
+           move=> nyx nlexz /= nlexy lexz.
+           move: (le_st_total x z) (le_st_total x y). rewrite nlexz nlexy /==> lezx _.
+           by apply le_st_anti; apply /andP ; split=> //.
+         + rewrite !lt_st_def.
+           rewrite Bool.andb_false_iff //.
+           rewrite /negb.
+           case: ifP=> //.
+           * move=> /eqP -> /=.
+             move=> _ _.
+             case: ifP=> //=.
+             by move=> _ ->.
+             move=> nzy; case=> //.
+             case: ifP=> //=.
+             move=> /eqP ->.
+             by move=> -> _ _; rewrite andbF.
+           move=> nyx nlexz /= _ nlexy.
+             case: ifP=> //= nzx.
+           move: (le_st_total x y) (le_st_total y z). rewrite nlexz nlexy /=.
+           move=> yx zy. have := le_st_trans zy yx.
+           move=> lzx lxz.
+           by apply le_st_anti; apply /andP ; split=> //.
+         + rewrite !lt_st_def.
+           move=> /andP[nzy leyz].
+           rewrite Bool.andb_false_iff.
+           rewrite /negb. case: ifP. by move=> /eqP ->.
+           move=> contra /=.
+           case: ifP. by move=> /eqP eqxy; move: leyz; rewrite eqxy=> ->.
+           by move=> /= nyx -> /= [//| nlexy].
+  Qed.
+
+  Definition join_st_nil_idl : left_id [::] join_st. Proof. by move=> []. Qed.
+  Definition join_st_nil_idr : right_id [::] join_st. Proof. by move=> []. Qed.
+  Canonical join_ts_monoid := Monoid.Law join_stA join_st_nil_idl join_st_nil_idr.
+  Definition join_st_comm : commutative join_st.
+  Proof. move=> x y. rewrite /join_st !lt_st_def.
+         case: ifP; case: ifP=> //.
+         + move=> /andP[neqxy leyx] /andP[neqyx lexy].
+           by apply /eqP/le_st_antisym/andP;split.
+         + rewrite Bool.andb_false_iff=> [[|leyx]].
+           by rewrite /negb; case: ifP=> // /eqP ->.
+           rewrite Bool.andb_false_iff=> [[|lexy]]; first by rewrite /negb; case: ifP=> // /eqP ->.
+           * by move: (le_st_total x y); rewrite lexy leyx.
+  Qed.
+
+  Canonical join_ts_monoid_com := Monoid.ComLaw join_st_comm.
+  Definition join_st_idem : idempotent join_st.
+  Proof. by move=> ?; rewrite /join_st lt_st_def eqxx //. Qed.
+
+  Lemma rdf_leP ts1 ts2 : reflect (sort le_triple ts1 = sort le_triple ts2) (perm_eq ts1 ts2).
+  Proof.
+  apply perm_sortP.
+  + by apply le_triple_total.
+  + by apply le_triple_trans.
+  + by apply le_triple_anti.
+  Qed.
+
+  (* Folding the join of sequences of triples results either in the default value or
+     an element of the folded sequence *)
+  Lemma foldl_max_st (l : seq (seq (triple I B L))) (x0 : (seq (triple I B L))):
+    foldl join_st x0 l = x0 \/ foldl join_st x0 l \in l.
+  Proof.
+  elim: l x0 => [//| t ts IHts] x0; first by left.
+  + rewrite in_cons /=; case: (IHts (join_st x0 t))=> [ -> |intail] /=.
+    - rewrite join_st_def; case: ifP=> _; first by right; rewrite eqxx.
+      * by left.
+    - by right; rewrite intail orbT.
+  Qed.
+
+  (* The join between the empty sequence
+     and any non-empty sequence of triples is different from the empty sequence *)
+  Lemma join_nil_size (h : seq (triple I B L)) :
+    (size h != 0) -> join_st [::] h != [::].
+  Proof. by case: h=> //. Qed.
+
+  (* Given a sequence of sequence of triples: l,
+     if there is a sequence of triples: x for which x is less than every other sequence of triples,
+     then if folding join in l results in x, either l is the empty sequence or x is in l *)
+  Lemma max_foldl_minimum_st (l : seq (seq (triple I B L))) (x : seq (triple I B L)) :
+    (forall y : (seq (triple I B L)) , lt_st x y) -> foldl join_st x l = x -> (l == [::]) || (x \in l).
+  Proof.
+  move=> minimum.
+  elim: l=> [//| hd t IHt]; rewrite /= join_st_def minimum.
+  case: (foldl_max_st t hd).
+  + by move=> -> ->; rewrite in_cons eqxx.
+  + by move=> H <-; rewrite in_cons H orbT.
+  Qed.
+
+  (* Given a sequence of sequence of triples: l,
+     if there is a sequence of triples: x for which
+     x is less than every other sequence of triples in l,
+     then if folding join in l results in x, either l is the empty sequence or x is in l *)
+  Lemma max_foldl_minimum_in_st (l : seq (seq (triple I B L))) (x : seq (triple I B L)) :
+    (forall y : (seq (triple I B L)) , y \in l -> lt_st x y) ->
+    foldl join_st x l = x -> (l == [::]) || (x \in l).
+  Proof.
+  elim: l=> [//| hd t IHt] minimum.
+  rewrite /= join_st_def minimum; last by rewrite in_cons eqxx.
+  case: (foldl_max_st t hd).
+  + by move=> -> ->; rewrite in_cons eqxx.
+  + by move=> H <-; rewrite in_cons H orbT.
+  Qed.
+
+
 End OrderRdf.
+
 Canonical ts_OrderType (d1 d2 : unit) (I L: orderType d1) (B : orderType d2)
   := Eval hnf in OrderOfChoiceType tt (@ts_leOrderMixin d1 d2 I L B).
 

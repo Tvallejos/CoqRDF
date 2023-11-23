@@ -304,13 +304,13 @@ Section OrderTerm.
   Definition join_term : (term I B L) -> (term I B L) -> (term I B L) :=
     fun x y => (if lt_term x y then y else x).
 
-  Lemma lt_def : forall x y, lt_term x y = (y != x) && (le_term x y).
+  Lemma lt_term_def : forall x y, lt_term x y = (y != x) && (le_term x y).
   Proof. by move=> []x []y//; rewrite /lt_term/= eqb_eq eq_sym. Qed.
 
-  Lemma meet_def : forall x y, meet_term x y = (if lt_term x y then x else y).
+  Lemma meet_term_def : forall x y, meet_term x y = (if lt_term x y then x else y).
   Proof. by []. Qed.
 
-  Lemma join_def : forall x y, join_term x y = (if lt_term x y then y else x).
+  Lemma join_term_def : forall x y, join_term x y = (if lt_term x y then y else x).
   Proof. by []. Qed.
 
   Lemma le_term_anti : antisymmetric le_term.
@@ -338,7 +338,7 @@ Definition term_leOrderMixin :=
   Eval hnf in
     @LeOrderMixin (@term_choiceType I B L)
       le_term lt_term meet_term join_term
-      lt_def meet_def join_def
+      lt_term_def meet_term_def join_term_def
       le_term_anti le_term_trans le_term_total.
 
 End OrderTerm.

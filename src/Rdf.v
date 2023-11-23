@@ -1199,73 +1199,53 @@ Definition rdf_leOrderMixin :=
       lt_rdf_def meet_rdf_def join_rdf_def
       le_rdf_anti le_rdf_trans le_rdf_total.
 
-  Definition join_stA : associative join_st.
-  Proof. move=> x y z; rewrite /join_st !(fun_if, if_arg).
-         repeat (try case : ifP); move=> //.
-         + rewrite !lt_st_def.
-           move=> /andP[nzy leyz].
-           rewrite Bool.andb_false_iff.
-           rewrite /negb. case: ifP. by move=> /eqP ->.
-           move=> contra; case=> //.
-           case: ifP. by move=> /eqP ->.
-           move=> nyx nlexz /andP[_ lexy] _.
-           move: (le_st_total x z). rewrite nlexz /==> lezx.
-           have lexz := (le_st_trans lexy leyz).
-           by apply le_st_anti; apply /andP ; split=> //.
-
-         + rewrite !lt_st_def.
-           move=> /andP[nzy leyz].
-           rewrite Bool.andb_false_iff.
-           rewrite /negb. case: ifP. by move=> /eqP ->.
-           move=> contra; case=> //.
-           case: ifP. by move=> /eqP eqxy; move: leyz; rewrite eqxy=> ->.
-           move=> nyx nlexz /= nlexy lexz.
-           move: (le_st_total x z) (le_st_total x y). rewrite nlexz nlexy /==> lezx _.
-           by apply le_st_anti; apply /andP ; split=> //.
-         + rewrite !lt_st_def.
-           rewrite Bool.andb_false_iff //.
-           rewrite /negb.
-           case: ifP=> //.
-           * move=> /eqP -> /=.
-             move=> _ _.
-             case: ifP=> //=.
-             by move=> _ ->.
-             move=> nzy; case=> //.
-             case: ifP=> //=.
-             move=> /eqP ->.
-             by move=> -> _ _; rewrite andbF.
-           move=> nyx nlexz /= _ nlexy.
-             case: ifP=> //= nzx.
-           move: (le_st_total x y) (le_st_total y z). rewrite nlexz nlexy /=.
-           move=> yx zy. have := le_st_trans zy yx.
-           move=> lzx lxz.
-           by apply le_st_anti; apply /andP ; split=> //.
-         + rewrite !lt_st_def.
-           move=> /andP[nzy leyz].
-           rewrite Bool.andb_false_iff.
-           rewrite /negb. case: ifP. by move=> /eqP ->.
-           move=> contra /=.
-           case: ifP. by move=> /eqP eqxy; move: leyz; rewrite eqxy=> ->.
-           by move=> /= nyx -> /= [//| nlexy].
+  Lemma join_stA : associative join_st.
+  Proof.
+  move=> x y z; rewrite /join_st !(fun_if, if_arg).
+  repeat (try case : ifP); rewrite // !lt_st_def Bool.andb_false_iff /negb.
+  + move=> /andP[_ leyz]; case: ifP=> [/eqP -> //|_ [//|]].
+    * case: ifP=> [/eqP -> //|nyx nlexz /andP[_ lexy _]].
+      suffices lezx : le_st z x.
+        have lexz := (le_st_trans lexy leyz).
+        by apply le_st_anti; apply /andP ; split=> //.
+      by move: (le_st_total x z); rewrite nlexz.
+  + move=> /andP[nzy leyz]; case: ifP=> [/eqP -> //|_ [//|]].
+    * case: ifP=> [/eqP eqxy| nyx nlexz /= nlexy lexz]; first by move: leyz; rewrite eqxy=> ->.
+      suffices lezx : le_st z x.
+        by apply le_st_anti; apply /andP ; split=> //.
+      by move: (le_st_total x z) (le_st_total x y); rewrite nlexz nlexy.
+  + case: ifP=> [/eqP -> _ _ /= |nzy [//|]]; first by case: ifP=> [//|_ ->].
+    * case: ifP=> [/eqP -> -> _ _| nyx nlexz /= _ nlexy]; first by rewrite andbF.
+      case: ifP=> //= nzx lexz.
+        suffices lezx : le_st z x.
+          by apply le_st_anti; apply /andP ; split=> //.
+        move: (le_st_total x y) (le_st_total y z); rewrite nlexz nlexy /==> yx zy.
+        by apply (le_st_trans zy yx).
+  + move=> /andP[nzy leyz]; case: ifP=> [/eqP -> //| contra /=].
+    case: ifP=> [/eqP eqxy| /= nyx -> /=]; last by case.
+    by move: leyz; rewrite eqxy=> ->.
   Qed.
 
-  Definition join_st_nil_idl : left_id [::] join_st. Proof. by move=> []. Qed.
-  Definition join_st_nil_idr : right_id [::] join_st. Proof. by move=> []. Qed.
+  Lemma join_st_nil_idl : left_id [::] join_st. Proof. by move=> []. Qed.
+
+  Lemma join_st_nil_idr : right_id [::] join_st. Proof. by move=> []. Qed.
+
   Canonical join_ts_monoid := Monoid.Law join_stA join_st_nil_idl join_st_nil_idr.
-  Definition join_st_comm : commutative join_st.
-  Proof. move=> x y. rewrite /join_st !lt_st_def.
-         case: ifP; case: ifP=> //.
-         + move=> /andP[neqxy leyx] /andP[neqyx lexy].
-           by apply /eqP/le_st_antisym/andP;split.
-         + rewrite Bool.andb_false_iff=> [[|leyx]].
-           by rewrite /negb; case: ifP=> // /eqP ->.
-           rewrite Bool.andb_false_iff=> [[|lexy]]; first by rewrite /negb; case: ifP=> // /eqP ->.
-           * by move: (le_st_total x y); rewrite lexy leyx.
+
+  Lemma join_st_comm : commutative join_st.
+  Proof.
+  move=> x y; rewrite /join_st !lt_st_def.
+  case: ifP; case: ifP=> //.
+  + move=> /andP[neqxy leyx] /andP[neqyx lexy].
+    by apply /eqP/le_st_antisym/andP;split.
+  + rewrite !Bool.andb_false_iff /negb => [[|leyx]]; first by case: ifP=> // /eqP ->.
+    by case: ifP=> [/eqP -> //|  _ [//|lexy]]; move: (le_st_total x y); rewrite lexy leyx.
   Qed.
 
   Canonical join_ts_monoid_com := Monoid.ComLaw join_st_comm.
-  Definition join_st_idem : idempotent join_st.
-  Proof. by move=> ?; rewrite /join_st lt_st_def eqxx //. Qed.
+
+  Lemma join_st_idem : idempotent join_st.
+  Proof. by move=> ?; rewrite /join_st lt_st_def eqxx. Qed.
 
   Lemma rdf_leP ts1 ts2 : reflect (sort le_triple ts1 = sort le_triple ts2) (perm_eq ts1 ts2).
   Proof.
@@ -1299,8 +1279,7 @@ Definition rdf_leOrderMixin :=
   Lemma max_foldl_minimum_st (l : seq (seq (triple I B L))) (x : seq (triple I B L)) :
     (forall y : (seq (triple I B L)) , lt_st x y) -> foldl join_st x l = x -> (l == [::]) || (x \in l).
   Proof.
-  move=> minimum.
-  elim: l=> [//| hd t IHt]; rewrite /= join_st_def minimum.
+  move=> minimum; elim: l=> [//| hd t IHt]; rewrite /= join_st_def minimum.
   case: (foldl_max_st t hd).
   + by move=> -> ->; rewrite in_cons eqxx.
   + by move=> H <-; rewrite in_cons H orbT.
@@ -1320,7 +1299,6 @@ Definition rdf_leOrderMixin :=
   + by move=> -> ->; rewrite in_cons eqxx.
   + by move=> H <-; rewrite in_cons H orbT.
   Qed.
-
 
 End OrderRdf.
 

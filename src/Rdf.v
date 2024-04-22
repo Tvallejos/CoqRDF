@@ -210,9 +210,11 @@ Section Rdf.
              apply: perm_trans peq_can peq.
       Qed.
 
-      Lemma perm_eq_relab_uniq g1 g2 mu : perm_eq (relabeling_seq_triple mu g1) g2 -> perm_eq (relabeling_seq_triple mu g1) g2 /\ uniq (relabeling_seq_triple mu g1).
+      Lemma perm_eq_relab_uniq_ts ts1 ts2 mu (u2 : uniq ts2) : perm_eq (relabeling_seq_triple mu ts1) ts2 -> perm_eq (relabeling_seq_triple mu ts1) ts2 /\ uniq (relabeling_seq_triple mu ts1).
       Proof. by move=> peq; rewrite (perm_uniq peq) peq. Qed.
 
+      Lemma perm_eq_relab_uniq g1 g2 mu : perm_eq (relabeling_seq_triple mu g1) g2 -> perm_eq (relabeling_seq_triple mu g1) g2 /\ uniq (relabeling_seq_triple mu g1).
+      Proof. by apply perm_eq_relab_uniq_ts. Qed.
 
       Lemma relabeling_triple_comp_map (B1 B2 B3 : eqType) (g : rdf_graph I B1 L) (mu12 : B1 -> B2) (mu23 : B2 -> B3) :
         [seq relabeling_triple mu23 i | i <- relabeling_seq_triple mu12 g] =
@@ -706,14 +708,19 @@ Section Rdf.
         by apply triple_inj=> /=; apply (relabeling_term_inj_terms mu_inj)=> //.
     Qed.
 
-    Lemma map_comp_in_id g (mu nu: B -> B) :
-      [seq (nu \o mu) i | i <- get_b g] = get_b g ->
-        {in (get_b g), nu \o mu =1 id}.
-    Proof. elim: (get_b g)=> [| h t IHtl]; first by move=> _ x; rewrite in_nil //.
+    Lemma map_comp_in_id_ts ts (mu nu: B -> B) :
+      [seq (nu \o mu) i | i <- get_bts ts] = get_bts ts ->
+        {in (get_bts ts), nu \o mu =1 id}.
+    Proof. elim: (get_bts ts)=> [| h t IHtl]; first by move=> _ x; rewrite in_nil //.
            move=> [heq teq] x; rewrite in_cons; case e: (x == h)=> /=.
            + by move: e=> /eqP ->; rewrite heq.
            + apply IHtl; apply teq.
     Qed.
+
+    Lemma map_comp_in_id g (mu nu: B -> B) :
+      [seq (nu \o mu) i | i <- get_b g] = get_b g ->
+        {in (get_b g), nu \o mu =1 id}.
+    Proof. apply map_comp_in_id_ts. Qed.
 
     Lemma bterm_eq_mem_get_b (b: B) g :
       (@Bnode I B L b) \in terms g ->
@@ -893,63 +900,90 @@ Section Rdf.
 
       Section eqb_rdf_perm_eq.
         (* TODO find a place for these lemmas *)
-        Lemma eqb_rdf_terms g1 g2 :
-          eqb_rdf g1 g2 -> perm_eq (terms g1) (terms g2).
+
+        Lemma peq_terms ts1 ts2 :
+          perm_eq ts1 ts2 -> perm_eq (terms_ts ts1) (terms_ts ts2).
         Proof. rewrite /eqb_rdf/terms=> peq.
                by rewrite perm_undup //; apply perm_mem; rewrite perm_flatten //; apply: perm_map peq.
         Qed.
 
-        Lemma eqb_rdf_bnodes g1 g2 :
-          eqb_rdf g1 g2 -> perm_eq (bnodes g1) (bnodes g2).
-        Proof. move=> /eqb_rdf_terms eqb.
+        Lemma eqb_rdf_terms g1 g2 :
+          eqb_rdf g1 g2 -> perm_eq (terms g1) (terms g2).
+        Proof. by apply peq_terms. Qed.
+
+        Lemma peq_bnodes ts1 ts2 :
+          perm_eq ts1 ts2 -> perm_eq (bnodes_ts ts1) (bnodes_ts ts2).
+        Proof. move=> /peq_terms eqb.
                by rewrite /bnodes perm_undup //; apply: perm_mem; apply: perm_filter.
         Qed.
 
+        Lemma eqb_rdf_bnodes g1 g2 :
+          eqb_rdf g1 g2 -> perm_eq (bnodes g1) (bnodes g2).
+        Proof. by apply peq_bnodes. Qed.
+
+        Lemma peq_get_bts ts1 ts2 :
+          perm_eq ts1 ts2 -> perm_eq (get_bts ts1) (get_bts ts2).
+        Proof. by move=> /peq_bnodes eqb ; apply: perm_pmap eqb. Qed.
+
         Lemma eqb_rdf_get_b g1 g2 :
           eqb_rdf g1 g2 -> perm_eq (get_b g1) (get_b g2).
-        Proof. by move=> /eqb_rdf_bnodes eqb ; rewrite /get_b/get_bs; apply: perm_pmap eqb. Qed.
+        Proof. by move=> /peq_bnodes eqb ; apply: perm_pmap eqb. Qed.
+
+        Lemma peq_get_bts_hom ts1 ts2 mu :
+          uniq (relabeling_seq_triple mu ts1) ->
+          perm_eq (relabeling_seq_triple mu ts1) ts2 -> perm_eq (undup (map mu (get_bts ts1))) (get_bts ts2).
+        Proof. by move=> us /peq_get_bts eqb ; rewrite (perm_eq_bnodes_relabel eqb). Qed.
 
         Lemma eqb_rdf_get_b_hom g1 g2 mu us :
           eqb_rdf (@relabeling _ _ mu g1 us) g2 -> perm_eq (undup (map mu (get_b g1))) (get_b g2).
-        Proof.
-          by move=> /eqb_rdf_get_b eqb ; rewrite /get_b/bnodes/relabeling (perm_eq_bnodes_relabel eqb).
-        Qed.
+        Proof. by apply peq_get_bts_hom. Qed.
 
       End eqb_rdf_perm_eq.
 
-      Remark eqiso g1 g2 : eqb_rdf g1 g2 -> iso g1 g2.
+      Remark eqiso_ts ts1 ts2 (u1 : uniq ts1) : perm_eq ts1 ts2 -> iso_ts ts1 ts2.
       Proof.
         exists id.
-        have usid: uniq (relabeling_seq_triple id g1) by rewrite relabeling_seq_triple_id; case g1.
+        have usid: uniq (relabeling_seq_triple id ts1) by rewrite relabeling_seq_triple_id.
         rewrite /is_iso/is_iso_ts usid /is_pre_iso/is_pre_iso_ts map_id relabeling_seq_triple_id /=; apply/andP; split=> //.
-        - exact: eqb_rdf_get_b.
+        - exact: peq_get_bts.
+      Qed.
+
+
+      Remark eqiso g1 g2 : eqb_rdf g1 g2 -> iso g1 g2.
+      Proof. by apply : eqiso_ts (uniq_rdf_graph _). Qed.
+
+      Lemma iso_ts_sym ts1 ts2 (u1 : uniq ts1) (u2 : uniq ts2) : iso_ts ts1 ts2 <-> iso_ts ts2 ts1.
+      Proof.
+        suffices imp h1 h2 : uniq h1 -> iso_ts h1 h2 -> iso_ts h2 h1 by split; exact: imp.
+        move=> uh1; case=> mu /and3P[pre_iso_mu uniq_relab perm_relab].
+        move:(is_pre_iso_ts_inv pre_iso_mu); rewrite /pre_iso/is_pre_iso; move=> [nu [pre_iso_nu /map_comp_in_id_ts/can_bs_can_rtbs nuP]].
+        exists nu.
+        rewrite /is_iso/is_iso_ts pre_iso_nu.
+        suffices peq : perm_eq (relabeling_seq_triple nu h2) h1.
+          by move/(perm_eq_relab_uniq_ts uh1) : peq => [-> ->].
+        move: perm_relab; rewrite perm_sym=> /(perm_map (relabeling_triple nu))=> perm_relab.
+        by apply: perm_trans perm_relab _; rewrite relabeling_triple_map_comp map_id_in //.
       Qed.
 
       Lemma iso_sym g1 g2 : iso g1 g2 <-> iso g2 g1.
-      Proof.
-        suffices imp h1 h2 : iso h1 h2 -> iso h2 h1 by split; exact: imp.
-        case=> mu /and3P[pre_iso_mu uniq_relab perm_relab].
-        move:(is_pre_iso_inv pre_iso_mu); rewrite /pre_iso/is_pre_iso; move=> [nu [pre_iso_nu /map_comp_in_id/can_b_can_rtb nuP]].
-        exists nu.
-        rewrite /is_iso/is_iso_ts pre_iso_nu.
-        have /perm_eq_relab_uniq [-> ->] //: perm_eq (relabeling_seq_triple nu h2) h1.
-        move: perm_relab; rewrite perm_sym=> /(perm_map (relabeling_triple nu))=> perm_relab.
-        apply: perm_trans perm_relab _; rewrite relabeling_triple_map_comp map_id_in //.
-      Qed.
+      Proof. by apply: iso_ts_sym (uniq_rdf_graph _) (uniq_rdf_graph _). Qed.
 
-      Lemma iso_trans g1 g2 g3 : iso g1 g2 -> iso g2 g3 -> iso g1 g3.
+      Lemma iso_ts_trans ts1 ts2 ts3 : iso_ts ts1 ts2 -> iso_ts ts2 ts3 -> iso_ts ts1 ts3.
       Proof. rewrite /iso/is_iso; move=> [mu12 /and3P[pre_iso12 urel12 perm12]] [mu23 /and3P[pre_iso23 urel23 perm23]].
              exists (mu23 \o mu12).
-             suffices ucomp: uniq (relabeling_seq_triple (mu23 \o mu12) g1).
+             suffices ucomp: uniq (relabeling_seq_triple (mu23 \o mu12) ts1).
              apply /and3P; split=> //.
-             + by apply: is_pre_iso_trans pre_iso12 pre_iso23.
-             + by apply : eqb_relabeling_comp perm12 perm23.
+             + by apply: is_pre_iso_ts_trans pre_iso12 pre_iso23.
+             + by apply : perm_eq_comp perm12 perm23.
              + rewrite -relabeling_seq_triple_comp /relabeling_seq_triple.
-               have /eq_uniq -> //: size [seq relabeling_triple mu23 i | i <- [seq relabeling_triple mu12 i | i <- g1]] =
-                             size (relabeling_seq_triple mu23 g2).
+               have /eq_uniq -> //: size [seq relabeling_triple mu23 i | i <- [seq relabeling_triple mu12 i | i <- ts1]] =
+                             size (relabeling_seq_triple mu23 ts2).
                by move: perm12=> /perm_size; rewrite !size_map.
                by apply eq_mem_map; apply perm_mem.
       Qed.
+
+      Lemma iso_trans g1 g2 g3 : iso g1 g2 -> iso g2 g3 -> iso g1 g3.
+      Proof. by apply iso_ts_trans. Qed.
 
       Lemma ts_pre_iso_iso ts mu (urel: uniq (relabeling_seq_triple mu ts)) :
         is_pre_iso_ts ts (relabeling_seq_triple mu ts) mu ->
@@ -973,6 +1007,16 @@ Section Rdf.
           have isog1k1 : iso g1 (M g1). by apply iso_output.
           have isog2k2 : iso (M g2) g2. by rewrite iso_sym; apply iso_output.
           by move=> /eqiso peqm; apply: iso_trans (iso_trans isog1k1 peqm) isog2k2.
+        Qed.
+
+        Lemma iso_can_trans_ts (M : seq (triple I B L) -> seq (triple I B L)) ts1 ts2 (u1 : uniq ts1) (u2 : uniq ts2) (uniq_output : forall ts, uniq ts -> uniq (M ts)) (iso_output : forall ts, uniq ts -> iso_ts ts (M ts)) :
+          iso_ts ts1 ts2 -> iso_ts (M ts1) (M ts2).
+        Proof.
+          have isog1k1 : iso_ts (M ts1) ts1.
+            rewrite iso_ts_sym //; last by apply (uniq_output _).
+            by apply iso_output.
+          have isog2k2 : iso_ts ts2 (M ts2). by apply iso_output.
+          by move=> peqm; apply: (iso_ts_trans (iso_ts_trans isog1k1 peqm) isog2k2).
         Qed.
 
         Lemma iso_can_trans M g1 g2 (iso_output : mapping_is_iso_mapping M) :
@@ -1043,7 +1087,7 @@ Section OrderRdf.
   Variables I L : orderType d1.
   Variable B : orderType d2.
 
-  Definition le_triple := @le_triple d1 d2 I L B.
+  Notation le_triple := (@le_triple d1 d2 I L B).
 
   Fixpoint le_st_fix (x y : seq (triple I B L)) :=
       match (x,y) with
@@ -1100,7 +1144,7 @@ Section OrderRdf.
   Lemma le_st_total : total le_st.
   Proof. elim=> [|tx txs IHtx] [| ty txy]=> //=.
          case e: (tx == ty); rewrite (eq_sym ty tx) e; first by apply: IHtx.
-         + exact: le_total.
+         + exact: le_triple_total.
   Qed.
 
   Lemma le_rdf_total : total le_rdf.
@@ -1131,10 +1175,10 @@ Section OrderRdf.
   Proof. elim=> [| x sx IHsx] [| y sy] [| z sz] //=.
          repeat (case : ifP=> // /eqP ?; subst)=> //.
          + by apply IHsx.
-         + rewrite /le_triple=> le1 le2.
+         + move=> le1 le2.
            suffices /eqP contra : x == z.
              by subst.
-           by apply le_triple_antisym; rewrite /le_triple in le1, le2; rewrite le1 le2.
+           by apply le_triple_antisym; rewrite le1 le2.
          + apply le_triple_trans.
   Qed.
 
@@ -1155,7 +1199,109 @@ Definition rdf_leOrderMixin :=
       lt_rdf_def meet_rdf_def join_rdf_def
       le_rdf_anti le_rdf_trans le_rdf_total.
 
+  Lemma join_stA : associative join_st.
+  Proof.
+  move=> x y z; rewrite /join_st !(fun_if, if_arg).
+  repeat (try case : ifP); rewrite // !lt_st_def Bool.andb_false_iff /negb.
+  + move=> /andP[_ leyz]; case: ifP=> [/eqP -> //|_ [//|]].
+    * case: ifP=> [/eqP -> //|nyx nlexz /andP[_ lexy _]].
+      suffices lezx : le_st z x.
+        have lexz := (le_st_trans lexy leyz).
+        by apply le_st_anti; apply /andP ; split=> //.
+      by move: (le_st_total x z); rewrite nlexz.
+  + move=> /andP[nzy leyz]; case: ifP=> [/eqP -> //|_ [//|]].
+    * case: ifP=> [/eqP eqxy| nyx nlexz /= nlexy lexz]; first by move: leyz; rewrite eqxy=> ->.
+      suffices lezx : le_st z x.
+        by apply le_st_anti; apply /andP ; split=> //.
+      by move: (le_st_total x z) (le_st_total x y); rewrite nlexz nlexy.
+  + case: ifP=> [/eqP -> _ _ /= |nzy [//|]]; first by case: ifP=> [//|_ ->].
+    * case: ifP=> [/eqP -> -> _ _| nyx nlexz /= _ nlexy]; first by rewrite andbF.
+      case: ifP=> //= nzx lexz.
+        suffices lezx : le_st z x.
+          by apply le_st_anti; apply /andP ; split=> //.
+        move: (le_st_total x y) (le_st_total y z); rewrite nlexz nlexy /==> yx zy.
+        by apply (le_st_trans zy yx).
+  + move=> /andP[nzy leyz]; case: ifP=> [/eqP -> //| contra /=].
+    case: ifP=> [/eqP eqxy| /= nyx -> /=]; last by case.
+    by move: leyz; rewrite eqxy=> ->.
+  Qed.
+
+  Lemma join_st_nil_idl : left_id [::] join_st. Proof. by move=> []. Qed.
+
+  Lemma join_st_nil_idr : right_id [::] join_st. Proof. by move=> []. Qed.
+
+  Canonical join_ts_monoid := Monoid.Law join_stA join_st_nil_idl join_st_nil_idr.
+
+  Lemma join_st_comm : commutative join_st.
+  Proof.
+  move=> x y; rewrite /join_st !lt_st_def.
+  case: ifP; case: ifP=> //.
+  + move=> /andP[neqxy leyx] /andP[neqyx lexy].
+    by apply /eqP/le_st_antisym/andP;split.
+  + rewrite !Bool.andb_false_iff /negb => [[|leyx]]; first by case: ifP=> // /eqP ->.
+    by case: ifP=> [/eqP -> //|  _ [//|lexy]]; move: (le_st_total x y); rewrite lexy leyx.
+  Qed.
+
+  Canonical join_ts_monoid_com := Monoid.ComLaw join_st_comm.
+
+  Lemma join_st_idem : idempotent join_st.
+  Proof. by move=> ?; rewrite /join_st lt_st_def eqxx. Qed.
+
+  Lemma rdf_leP ts1 ts2 : reflect (sort le_triple ts1 = sort le_triple ts2) (perm_eq ts1 ts2).
+  Proof.
+  apply perm_sortP.
+  + by apply le_triple_total.
+  + by apply le_triple_trans.
+  + by apply le_triple_anti.
+  Qed.
+
+  (* Folding the join of sequences of triples results either in the default value or
+     an element of the folded sequence *)
+  Lemma foldl_max_st (l : seq (seq (triple I B L))) (x0 : (seq (triple I B L))):
+    foldl join_st x0 l = x0 \/ foldl join_st x0 l \in l.
+  Proof.
+  elim: l x0 => [//| t ts IHts] x0; first by left.
+  + rewrite in_cons /=; case: (IHts (join_st x0 t))=> [ -> |intail] /=.
+    - rewrite join_st_def; case: ifP=> _; first by right; rewrite eqxx.
+      * by left.
+    - by right; rewrite intail orbT.
+  Qed.
+
+  (* The join between the empty sequence
+     and any non-empty sequence of triples is different from the empty sequence *)
+  Lemma join_nil_size (h : seq (triple I B L)) :
+    (size h != 0) -> join_st [::] h != [::].
+  Proof. by case: h=> //. Qed.
+
+  (* Given a sequence of sequence of triples: l,
+     if there is a sequence of triples: x for which x is less than every other sequence of triples,
+     then if folding join in l results in x, either l is the empty sequence or x is in l *)
+  Lemma max_foldl_minimum_st (l : seq (seq (triple I B L))) (x : seq (triple I B L)) :
+    (forall y : (seq (triple I B L)) , lt_st x y) -> foldl join_st x l = x -> (l == [::]) || (x \in l).
+  Proof.
+  move=> minimum; elim: l=> [//| hd t IHt]; rewrite /= join_st_def minimum.
+  case: (foldl_max_st t hd).
+  + by move=> -> ->; rewrite in_cons eqxx.
+  + by move=> H <-; rewrite in_cons H orbT.
+  Qed.
+
+  (* Given a sequence of sequence of triples: l,
+     if there is a sequence of triples: x for which
+     x is less than every other sequence of triples in l,
+     then if folding join in l results in x, either l is the empty sequence or x is in l *)
+  Lemma max_foldl_minimum_in_st (l : seq (seq (triple I B L))) (x : seq (triple I B L)) :
+    (forall y : (seq (triple I B L)) , y \in l -> lt_st x y) ->
+    foldl join_st x l = x -> (l == [::]) || (x \in l).
+  Proof.
+  elim: l=> [//| hd t IHt] minimum.
+  rewrite /= join_st_def minimum; last by rewrite in_cons eqxx.
+  case: (foldl_max_st t hd).
+  + by move=> -> ->; rewrite in_cons eqxx.
+  + by move=> H <-; rewrite in_cons H orbT.
+  Qed.
+
 End OrderRdf.
+
 Canonical ts_OrderType (d1 d2 : unit) (I L: orderType d1) (B : orderType d2)
   := Eval hnf in OrderOfChoiceType tt (@ts_leOrderMixin d1 d2 I L B).
 
@@ -1163,7 +1309,7 @@ Canonical rdf_OrderType (d1 d2 : unit) (I L: orderType d1) (B : orderType d2)
   := Eval hnf in OrderOfChoiceType tt (@rdf_leOrderMixin d1 d2 I L B).
 
 Canonical ts_OPOrderType (d1 d2 : unit) (I L : orderType d1) (B : orderType d2) :=
-  Eval hnf in  Order.Total.porderType (rdf_OrderType I L B).
+  Eval hnf in  Order.Total.porderType (ts_OrderType I L B).
 
 End Rdf.
 

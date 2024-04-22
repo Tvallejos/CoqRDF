@@ -313,24 +313,24 @@ Section OrderTriple.
   Definition join_triple : (triple I B L) -> (triple I B L) -> (triple I B L) :=
     fun x y => (if lt_triple x y then y else x).
 
-  Lemma lt_def : forall x y, lt_triple x y = (y != x) && (le_triple x y).
+  Lemma lt_triple_def : forall x y, lt_triple x y = (y != x) && (le_triple x y).
   Proof. by move=> x y; rewrite /lt_triple/negb eq_sym. Qed.
 
-  Lemma meet_def : forall x y, meet_triple x y = (if lt_triple x y then x else y).
+  Lemma meet_triple_def : forall x y, meet_triple x y = (if lt_triple x y then x else y).
   Proof. by []. Qed.
 
-  Lemma join_def : forall x y, join_triple x y = (if lt_triple x y then y else x).
+  Lemma join_triple_def : forall x y, join_triple x y = (if lt_triple x y then y else x).
   Proof. by []. Qed.
 
-  Lemma le_total : total le_triple.
+  Lemma le_triple_total : total le_triple.
   Proof. move=> [sx px ox ? ?] [sy py oy ? ?] /=.
          case e: (sx == sy); rewrite (eq_sym sy sx) e; last by apply le_term_total.
          case e2: (px == py); rewrite (eq_sym py px) e2; last by apply le_term_total.
          by case e3: (ox == oy); rewrite (eq_sym oy ox) e3; last by apply le_term_total.
   Qed.
 
-  Lemma lt_neq_total t1 t2 : t1 != t2 -> lt_triple t1 t2 || lt_triple t2 t1.
-  Proof. by rewrite !lt_def /negb eq_sym=> -> /=; apply le_total. Qed.
+  Lemma lt_triple_neq_total t1 t2 : t1 != t2 -> lt_triple t1 t2 || lt_triple t2 t1.
+  Proof. by rewrite !lt_triple_def /negb eq_sym=> -> /=; apply le_triple_total. Qed.
 
   Lemma le_triple_antisym t1 t2 : le_triple t1 t2 && le_triple t2 t1 -> t1 == t2.
   Proof. case: t1=> [sx px ox ? ?]; case: t2=> [sy py oy ? ?] /=.
@@ -356,8 +356,8 @@ Definition triple_leOrderMixin :=
   Eval hnf in
     @LeOrderMixin (@triple_choiceType I B L)
       le_triple lt_triple meet_triple join_triple
-      lt_def meet_def join_def
-      le_triple_anti le_triple_trans le_total.
+      lt_triple_def meet_triple_def join_triple_def
+      le_triple_anti le_triple_trans le_triple_total.
 
 End OrderTriple.
 

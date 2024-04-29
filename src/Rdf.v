@@ -1,3 +1,4 @@
+From HB Require Import structures.
 From mathcomp Require Import all_ssreflect.
 Set Implicit Arguments.
 Unset Strict Implicit.
@@ -111,16 +112,13 @@ Section Rdf.
     Lemma eqb_rdf_trans g1 g2 g3: eqb_rdf g1 g2 -> eqb_rdf g2 g3 -> eqb_rdf g1 g3.
     Proof. exact: perm_trans. Qed.
 
-    Canonical rdf_eqType (i b l : eqType):=
-      Eval hnf in EqType (rdf_graph i b l) (PcanEqMixin (@pcancel_code_decode i b l)).
+    Definition eqb_ts (ts1 ts2 : seq (triple I B L)) := ts1 == ts2.
+
+    Lemma ts_eqP : Equality.axiom eqb_ts.
+    Proof. by move=> x y; apply eqseqP. Qed.
 
     Canonical rdf_predType (i b l : eqType) :=
       Eval hnf in PredType (pred_of_seq \o (@graph i b l)).
-
-    Lemma rdfE g1 g2 : (g1 == g2) = ((graph g1) == (graph g2)). by []. Qed.
-
-    Remark eq_eqb_rdf g1 g2 : g1 == g2 -> eqb_rdf g1 g2.
-    Proof. by move=> /eqP ->; rewrite eqb_rdf_refl. Qed.
 
     Implicit Type t : triple I B L.
     Implicit Type ts : seq (triple I B L).
@@ -746,16 +744,19 @@ Section Rdf.
 
       Section PreIsomorphism.
 
+        Definition bnode_map_bij (dom cod : seq B) (mu : B -> B) :=
+          [&& uniq dom, uniq cod & perm_eq (map mu dom) cod].
+
         Definition is_pre_iso_ts ts1 ts2 (mu : B -> B) :=
-          perm_eq (map mu (get_bts ts1)) (get_bts ts2).
+          bnode_map_bij (get_bts ts1) (get_bts ts2) mu.
 
         Definition is_pre_iso g1 g2 (mu : B -> B) :=
           is_pre_iso_ts g1 g2 mu.
 
         Lemma is_pre_iso_ts_trans ts1 ts2 ts3 m12 m23 :
           is_pre_iso_ts ts1 ts2 m12 -> is_pre_iso_ts ts2 ts3 m23 -> is_pre_iso_ts ts1 ts3 (m23 \o m12).
-        Proof. rewrite /is_pre_iso=> /(perm_map m23); rewrite -map_comp=> pe12 pe23.
-               by apply: perm_trans pe12 pe23.
+        Proof. rewrite /is_pre_iso_ts=> /and3P[_ _ /(perm_map m23)]; rewrite -map_comp=> pe12 /and3P[_ _ pe23].
+               by apply /and3P; split=> //; apply: perm_trans pe12 pe23.
         Qed.
 
         Lemma is_pre_iso_trans g1 g2 g3 m12 m23 :
@@ -774,7 +775,7 @@ Section Rdf.
         Definition pre_iso g1 g2 := exists (mu : B -> B), is_pre_iso_ts g1 g2 mu.
 
         Lemma pre_iso_ts_refl ts : pre_iso_ts ts ts.
-        Proof. by rewrite /pre_iso_ts /is_pre_iso_ts; exists id; rewrite map_id perm_refl. Qed.
+        Proof. by rewrite /pre_iso_ts /is_pre_iso_ts; exists id; rewrite /bnode_map_bij !uniq_get_bts map_id perm_refl. Qed.
 
         Lemma pre_iso_refl g : pre_iso g g.
         Proof. by apply pre_iso_ts_refl. Qed.
@@ -785,26 +786,27 @@ Section Rdf.
                     map (nu \o mu) (get_bts ts1) = get_bts ts1.
         Proof.
         wlog dflt :/ B.
-          move=> hwlog; rewrite /is_pre_iso_ts/get_b.
+          move=> hwlog; rewrite /is_pre_iso_ts/get_b/bnode_map_bij.
           case_eq (get_bts ts2) => [e |dflt l <-]; last by apply: hwlog.
+          rewrite !uniq_get_bts /=.
           by move/perm_nilP/eqP; rewrite -size_eq0 size_map size_eq0; move/eqP->; exists id.
-        rewrite /is_pre_iso_ts => mu_pre_iso.
+        rewrite /is_pre_iso_ts => /and3P[_ _ mu_pre_iso].
         wlog map_mu:  mu {mu_pre_iso} / [seq mu i | i <- get_bts ts1] = get_bts ts2.
           move=> hwlog.
           have [rho rhoP] := map_of_seq [seq mu i | i <- get_bts ts1] (get_bts ts2) dflt.
           have {rhoP} rhoP : [seq (rho \o mu) i | i <- get_bts ts1] = get_bts ts2.
           rewrite -map_comp in rhoP; apply: rhoP; first by rewrite (perm_uniq mu_pre_iso).
             by rewrite (perm_size mu_pre_iso).
-          have {hwlog} [tau [tauP1 tauP2]] := hwlog _ rhoP.
+          have {hwlog} [tau [/and3P[_ _ tauP1] tauP2]] := hwlog _ rhoP.
           exists (tau \o rho); split=> //.
-          rewrite -tauP2 perm_sym.
+          rewrite /bnode_map_bij perm_sym !uniq_get_bts -tauP2 /=.
           have:=  (perm_map (tau \o rho) mu_pre_iso).
           by rewrite -map_comp.
         have [nu nuP] := map_of_seq (get_bts ts2) (get_bts ts1) dflt.
         have  {nuP} nuP : [seq nu i | i <- get_bts ts2] = get_bts ts1.
           by apply: nuP=> //; rewrite -map_mu size_map.
         exists nu; split=> //.
-        - rewrite nuP; exact: perm_refl.
+        - rewrite /bnode_map_bij !uniq_get_bts nuP; exact: perm_refl.
         by rewrite map_comp map_mu.
         Qed.
 
@@ -834,7 +836,7 @@ Section Rdf.
         Lemma is_pre_iso_ts_inj ts1 ts2 mu :
           is_pre_iso_ts ts1 ts2 mu -> {in get_bts ts1 &, injective mu}.
         Proof.
-        move=> hmu b b' hb1 hb'.
+        move=> /and3P[_ _ hmu] b b' hb1 hb'.
         apply: contra_eq => neqb.
         apply/negP=> eqmu.
         have test : perm_eq (get_bts ts1)  (b' :: rem b' (get_bts ts1)).
@@ -845,13 +847,13 @@ Section Rdf.
         have hcount : 2 <= count_mem (mu b) (map mu (get_bts ts1)).
           by move/permP: test->; rewrite /= (eqP eqmu) !eqxx.
         have {hcount} : 2 <= count_mem (mu b) (get_bts ts2).
-          by move/permP: hmu<-.
+          by move/permP: hmu <-.
         by rewrite count_uniq_mem //; case: (mu b \in get_bts ts2).
         Qed.
 
         Lemma is_pre_iso_ts_inj2 ts1 ts2 mu :
           is_pre_iso_ts ts1 ts2 mu -> {in get_bts ts1 &, injective mu}.
-        Proof. by move=> /perm_uniq equniq; apply/(in_map_injP); rewrite // equniq. Qed.
+        Proof. by move=> /and3P[_ _] /perm_uniq equniq; apply/(in_map_injP); rewrite // equniq. Qed.
 
         Lemma is_pre_iso_inj g1 g2 mu :
           is_pre_iso g1 g2 mu -> {in get_b g1 &, injective mu}.
@@ -893,9 +895,9 @@ Section Rdf.
       Proof. by case/and3P. Qed.
 
       Definition iso_refl g : iso g g.
-      Proof. exists id; rewrite /is_iso.
+      Proof. exists id; rewrite /is_iso/is_iso_ts/is_pre_iso_ts/bnode_map_bij.
              case g=> g' ug /=.
-             by rewrite /is_iso_ts relabeling_seq_triple_id ug  /= /is_pre_iso/is_pre_iso_ts map_id !perm_refl.
+             by rewrite uniq_get_bts! relabeling_seq_triple_id ug  /= /is_pre_iso/is_pre_iso_ts map_id !perm_refl.
       Qed.
 
       Section eqb_rdf_perm_eq.
@@ -944,7 +946,8 @@ Section Rdf.
       Proof.
         exists id.
         have usid: uniq (relabeling_seq_triple id ts1) by rewrite relabeling_seq_triple_id.
-        rewrite /is_iso/is_iso_ts usid /is_pre_iso/is_pre_iso_ts map_id relabeling_seq_triple_id /=; apply/andP; split=> //.
+        rewrite /is_iso/is_iso_ts usid /is_pre_iso/is_pre_iso_ts/bnode_map_bij.
+        rewrite map_id relabeling_seq_triple_id /= !uniq_get_bts ; apply/andP; split=> //.
         - exact: peq_get_bts.
       Qed.
 
@@ -996,6 +999,10 @@ Section Rdf.
           (forall g, iso g (M g)) /\
             (forall g1 g2, eqb_rdf (M g1) (M g2) <-> iso g1 g2).
 
+        Definition isocanonical_mapping' M :=
+          (forall g, iso g (M g)) /\
+            (forall g1 g2, eqb_rdf (M g1) (M g2) <-> iso g1 g2).
+
         Definition mapping_is_iso_mapping (M : rdf_graph I B L -> rdf_graph I B L) := forall g, iso g (M g).
 
         Definition dt_names_mapping (M : rdf_graph I B L -> rdf_graph I B L) := forall g1 g2,
@@ -1043,51 +1050,27 @@ Section Rdf.
   Definition code_ts (I B L : eqType) ts : (seq (triple I B L))%type :=
     ts.
 
-  Definition decode_ts (I B L : eqType) (s: seq (triple I B L)) : option (seq (triple I B L)) :=
-    Some s.
+  Definition decode_ts (I B L : eqType) (s: seq (triple I B L)) : (seq (triple I B L)) :=
+    s.
 
-  Lemma pcancel_code_decode_ts (I B L : eqType): pcancel (@code_ts I B L) (@decode_ts I B L).
+  Definition odecode_ts (I B L : eqType) (s: seq (triple I B L)) : option (seq (triple I B L)) :=
+    Some (decode_ts s).
+
+  Lemma pcancel_code_decode_ts (I B L : eqType): pcancel (@code_ts I B L) (@odecode_ts I B L).
   Proof. by case. Qed.
 
-  Definition ts_canChoiceMixin' (I B L : choiceType) := PcanChoiceMixin (@pcancel_code_decode_ts I B L).
-  Definition ts_canCountMixin' (I B L : countType):= PcanCountMixin (@pcancel_code_decode_ts I B L).
+  Section ChoiceTs.
+    Variable I B L: choiceType.
 
-  Canonical ts_choiceType (I B L: choiceType):= Eval hnf in ChoiceType (seq (triple I B L)) (@ts_canChoiceMixin' I B L).
-  Canonical ts_countType (I B L: countType):= Eval hnf in CountType (seq (triple I B L)) (@ts_canCountMixin' I B L).
+    HB.instance Definition _ :=
+      Choice.copy (seq (triple I B L)) (pcan_type (@pcancel_code_decode_ts I B L)).
 
-  Definition ts_canPOrderMixin (I B L: countType):= PcanPOrderMixin (@pickleK (ts_countType I B L)).
-  Canonical ts_POrderType (I B L: countType):= Eval hnf in POrderType tt (seq (triple I B L)) (@ts_canPOrderMixin I B L).
+  End ChoiceTs.
+  Section OrderTs.
+  Variables d : unit.
+  Variables I B L : orderType d.
 
-  Definition rdf_canChoiceMixin' (I B L : choiceType) := PcanChoiceMixin (@pcancel_code_decode I B L).
-  Definition rdf_canCountMixin' (I B L : countType):= PcanCountMixin (@pcancel_code_decode I B L).
-
-  Canonical rdf_choiceType (I B L: choiceType):= Eval hnf in ChoiceType (rdf_graph I B L) (@rdf_canChoiceMixin' I B L).
-  Canonical rdf_countType (I B L: countType):= Eval hnf in CountType (rdf_graph I B L) (@rdf_canCountMixin' I B L).
-
-  Definition rdf_canPOrderMixin (I B L: countType):= PcanPOrderMixin (@pickleK (rdf_countType I B L)).
-  Canonical rdf_POrderType (I B L: countType):= Eval hnf in POrderType tt (rdf_graph I B L) (@rdf_canPOrderMixin I B L).
-
-  Section CountRdf.
-    Variables I B L : countType.
-    Implicit Type g : rdf_graph I B L.
-
-    Lemma empty_min g : Order.max g (@empty_rdf_graph I B L) = g.
-    Proof. by case: g=> g'; case: g'=> [//|h t] us; rewrite Order.POrderTheory.maxElt. Qed.
-
-    Lemma nil_minimum (ts: seq (triple I B L)) : [::] <= ts.
-  Proof. by case ts. Qed.
-
-  Lemma minn_refl n : minn n n = n.
-  Proof. by rewrite /minn; case e: (_ < _)%N. Qed.
-
-  End CountRdf.
-
-Section OrderRdf.
-  Variables d1 d2 : unit.
-  Variables I L : orderType d1.
-  Variable B : orderType d2.
-
-  Notation le_triple := (@le_triple d1 d2 I L B).
+  Notation le_triple := (@le_triple d I B L).
 
   Fixpoint le_st_fix (x y : seq (triple I B L)) :=
       match (x,y) with
@@ -1102,43 +1085,24 @@ Section OrderRdf.
   Definition le_st : rel (seq (triple I B L)) :=
     fun x y => le_st_fix x y.
 
-  Definition le_rdf : rel (rdf_graph I B L) :=
-    fun x y => le_st x y.
-
   Definition lt_st : rel (seq (triple I B L)) :=
-    fun x y => (negb (x == y)) && (le_st x y).
-
-  Definition lt_rdf : rel (rdf_graph I B L) :=
     fun x y => (negb (x == y)) && (le_st x y).
 
   (* Infimum *)
   Definition meet_st : (seq (triple I B L)) -> seq (triple I B L) -> seq (triple I B L) :=
     fun x y => (if lt_st x y then x else y).
 
-  Definition meet_rdf : (rdf_graph I B L) -> (rdf_graph I B L) -> (rdf_graph I B L) :=
-    fun x y => (if lt_st x y then x else y).
-
   (* Supremum *)
   Definition join_st : seq (triple I B L) -> seq (triple I B L) -> seq (triple I B L) :=
-    fun x y => (if lt_st x y then y else x).
-
-  Definition join_rdf : (rdf_graph I B L) -> (rdf_graph I B L) -> (rdf_graph I B L) :=
     fun x y => (if lt_st x y then y else x).
 
   Lemma lt_st_def : forall x y, lt_st x y = (y != x) && (le_st x y).
   Proof. by move=> x y; rewrite eq_sym. Qed.
 
-  Lemma lt_rdf_def : forall x y, lt_rdf x y = (y != x) && (le_rdf x y).
-  Proof. by move=> x y; apply lt_st_def. Qed.
-
   Lemma meet_st_def : forall x y, meet_st x y = (if lt_st x y then x else y).
-  Proof. by []. Qed.
-  Lemma meet_rdf_def : forall x y, meet_rdf x y = (if lt_rdf x y then x else y).
   Proof. by []. Qed.
 
   Lemma join_st_def : forall x y, join_st x y = (if lt_st x y then y else x).
-  Proof. by []. Qed.
-  Lemma join_rdf_def : forall x y, join_rdf x y = (if lt_rdf x y then y else x).
   Proof. by []. Qed.
 
   Lemma le_st_total : total le_st.
@@ -1147,13 +1111,8 @@ Section OrderRdf.
          + exact: le_triple_total.
   Qed.
 
-  Lemma le_rdf_total : total le_rdf.
-  Proof. by move=> x y; apply: le_st_total. Qed.
-
   Lemma lt_st_neq_total sx sy : sx != sy -> lt_st sx sy || lt_st sy sx.
   Proof. rewrite !lt_st_def /negb eq_sym=> -> /=; exact: le_st_total. Qed.
-  Lemma lt_rdf_neq_total g h : g != h -> lt_rdf g h || lt_rdf h g.
-  Proof. rewrite !lt_rdf_def /negb eq_sym=> -> /=; exact: le_rdf_total. Qed.
 
   Lemma le_st_antisym sx sy : le_st sx sy && le_st sy sx -> sx == sy.
     elim: sx sy=> [| x xs IHxs] [| y ys] //=.
@@ -1162,14 +1121,8 @@ Section OrderRdf.
       + by move=> /le_triple_antisym; rewrite e.
   Qed.
 
-  Lemma le_rdf_antisym g h : le_rdf g h && le_rdf h g -> g == h.
-  Proof. by apply le_st_antisym. Qed.
-
   Lemma le_st_anti : antisymmetric le_st.
   Proof. by move=> sx sy /le_st_antisym/eqP ->. Qed.
-
-  Lemma le_rdf_anti : antisymmetric le_rdf.
-  Proof. by move=> x y /le_st_anti/rdf_inj ->. Qed.
 
   Lemma le_st_trans : transitive le_st.
   Proof. elim=> [| x sx IHsx] [| y sy] [| z sz] //=.
@@ -1177,27 +1130,10 @@ Section OrderRdf.
          + by apply IHsx.
          + move=> le1 le2.
            suffices /eqP contra : x == z.
-             by subst.
+           by subst.
            by apply le_triple_antisym; rewrite le1 le2.
          + apply le_triple_trans.
   Qed.
-
-  Lemma le_rdf_trans : transitive le_rdf.
-  Proof. by move=> x y z; apply le_st_trans. Qed.
-
-Definition ts_leOrderMixin :=
-  Eval hnf in
-    @LeOrderMixin (@ts_choiceType I B L)
-      le_st lt_st meet_st join_st
-      lt_st_def meet_st_def join_st_def
-      le_st_anti le_st_trans le_st_total.
-
-Definition rdf_leOrderMixin :=
-  Eval hnf in
-    @LeOrderMixin (@rdf_choiceType I B L)
-      le_rdf lt_rdf meet_rdf join_rdf
-      lt_rdf_def meet_rdf_def join_rdf_def
-      le_rdf_anti le_rdf_trans le_rdf_total.
 
   Lemma join_stA : associative join_st.
   Proof.
@@ -1230,30 +1166,22 @@ Definition rdf_leOrderMixin :=
 
   Lemma join_st_nil_idr : right_id [::] join_st. Proof. by move=> []. Qed.
 
-  Canonical join_ts_monoid := Monoid.Law join_stA join_st_nil_idl join_st_nil_idr.
-
   Lemma join_st_comm : commutative join_st.
   Proof.
-  move=> x y; rewrite /join_st !lt_st_def.
-  case: ifP; case: ifP=> //.
-  + move=> /andP[neqxy leyx] /andP[neqyx lexy].
-    by apply /eqP/le_st_antisym/andP;split.
-  + rewrite !Bool.andb_false_iff /negb => [[|leyx]]; first by case: ifP=> // /eqP ->.
-    by case: ifP=> [/eqP -> //|  _ [//|lexy]]; move: (le_st_total x y); rewrite lexy leyx.
+    move=> x y; rewrite /join_st !lt_st_def.
+    case: ifP; case: ifP=> //.
+    + move=> /andP[neqxy leyx] /andP[neqyx lexy].
+      by apply /eqP/le_st_antisym/andP;split.
+    + rewrite !Bool.andb_false_iff /negb => [[|leyx]]; first by case: ifP=> // /eqP ->.
+      by case: ifP=> [/eqP -> //|  _ [//|lexy]]; move: (le_st_total x y); rewrite lexy leyx.
   Qed.
 
-  Canonical join_ts_monoid_com := Monoid.ComLaw join_st_comm.
 
   Lemma join_st_idem : idempotent join_st.
   Proof. by move=> ?; rewrite /join_st lt_st_def eqxx. Qed.
 
-  Lemma rdf_leP ts1 ts2 : reflect (sort le_triple ts1 = sort le_triple ts2) (perm_eq ts1 ts2).
-  Proof.
-  apply perm_sortP.
-  + by apply le_triple_total.
-  + by apply le_triple_trans.
-  + by apply le_triple_anti.
-  Qed.
+  Lemma nil_minimum (ts: seq (triple I B L)) : le_st [::] ts.
+  Proof. by case ts. Qed.
 
   (* Folding the join of sequences of triples results either in the default value or
      an element of the folded sequence *)
@@ -1300,16 +1228,87 @@ Definition rdf_leOrderMixin :=
   + by move=> H <-; rewrite in_cons H orbT.
   Qed.
 
+
+  End OrderTs.
+  Fact ts_display : unit. exact tt. Qed.
+
+  HB.instance Definition _ (d : unit) (I B L : orderType d):=
+    Monoid.isComLaw.Build
+      (seq (triple I B L)) [::]
+      (@join_st d I B L) (@join_stA d I B L)
+      (@join_st_comm d I B L)
+      (@join_st_nil_idl d I B L).
+
+HB.instance Definition _ (d : unit) (I B L: orderType d):=
+  Order.isOrder.Build ts_display (seq (triple I B L))
+    (@lt_st_def d I B L) (@meet_st_def d I B L) (@join_st_def d I B L)
+    (@le_st_anti d I B L) (@le_st_trans d I B L) (@le_st_total d I B L).
+
+  (* Section CountRdf. *)
+  (*   Variables I B L : countType. *)
+  (*   Implicit Type g : rdf_graph I B L. *)
+
+  (*   Lemma empty_min g : Order.max g (@empty_rdf_graph I B L) = g. *)
+  (*   Proof. by case: g=> g'; case: g'=> [//|h t] us; rewrite Order.POrderTheory.maxElt. Qed. *)
+
+  (* End CountRdf. *)
+
+Lemma minn_refl n : minn n n = n.
+Proof. by rewrite /minn; case e: (_ < _)%N. Qed.
+
+Section OrderRdf.
+  Variables d : unit.
+  Variables I B L : orderType d.
+
+  Notation le_triple := (@le_triple d I B L).
+
+  Definition le_rdf : rel (rdf_graph I B L) :=
+    fun x y => le_st x y.
+
+  Definition lt_rdf : rel (rdf_graph I B L) :=
+    fun x y => (negb ((graph x) == (graph y))) && (le_st x y).
+
+  (* Infimum *)
+  Definition meet_rdf : (rdf_graph I B L) -> (rdf_graph I B L) -> (rdf_graph I B L) :=
+    fun x y => (if lt_st x y then x else y).
+
+  (* Supremum *)
+  Definition join_rdf : (rdf_graph I B L) -> (rdf_graph I B L) -> (rdf_graph I B L) :=
+    fun x y => (if lt_st x y then y else x).
+
+  Lemma lt_rdf_def : forall x y, lt_rdf x y = ((graph y) != (graph x)) && (le_rdf x y).
+  Proof. by move=> x y; apply lt_st_def. Qed.
+
+  Lemma meet_rdf_def : forall x y, meet_rdf x y = (if lt_rdf x y then x else y).
+  Proof. by []. Qed.
+
+  Lemma join_rdf_def : forall x y, join_rdf x y = (if lt_rdf x y then y else x).
+  Proof. by []. Qed.
+
+  Lemma le_rdf_total : total le_rdf.
+  Proof. by move=> x y; apply: le_st_total. Qed.
+
+  Lemma lt_rdf_neq_total g h : (graph g) != (graph h) -> lt_rdf g h || lt_rdf h g.
+  Proof. rewrite !lt_rdf_def /negb eq_sym=> -> /=; exact: le_rdf_total. Qed.
+
+  Lemma le_rdf_antisym g h : le_rdf g h && le_rdf h g -> (graph g) == (graph h).
+  Proof. by apply le_st_antisym. Qed.
+
+  Lemma le_rdf_anti : antisymmetric le_rdf.
+  Proof. by move=> x y /le_st_anti/rdf_inj ->. Qed.
+
+  Lemma le_rdf_trans : transitive le_rdf.
+  Proof. by move=> x y z; apply le_st_trans. Qed.
+
+  Lemma rdf_leP ts1 ts2 : reflect (sort le_triple ts1 = sort le_triple ts2) (perm_eq ts1 ts2).
+  Proof.
+  apply perm_sortP.
+  + by apply le_triple_total.
+  + by apply le_triple_trans.
+  + by apply le_triple_anti.
+  Qed.
+
 End OrderRdf.
-
-Canonical ts_OrderType (d1 d2 : unit) (I L: orderType d1) (B : orderType d2)
-  := Eval hnf in OrderOfChoiceType tt (@ts_leOrderMixin d1 d2 I L B).
-
-Canonical rdf_OrderType (d1 d2 : unit) (I L: orderType d1) (B : orderType d2)
-  := Eval hnf in OrderOfChoiceType tt (@rdf_leOrderMixin d1 d2 I L B).
-
-Canonical ts_OPOrderType (d1 d2 : unit) (I L : orderType d1) (B : orderType d2) :=
-  Eval hnf in  Order.Total.porderType (ts_OrderType I L B).
 
 End Rdf.
 

@@ -1,4 +1,6 @@
+From HB Require Import structures.
 From mathcomp Require Import all_ssreflect.
+
 Set Implicit Arguments.
 Unset Strict Implicit.
 Unset Printing Implicit Defensive.
@@ -164,58 +166,43 @@ Section CodeTriple.
 
 End CodeTriple.
 
-Definition triple_canEqMixin (I B L : eqType) := PcanEqMixin (@pcancel_code_decode I B L).
-Canonical triple_eqType (I B L : eqType) :=
-  Eval hnf in EqType (triple I B L) (triple_canEqMixin I B L).
-
-Definition triple_canChoiceMixin (I B L : choiceType) :=
-  PcanChoiceMixin (@pcancel_code_decode I B L).
-
-Canonical triple_choiceType (I B L : choiceType) :=
-  Eval hnf in ChoiceType (triple I B L) (triple_canChoiceMixin I B L).
-
-Definition triple_canCountMixin (I B L : countType) :=
-  PcanCountMixin (@pcancel_code_decode I B L).
-Canonical triple_countType (I B L : countType) :=
-  Eval hnf in CountType (triple I B L) (triple_canCountMixin I B L).
-
-Definition triple_canPOrderMixin (I B L : countType) :=
-  PcanPOrderMixin (@pickleK (triple_countType I B L)).
-
-Canonical triple_POrderType (I B L : countType) :=
-  Eval hnf in POrderType tt (triple_countType I B L) (triple_canPOrderMixin I B L).
-
-(* assia : below not cleaned up *)
 Section OperationsOnTriples.
 
   Variables I B L : eqType.
   Implicit Type t : triple I B L.
 
-  Lemma triple_case t1 t2: t1 = t2 -> [&& (subject t1) == (subject t2),
-        (predicate t1) == (predicate t2) &
-          (object t1) == (object t2)].
-  Proof. by case t1; case t2=> /= ? ? ? ? ? ? ? ? ? ? [] -> -> ->; rewrite !eqxx. Qed.
+  Definition eqb_triple t1 t2 :=
+    [&& (subject t1) == (subject t2),
+      (predicate t1) == (predicate t2) &
+        (object t1) == (object t2)].
 
-  Lemma tripleE t1 t2 : t1 == t2 = [&& (subject t1) == (subject t2),
-        (predicate t1) == (predicate t2) &
-          (object t1) == (object t2)].
-  Proof. apply /idP/idP.
-         by move=> /eqP/triple_case.
-         by move/and3P => [/eqP eqs /eqP eqp /eqP eqo]; apply /eqP; apply triple_inj.
+  Lemma triple_case t1 t2: t1 = t2 -> eqb_triple t1 t2.
+  Proof. case: t1; case :t2=> /= ? ? ? ? ? ? ? ? ? ? [].
+         by rewrite /eqb_triple=> /=-> -> ->; rewrite !eqxx.
   Qed.
 
+  Lemma triple_eqP : Equality.axiom eqb_triple.
+  Proof.
+    move=> x y. apply /(iffP idP).
+    + by move/and3P => [/eqP eqs /eqP eqp /eqP eqo]; apply triple_inj.
+      by apply triple_case.
+  Qed.
+
+  HB.instance Definition _ := hasDecEq.Build (triple I B L) triple_eqP.
+
+
   Corollary tripleNeqs t1 t2 : subject t1 != subject t2 -> t1 != t2.
-  Proof. apply contraPT=> /=; rewrite negbK tripleE.
+  Proof. apply contraPT=> /=; rewrite negbK.
          by move=> /and3P[/eqP -> _ _]; apply /negP; rewrite negbK eqxx.
   Qed.
 
   Corollary tripleNeqp t1 t2 : predicate t1 != predicate t2 -> t1 != t2.
-  Proof. apply contraPT=> /=; rewrite negbK tripleE.
+  Proof. apply contraPT=> /=; rewrite negbK.
          by move=> /and3P[_ /eqP -> _]; apply /negP; rewrite negbK eqxx.
   Qed.
 
   Corollary tripleNeqo t1 t2 : object t1 != object t2 -> t1 != t2.
-  Proof. apply contraPT=> /=; rewrite negbK tripleE.
+  Proof. apply contraPT=> /=; rewrite negbK.
          by move=> /and3P[_ _ /eqP->]; apply /negP; rewrite negbK eqxx.
   Qed.
 
@@ -285,11 +272,17 @@ Section OperationsOnTriples.
   Defined.
 
 End OperationsOnTriples.
+Section ChoiceTriple.
+  Variable I B L: choiceType.
+
+  HB.instance Definition _ :=
+    Choice.copy (triple I B L) (pcan_type (@pcancel_code_decode I B L)).
+
+End ChoiceTriple.
 
 Section OrderTriple.
-  Variable d1 d2 : unit.
-  Variables I L : orderType d1.
-  Variable B : orderType d2.
+  Variable d : unit.
+  Variables I B L : orderType d.
 
   Definition le_triple : rel (triple I B L) :=
     fun (x y : triple I B L)=>
@@ -334,10 +327,10 @@ Section OrderTriple.
 
   Lemma le_triple_antisym t1 t2 : le_triple t1 t2 && le_triple t2 t1 -> t1 == t2.
   Proof. case: t1=> [sx px ox ? ?]; case: t2=> [sy py oy ? ?] /=.
-         rewrite tripleE /=.
          case e: (sx == sy); rewrite (eq_sym sy sx) e; last by move=> /le_term_anti/eqP; rewrite e.
          case e2: (px == py); rewrite (eq_sym py px) e2; last by move=> /le_term_anti/eqP; rewrite e2.
-         by case e3: (ox == oy); rewrite (eq_sym oy ox) e3 // => /le_term_anti/eqP; rewrite e3.
+         case e3: (ox == oy); rewrite (eq_sym oy ox) e3 //; move=> ?; apply /eqP; apply triple_inj=> /=; apply /eqP=> //.
+         by apply /eqP; apply le_term_anti.
   Qed.
 
   Lemma le_triple_anti : antisymmetric le_triple.
@@ -352,18 +345,11 @@ Section OrderTriple.
          by move: (le_term_anticurr le le0)=> //.
   Qed.
 
-Definition triple_leOrderMixin :=
-  Eval hnf in
-    @LeOrderMixin (@triple_choiceType I B L)
-      le_triple lt_triple meet_triple join_triple
-      lt_triple_def meet_triple_def join_triple_def
-      le_triple_anti le_triple_trans le_triple_total.
-
 End OrderTriple.
 
-Canonical my_triple_OrderType (d1 d2 : unit) (I L : orderType d1) (B : orderType d2):=
-  Eval hnf in OrderOfChoiceType tt (@triple_leOrderMixin d1 d2 I L B).
+Fact triple_display : unit. exact tt. Qed.
 
-Canonical my_triplePOrderType (d1 d2 : unit) (I L : orderType d1) (B : orderType d2):=
-  Eval hnf in @Order.Total.porderType tt (@my_triple_OrderType d1 d2 I L B).
-
+HB.instance Definition _ (d : unit) (I B L: orderType d):=
+  Order.isOrder.Build triple_display (triple I B L)
+    (@lt_triple_def d I B L) (@meet_triple_def d I B L) (@join_triple_def d I B L)
+    (@le_triple_anti d I B L) (@le_triple_trans d I B L) (@le_triple_total d I B L).

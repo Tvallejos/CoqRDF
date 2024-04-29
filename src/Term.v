@@ -1,3 +1,4 @@
+From HB Require Import structures.
 From mathcomp Require Import all_ssreflect.
 
 Set Implicit Arguments.
@@ -34,7 +35,7 @@ Open Scope order_scope.
 (******************************************************************************)
 
 Inductive term (I B L : Type) : Type :=
-| Iri (id: I)
+| Iri (i: I)
 | Lit (l : L)
 | Bnode (name : B).
 
@@ -154,21 +155,26 @@ Section CodeTerm.
     | Bnode name => (inl (inr name))
     end.
 
-  Definition decode_term (x : (I + B + L)) : option (term I B L) :=
+  Definition decode_term (x : (I + B + L)) : (term I B L) :=
     match x with
-    | (inl (inl i)) => Some (Iri i)
-    | (inr l) =>  Some (Lit l)
-    | (inl (inr name)) => Some (Bnode name)
+    | (inl (inl i)) => Iri i
+    | (inr l) =>  Lit l
+    | (inl (inr name)) => Bnode name
     end.
 
-  Lemma pcancel_code_decode : pcancel code_term decode_term.
+  Definition odecode_term (x : (I + B + L)) : option (term I B L) :=
+    Some (decode_term x).
+
+  Definition odecode_oterm (x : option (I + B + L)) : option (term I B L) :=
+    match x with
+      | None => None
+      | Some x => odecode_term x
+    end.
+
+  Lemma pcancel_code_decode : pcancel code_term odecode_term.
   Proof. by case => [i | l | name]. Qed.
 
 End CodeTerm.
-
-Definition term_canEqMixin (I B L : eqType) := PcanEqMixin (@pcancel_code_decode I B L).
-Canonical term_eqType (I B L : eqType) :=
-  Eval hnf in EqType (term I B L) (term_canEqMixin I B L).
 
 Section EqTerm.
   Variables I B L : eqType.
@@ -180,12 +186,23 @@ Section EqTerm.
     | _,_ => false
     end.
 
+  Lemma eqb_term_refl (t: term I B L)  : eqb_term t t.
+  Proof. by case: t=> ?//=. Qed.
+
+  Definition term_eqP : Equality.axiom eqb_term.
+  Proof.
+    move=> x y; apply /(iffP idP); last by move=> ->; apply eqb_term_refl.
+    by case: x; case: y=> ? ? //= /eqP ->.
+  Qed.
+
+  HB.instance Definition _ := hasDecEq.Build (term I B L) term_eqP.
+
   Lemma eqb_eq trm1 trm2 : (trm1 == trm2) = eqb_term trm1 trm2.
   Proof.
     apply /idP/idP.
-      + by move=> /eqP ->; case: trm2=> ? /=; rewrite eqxx.
-      + by case: trm1; case:trm2 => //= t1 t2 /eqP ->; rewrite eqxx.
-    Qed.
+    + by move=> /eqP ->; case: trm2=> ? /=; rewrite eqxx.
+    + by case: trm1; case:trm2 => //= t1 t2 /eqP ->; rewrite eqxx.
+  Qed.
 
   Definition get_b_term (t : (term I B L)) : option B :=
     if t is Bnode b then Some b else None.
@@ -258,27 +275,34 @@ End EqTerm.
 
 Fact term_display : unit. exact tt. Qed.
 
-Definition term_canChoiceMixin (I B L : choiceType) :=
-  PcanChoiceMixin (@pcancel_code_decode I B L).
+Section ChoiceTerm.
 
-Canonical term_choiceType (I B L : choiceType) :=
-  Eval hnf in ChoiceType (term I B L) (term_canChoiceMixin I B L).
+  Variable I B L: choiceType.
 
-Definition term_canCountMixin (I B L : countType) :=
-  PcanCountMixin (@pcancel_code_decode I B L).
-Canonical term_countType (I B L : countType) :=
-  Eval hnf in CountType (term I B L) (term_canCountMixin I B L).
+  HB.instance Definition _ :=
+    Choice.copy (term I B L) (pcan_type (@pcancel_code_decode I B L)).
 
-Definition term_canPOrderMixin (I B L : countType) :=
-  PcanPOrderMixin (@pickleK (term_countType I B L)).
+End ChoiceTerm.
+Section CountTerm.
+  Variables I B L: countType.
 
-Canonical term_POrderType (I B L : countType) :=
-  Eval hnf in POrderType term_display (term I B L) (term_canPOrderMixin I B L).
+  Definition pickle_term : term I B L -> nat :=
+    pickle \o @code_term I B L.
+
+  Definition unpickle_term : nat -> option (term I B L) :=
+    (pcomp (@odecode_term I B L) unpickle).
+
+  Definition codeK_term: pcancel pickle_term unpickle_term.
+  Proof. apply: pcan_pickleK (@pcancel_code_decode I B L). Qed.
+
+End CountTerm.
+
+  HB.instance Definition _ (I B L : countType) :=
+    isCountable.Build (term I B L) (@codeK_term I B L).
 
 Section OrderTerm.
-  Variable d1 d2 : unit.
-  Variables I L : orderType d1.
-  Variables B : orderType d2.
+  Variable d : unit.
+  Variables I B L : orderType d.
 
   Definition le_term : rel (term I B L) :=
     fun (x y : term I B L)=>
@@ -334,18 +358,10 @@ Section OrderTerm.
   Lemma le_term_neq_antisym t1 t2 : t1 != t2 -> le_term t1 t2 == ~~ le_term t2 t1.
   Proof. by case: t1=> []?; case: t2=> []? //; rewrite /negb eqb_eq; apply order_le_neq_antisym. Qed.
 
-Definition term_leOrderMixin :=
-  Eval hnf in
-    @LeOrderMixin (@term_choiceType I B L)
-      le_term lt_term meet_term join_term
-      lt_term_def meet_term_def join_term_def
-      le_term_anti le_term_trans le_term_total.
-
 End OrderTerm.
 
-Canonical my_term_OrderType (I B L : orderType tt) :=
-  Eval hnf in OrderOfChoiceType term_display (@term_leOrderMixin tt tt I B L).
-
-Canonical my_termPOrderType (I B L : orderType tt) :=
-  Eval hnf in Order.Total.porderType (@my_term_OrderType I B L).
+HB.instance Definition _ (d : unit) (I B L: orderType d):=
+  Order.isOrder.Build term_display (term I B L)
+    (@lt_term_def d I B L) (@meet_term_def d I B L) (@join_term_def d I B L)
+    (@le_term_anti d I B L) (@le_term_trans d I B L) (@le_term_total d I B L).
 

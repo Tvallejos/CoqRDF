@@ -9,22 +9,21 @@ From RDF Require Export Rdf Triple Term Util IsoCan.
 (*            κ-mapping algorithm rewritten in a functional style             *)
 (*                                                                            *)
 (******************************************************************************)
-
 Section Kmapping.
   Variable disp : unit.
   Variable I B L : orderType disp.
   Hypothesis nat_inj : nat -> B.
   Hypothesis nat_inj_ : injective nat_inj.
 
-  Notation hn := (hash Order.NatOrder.orderType B).
+  Notation hn := (hash nat B).
   Notation hterm := (term I hn L).
   Definition HBnode p := @Bnode I hn L (mkHinput p.1 p.2).
 
-  Notation le_triple := (@le_triple disp _ I L B).
-  Notation join_st := (@join_st disp _ I L B).
-  Notation le_triple_total := (@le_triple_total _ _ I L B).
-  Notation le_triple_anti := (@le_triple_anti _ _ I L B).
-  Notation le_triple_trans := (@le_triple_trans _ _ I L B).
+  Notation le_triple := (@le_triple disp I B L).
+  Notation join_st := (@join_st disp I B L).
+  Notation le_triple_total := (@le_triple_total _ I B L).
+  Notation le_triple_anti := (@le_triple_anti _ I B L).
+  Notation le_triple_trans := (@le_triple_trans _ I B L).
 
   Definition n0 := 0%N.
 
@@ -172,6 +171,7 @@ Section Kmapping.
     (mu_inj : {in get_bts ts&, injective (build_map_k perm)}):
     is_pre_iso_ts ts (relabeling_seq_triple (build_map_k perm) ts) (build_map_k perm).
   Proof.
+  rewrite /is_pre_iso_ts/bnode_map_bij !uniq_get_bts.
   apply uniq_perm.
   + by rewrite map_inj_in_uniq // uniq_get_bts.
   + by rewrite uniq_get_bts.
@@ -267,11 +267,11 @@ Section Kmapping.
     Proof.
     move=> u1 u2 /and3P[piso urel peq] ts3 p13.
     apply/and3P; split=> //.
-    + rewrite/is_pre_iso_ts; apply uniq_perm=> [| |b].
+    + rewrite/is_pre_iso_ts/bnode_map_bij !uniq_get_bts; apply uniq_perm=> [| |b].
       * rewrite map_inj_in_uniq; first by rewrite uniq_get_bts.
         - by apply (is_pre_iso_ts_inj piso).
       * by rewrite uniq_get_bts.
-      * rewrite (perm_mem piso) /get_bts/get_bs.
+      * move: piso=> /and3P [_ _ piso]; rewrite (perm_mem piso) /get_bts/get_bs.
         apply eq_mem_pmap=> bb; rewrite /bnodes_ts !mem_undup.
         rewrite !mem_filter; congr (andb (is_bnode bb)).
         rewrite /terms_ts !mem_undup.
@@ -415,7 +415,7 @@ Section Kmapping.
     Proof.
     move=> /= u1 iso12 sc /mapP /= [cc1 /mapP[/= p pinperm ->] ->].
     apply/mapP => /=.
-    case : iso12 => mu /and3P [piso u peq].
+    case : iso12 => mu /and3P [/and3P [_ _ piso] u peq].
     exists (relabeling_seq_triple (build_map_k (map mu p)) ts2).
     + rewrite /candidates; apply/mapP=> /=.
       exists (map mu p)=> //.
@@ -437,6 +437,7 @@ Section Kmapping.
                  rewrite build_modulo_map // (perm_mem pinperm); apply (mem_ts_mem_triple_bts tin);
                    rewrite /bnodes_triple filter_undup mem_undup /= ?in_cons ?eqxx ?orbT //.
         have mu_inj : {in p &, injective mu}.
+        have {}piso : is_pre_iso_ts ts1 ts2 mu. by apply /and3P; rewrite !uniq_get_bts.
           by move=> x y xin yin; apply (is_pre_iso_ts_inj2 piso); rewrite -(perm_mem pinperm).
         have up : uniq p by rewrite (perm_uniq pinperm) uniq_get_bts.
         by move=> b; apply (build_modulo_map ts1 up mu_inj).
@@ -459,7 +460,7 @@ Section Kmapping.
     Proof.
     rewrite /k_mapping_ts !s_can_f.
     suffices memeq : s_can ts1 =i s_can ts2.
-      by rewrite !foldl_idx (eq_big_idem (fun x => true) _ (@join_st_idem _ _ I L B) memeq).
+      by rewrite !foldl_idx (eq_big_idem (fun x => true) _ (@join_st_idem _ I B L) memeq).
     by apply iso_memeq_s_can.
     Qed.
 

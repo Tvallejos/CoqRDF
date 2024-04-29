@@ -1,4 +1,6 @@
+From HB Require Import structures.
 From mathcomp Require Import all_ssreflect.
+
 Set Implicit Arguments.
 Unset Strict Implicit.
 Unset Printing Implicit Defensive.
@@ -37,36 +39,22 @@ Section HashedData.
 
   Definition pair_of_hash h := let: Hash th := h in th.
 
-  Canonical hash_subType := [newType for pair_of_hash].
+  HB.instance Definition _ := [isNew for pair_of_hash].
 
   Definition forget_hashes (hbs: seq hash) : seq T :=
     map (fun b=> input b) hbs.
 
 End HashedData.
 
+
 (* Various transfers of structures *)
-Definition hash_eqMixin (H T : eqType) := Eval hnf in [eqMixin of hash H T by <:].
-Canonical hash_eqType (H T : eqType) :=
-  Eval hnf in EqType (hash H T) (hash_eqMixin H T).
+HB.instance Definition _ (H T: eqType):= [Equality of hash H T by <: ].
 Lemma eq_i_ch (H T : eqType) (h1 h2: hash H T) :
   h1 == h2 = ((input h1) == (input h2)) && ((current_hash h1) == (current_hash h2)).
 Proof. by case h1; case h2. Qed.
 
-Definition hash_choiceMixin (H T : choiceType) := [choiceMixin of hash H T by <:].
-Canonical hash_choiceType (H T : choiceType) :=
-  Eval hnf in ChoiceType (hash H T) (hash_choiceMixin H T).
-Definition hash_countMixin (H T : countType) := [countMixin of hash H T by <:].
-Canonical hash_countType (H T : countType) :=
-  Eval hnf in CountType (hash H T) (hash_countMixin H T).
-Canonical hash_subCountType (H T : countType) :=
-  Eval hnf in [subCountType of hash H T].
-
-Definition hin_pair (d1 d2 : unit) (H: orderType d1) (T : orderType d2) :=
-  Order.DefaultProdLexiOrder.prodlexi_orderType H T.
-
-Canonical hin_OrderType (d1 d2 : unit) (H: orderType d1) (T : orderType d2) :=
-  Eval hnf in Order.DefaultProdLexiOrder.prodlexi_orderType H T.
-
+HB.instance Definition _ (H T: choiceType):= [Choice of hash H T by <: ].
+HB.instance Definition _ (H T : countType) := [Countable of hash H T by <:].
 
 Section IsoCan.
   Variable disp: unit.
@@ -176,7 +164,7 @@ Section IsoCan.
 
   Section Hgraph.
 
-    Definition hgraph := rdf_graph I (hash_eqType h B) L.
+    Definition hgraph := rdf_graph I (hash B) L.
 
     Definition get t (g : hgraph) : option hterm :=
       let otrs := (map (has_term_triple t) (graph g)) in

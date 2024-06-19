@@ -1009,8 +1009,14 @@ Section Rdf.
 
       Lemma not_perm_eq (T : eqType) (s1 s2: seq T) :
         uniq s1 -> uniq s2 -> size s1 = size s2 -> negb (perm_eq s1 s2) -> exists (t : T), (t \in s1) && (t \notin s2).
-      Proof. move=> us1 us2 eqsize.
-      Admitted.
+      Proof. 
+        move=> us1 us2 eqsize nperm.
+        suff : ~~ all (mem s2) s1 by case/allPn=> x s1x s2x; exists x; rewrite s1x.
+        apply: contra nperm => s21; apply: uniq_perm=> //.
+        have sub12 : {subset s1 <= s2} by move=> x /(allP s21).
+        have leqs21 : size s2 <= size s1 by rewrite eqsize.
+        by case: (uniq_min_size us1 sub12 leqs21).
+      Qed.
 
       Lemma iso_ts_sym ts1 ts2 (u1 : uniq ts1) (u2 : uniq ts2) : iso_ts ts1 ts2 <-> iso_ts ts2 ts1.
       Proof.

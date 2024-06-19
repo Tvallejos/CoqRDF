@@ -8,9 +8,9 @@ Development of the RDF model using Coq and the Mathematical Components library.
 - Author(s):
   - Tomas Vallejos
   - Assia Mahboubi
-- Compatible Coq versions: 8.17
+- Compatible Coq versions: 8.19.1
 - Additional dependencies: 
-  - the [`Mathematical Components` Library](https://github.com/math-comp/math-comp) version 1.16
+  - the [`Mathematical Components` Library](https://github.com/math-comp/math-comp) version 2.2.0
   
 ## Description
 
@@ -26,8 +26,8 @@ git clone https://github.com/Tvallejos/CoqRDF.git
 cd CoqRDF
 opam switch create CoqRDF 4.12.0
 eval $(opam env)
-opam pin add coq 8.17.0
-opam pin add coq-mathcomp-ssreflect 1.16.0
+opam pin add coq 8.19.1
+opam pin add coq-mathcomp-ssreflect 2.2.0
 make
 ```
 

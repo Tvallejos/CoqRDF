@@ -482,3 +482,4 @@ Lemma zip_uniq_proj (T1 T2 : eqType) (s1 : seq T1) (s2 : seq T2) :
          by move=> ? ? xinn yinn; apply inj_f; rewrite in_cons ?xinn ?yinn orbT.
          by move: xin; rewrite in_cons eq_sym neq /=.
   Qed.
+

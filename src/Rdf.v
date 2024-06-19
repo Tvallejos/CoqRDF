@@ -1004,9 +1004,6 @@ Section Rdf.
         predicate (relabeling_triple mu t) = predicate t.
       Proof. by case: t=> ? [] ? //. Qed.
 
-      (* Lemma contraPNN : forall [P : Prop] [b : bool], (~ P -> b) -> ~~ b -> P. *)
-      (* Proof. move=> P b //. apply contraPN in b. *)
-
       Lemma not_perm_eq (T : eqType) (s1 s2: seq T) :
         uniq s1 -> uniq s2 -> size s1 = size s2 -> negb (perm_eq s1 s2) -> exists (t : T), (t \in s1) && (t \notin s2).
       Proof. 
@@ -1030,12 +1027,6 @@ Section Rdf.
           suffices [rho [/andP[piso_rho peq_rho] mu_part]]: exists rho : B -> B,
               (is_pre_iso_ts H G rho && perm_eq (relabeling_seq_triple rho H) G) /\
                 forall b, rho b \in (get_bts G) -> b \in get_bts H.
-        (* + set nu2 := (fun b => if (b \in (get_bts h2)) then nu b else b). *)
-          (* suffices H4 : forall b, nu2 b \in (get_bts h1) -> b \in get_bts h2. *)
-          (* exists nu2. *)
-          (* rewrite /is_iso/is_iso_ts. *)
-          (* suffices /andP[piso_nu2 peq] : *)
-          (*   (is_pre_iso_ts h2 h1 nu2) && perm_eq (relabeling_seq_triple nu2 h2) h1. *)
             exists rho; split.
             + by move/(perm_eq_relab_uniq_ts uG) : peq_rho => [-> ->]; rewrite piso_rho.
             + move=> t wfs wfp.
@@ -1046,7 +1037,6 @@ Section Rdf.
                                                              subject_in_IB := wfs;
                                                                               predicate_in_I := wfp
                          |} = relabeling_triple rho t.
-                (* suffices power : forall b, nu2 b \in (get_bts h1) -> b \in (get_bts h2). *)
                   suffices /(_ I L) SH : forall s s', s' \in get_bts H -> Bnode (rho s) = Bnode (rho s') -> s \in get_bts H.
                     rewrite -(perm_mem peq_rho)=> /mapP/=[t' t'inh2 eqtt' ].
                     have /and3P[/eqP eqs /eqP eqp /eqP eqo] := triple_case eqtt'.
@@ -1232,14 +1222,6 @@ Section Rdf.
                + by apply: is_pre_iso_ts_trans pre_iso12 pre_iso23.
                + by apply : perm_eq_comp perm12 perm23.
                + move=> t wfs wfp tin.
-                 (* suffices -> : {| *)
-                 (*                 subject := relabeling_term (mu23 \o mu12) (subject t); *)
-                 (*                 predicate := predicate t; *)
-                 (*                 object := relabeling_term (mu23 \o mu12) (object t); *)
-                 (*                 subject_in_IB := wfs; *)
-                 (*                 predicate_in_I := wfp *)
-                 (*               |} = relabeling_triple mu23 (relabeling_triple mu12 t). *)
-
                  move: mu23_part=> /(_ (relabeling_triple mu12 t)).
                  have wfs2 := wfs.
                  rewrite -projs_rel relabeling_triple_comp projs_rel in wfs2.
@@ -1263,7 +1245,6 @@ Section Rdf.
                  move=> /(_ tin).
                  move=> tin2.
                  suffices ib : (is_in_ib (relabeling_term mu12 (subject t))).
-                 (* The term "ib" has type "is_true (is_in_ib (relabeling_term mu12 (subject t)))" while it is expected to have type "triple I B L". *)
                  apply (mu12_part _ ib wfp2).
                  suffices -> :  {|
                               subject := relabeling_term mu12 (subject t);
@@ -1739,6 +1720,31 @@ Section RDF_Spec.
   (*     node_terms (relabeling_seq_triple mu ts). *)
   (* Proof. elim: ts=> [//| h tl IHl]. rewrite /=. rewrite !nodes_terms_cons. *)
 
+  Lemma in_nt_in_ts (trm: term I B L) (ts : seq (triple I B L)) :
+    trm \in node_terms ts -> exists t, (t \in ts) && (((subject t) == trm) || ((object t) == trm)).
+  Proof.
+   elim: ts=> [//| hd tl IHl].
+   rewrite nodes_terms_cons mem_undup mem_cat=> /orP[]eq.
+   + exists hd.
+     rewrite in_cons eqxx /=.
+     move: eq; rewrite /node_triple !in_cons.
+     by move=> /orP[ /eqP ->| /orP[/eqP ->|]] //; rewrite eqxx ?orbT.
+   + have [t0 /andP[tin tP]]:= IHl eq.
+     by exists t0; rewrite tP andbT; apply: inweak tin.
+  Qed.
+
+  Lemma in_ts_in_nt (t : triple I B L) (ts : seq (triple I B L)):
+    t \in ts -> ((subject t) \in node_terms ts) && ((object t) \in node_terms ts).
+  Proof.
+    elim: ts=> [//| hd tl IHl] tin.
+    rewrite !nodes_terms_cons !mem_undup.
+    case_eq (t == hd).
+      + by move=> /eqP <- /=; rewrite in_cons eqxx /=; apply inweak; rewrite in_cons eqxx.
+      + move=> neq; rewrite in_cons neq /= in tin; rewrite !mem_cat.
+        have /andP[-> ->]:= IHl tin.
+        by rewrite !orbT.
+  Qed.
+
   Theorem iso_equiv (ts1 ts2 : seq (triple I B L)) :
     (uniq ts1) -> (uniq ts2) ->
       iso_ts ts1 ts2 <-> spec_iso ts1 ts2.
@@ -1749,81 +1755,51 @@ Section RDF_Spec.
   have piso2 := piso.
   rewrite /is_pre_iso_ts/bnode_map_bij in piso.
   move : piso => /and3P[_ _ piso].
-  (* apply (perm_map (@Bnode I B L)) in piso. *)
   rewrite /bij_nodes.
   rewrite /bnode_map_bij.
   rewrite !uniq_node_terms /=.
-  have bnG := bnodes_nodes ts1.
-  have bnH := bnodes_nodes ts2.
-  have /permEl nodes_filterG := perm_filterC (@is_bnode I B L) (node_terms ts2).
-  suffices H : perm_eq (map (relabeling_term mu) (node_terms ts1)) ([seq x <- node_terms ts2 | is_bnode x] ++ [seq x <- node_terms ts2 | predC (is_bnode (L:=L)) x]) .
-    by apply (perm_trans H nodes_filterG).
-    have /permEl nodes_filterH := perm_filterC (@is_bnode I B L) (map (relabeling_term mu) (node_terms ts1)).
-    eapply perm_trans. rewrite perm_sym. apply nodes_filterH.
-    apply perm_cat.
-    suffices H : perm_eq [seq x <- [seq relabeling_term mu i | i <- node_terms ts1] | is_bnode x] (bnodes_ts ts2).
-    eapply perm_trans. apply H. apply bnH.
-
-    rewrite perm_sym.
-    eapply perm_trans.
-    rewrite -perm_relabel_bts perm_sym in piso.
-    apply piso.
-    rewrite filter_map.
-    apply perm_map.
-    elim: ts1 {u1 wf_ret adj mu_part piso2 piso bnG nodes_filterH}=> [//|[]s p o sib pii tl IHl] //=.
-    rewrite bnodes_ts_cons. rewrite nodes_terms_cons. rewrite filter_undup.
-    apply perm_undup.
-    move=> t. rewrite filter_cat. rewrite !mem_cat. rewrite (perm_mem IHl). f_equal.
-    rewrite /bnodes_triple/terms_triple.
-    rewrite filter_undup mem_undup.
-    rewrite /node_triple. 
-    case: s sib=> //=; case : p pii=> //=; case: o=> //=.
-    move=> {bnG bnH nodes_filterG nodes_filterH}.
-    suffices H : uniq  [seq x <- [seq relabeling_term mu i | i <- node_terms ts1] | predC (is_bnode (L:=L)) x].
-    suffices H2 : uniq [seq x <- node_terms ts2 | predC (is_bnode (L:=L)) x].
-      rewrite -(undup_id H) -(undup_id H2).
-      apply perm_undup=> t.
-
-    apply (perm_mem IHl).
-
-    rewrite filter_map.
-    admit.
-    apply (perm_map (relabeling_term mu)) in bnG.
-
-    apply bnH.
-    suffices H : perm_eq [seq x <- [seq relabeling_term mu i | i <- node_terms ts1] | is_bnode x] (bnodes_ts ts2).
-
-    rewrite map_filter_nodes.
-    rewrite filter_map.
-    apply perm_map
-
-   admit.
-   apply nodes_filterG.
-  (* rewrite -perm_relabel_bts in piso. *)
   apply uniq_perm.
-  have equ := perm_uniq piso.
-  rewrite map_inj_in_uniq.
-  by rewrite -(perm_uniq bnG) uniq_bnodes_ts.
-  have piso_inj := (is_pre_iso_ts_inj piso2).
-  move=> /= x y.
-  rewrite -!(perm_mem bnG).
-  case: x=> // bx.
-  - by rewrite i_in_bnodes_ts.
-  - by rewrite l_in_bnodes_ts.
-  case: y => // by1.
-  rewrite !bnodes_map_get_bts.
-  rewrite !mem_map.
-  move=> bxin byin.
-  rewrite /==> [[]].
-  move=> /piso_inj=> -> //.
-  by move=> x y []. 
-  by move=> x y [].
-  by rewrite -(perm_uniq bnH) uniq_bnodes_ts.
-  move=> b.
-  rewrite -(perm_mem bnH).
-  rewrite -(eq_mem_map (relabeling_term mu) (perm_mem bnG)).
-  rewrite -perm_relabel_bts in piso.
-  apply (perm_mem piso).
+  rewrite map_inj_in_uniq; first by rewrite uniq_node_terms.
+  move=> /= nx ny /=.
+  have /permEl /perm_mem eq := perm_filterC (@is_bnode I B L) (node_terms ts1).
+  rewrite -!eq !mem_cat=> /orP[nxbnode |nxnotbnode] /orP[nybnode | nynotbnode].
+  rewrite -!(perm_mem (bnodes_nodes ts1)) in nxbnode nybnode.
+  have mu_inj_bnodes := is_pre_iso_ts_bnodes_inj piso2.
+  by apply mu_inj_bnodes.
+  by move: nxbnode nynotbnode; rewrite !mem_filter /=; case: nx=> //; case ny=> //.
+  by move: nxnotbnode nybnode; rewrite !mem_filter /=; case: nx=> //; case ny=> //.
+  by move: nxnotbnode nynotbnode; rewrite !mem_filter /=; case: nx=> //; case ny=> //.
+  apply uniq_node_terms.
+      move=> trm; apply /idP/idP=> /=.
+      move=> /mapP[/= t' in_nt].
+      have [triple /andP[tin tP]] := in_nt_in_ts in_nt.
+      apply (map_f (relabeling_triple mu)) in tin.
+      rewrite (perm_mem adj) in tin.
+      have /andP[sin_nt oin_nt] := in_ts_in_nt tin.
+      move=> eq.
+      rewrite {}eq.
+      case/orP: tP.
+       + by move=> /eqP <-; rewrite -projs_rel.
+       + by move=> /eqP <-; rewrite -projo_rel.
+         (**)
+      move=> trmin.
+      apply /mapP=> /=.
+      case_eq (is_bnode trm).
+      - case: trm trmin=> trm //= trmin _.
+        have /permEl /perm_mem eq := perm_filterC (@is_bnode I B L) (node_terms ts2).
+        rewrite -eq mem_cat orbC mem_filter /= in trmin.
+        rewrite -!(perm_mem (bnodes_nodes ts2)) in trmin.
+        rewrite -perm_relabel_bts in piso.
+        rewrite -(perm_mem piso) in trmin.
+        move/mapP : trmin => /=[pre_trm pre_in preeq].
+        exists pre_trm=> //.
+        have /permEl /perm_mem eq_mem := perm_filterC (@is_bnode I B L) (node_terms ts1).
+        rewrite -eq_mem mem_cat.
+        rewrite !(perm_mem (bnodes_nodes ts1)) in pre_in.
+        by rewrite pre_in.
+      - move=> nbnode. exists trm.
+    admit.
+    by case: trm nbnode trmin.
   (*  *)
   + split.
   + by move=> []//.
@@ -1853,9 +1829,7 @@ Section RDF_Spec.
 + move=> [mu_trm [b_to_b [l_id [i_id /= adj_pres]]]].
   rewrite /adj_pres/= in adj_pres.
   rewrite /iso_ts/is_iso_ts.
-  have : exists nu, 
-
-   spec_is_iso ts1 ts2 mu_trm
+  Admitted.
 
 
 

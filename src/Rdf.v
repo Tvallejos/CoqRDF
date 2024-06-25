@@ -1112,7 +1112,7 @@ Section Rdf.
       Lemma iso_ts_sym ts1 ts2 (u1 : uniq ts1) (u2 : uniq ts2) : iso_ts ts1 ts2 <-> iso_ts ts2 ts1.
       Proof.
         suffices imp G H : uniq G -> iso_ts G H -> iso_ts H G by split; exact: imp.
-        move=> /= uG; case=> mu [/and3P[pre_iso_mu uniq_relab perm_relab] mem_eq].
+          move=> /= uG; case=> mu [/and3P[pre_iso_mu uniq_relab perm_relab] _].
         rewrite /iso_ts/is_iso/is_iso_ts.
         suffices [rho [/and3P[piso_rho urG peq_rho] mu_part]]: exists rho : B -> B,
                 is_effective_iso_ts H G rho /\

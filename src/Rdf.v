@@ -1112,7 +1112,7 @@ Section Rdf.
       Lemma iso_ts_sym G H : uniq G -> effective_iso_ts G H -> iso_ts H G.
       Proof.
         
-          move=> /= uG; case=> mu [/and3P[pre_iso_mu uniq_relab perm_relab] _].
+          move=> /= uG; case=> mu /and3P[pre_iso_mu uniq_relab perm_relab].
         rewrite /iso_ts/is_iso/is_iso_ts.
         suffices [rho [/and3P[piso_rho urG peq_rho] mu_part]]: exists rho : B -> B,
                 is_effective_iso_ts H G rho /\

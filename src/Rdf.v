@@ -1109,9 +1109,9 @@ Section Rdf.
         by apply (effective_iso_outside_eq_inv uG pre_iso_mu).
       Qed.
 
-      Lemma iso_ts_sym ts1 ts2 (u1 : uniq ts1) (u2 : uniq ts2) : iso_ts ts1 ts2 <-> iso_ts ts2 ts1.
+      Lemma iso_ts_sym G H : uniq G -> effective_iso_ts G H <-> iso_ts ts2 ts1.
       Proof.
-        suffices imp G H : uniq G -> iso_ts G H -> iso_ts H G by split; exact: imp.
+        
           move=> /= uG; case=> mu [/and3P[pre_iso_mu uniq_relab perm_relab] _].
         rewrite /iso_ts/is_iso/is_iso_ts.
         suffices [rho [/and3P[piso_rho urG peq_rho] mu_part]]: exists rho : B -> B,

@@ -1745,6 +1745,11 @@ Section RDF_Spec.
         by rewrite !orbT.
   Qed.
 
+  Lemma not_b_rel_inj (trm1 trm2 : term I B L) (mu : B -> B) : negb (is_bnode trm1) -> negb (is_bnode trm2)->
+                                                              relabeling_term mu trm1 = relabeling_term mu trm2 ->
+                                                              trm1 = trm2.
+  Proof. by case: trm1; case: trm2=> //. Qed.
+
   Theorem iso_equiv (ts1 ts2 : seq (triple I B L)) :
     (uniq ts1) -> (uniq ts2) ->
       iso_ts ts1 ts2 <-> spec_iso ts1 ts2.
@@ -1798,7 +1803,38 @@ Section RDF_Spec.
         rewrite !(perm_mem (bnodes_nodes ts1)) in pre_in.
         by rewrite pre_in.
       - move=> nbnode. exists trm.
-    admit.
+        have /= [triple /andP[tin tP]] := in_nt_in_ts trmin.
+      rewrite -(perm_mem adj) in tin.
+      have /andP[sin_nt oin_nt] := in_ts_in_nt tin.
+      suffices node_terms_rel : forall trm ts mu, negb (is_bnode trm) -> (trm \in node_terms ts) = (trm \in node_terms (relabeling_seq_triple mu ts)).
+       move/eqP : nbnode; rewrite eqbF_neg=> nbnode.
+       case/orP: tP.
+       + move/eqP=> eq; by rewrite (node_terms_rel trm ts1 mu nbnode) -eq.
+       + move/eqP=> eq; by rewrite (node_terms_rel trm ts1 mu nbnode) -eq.
+       + move=> trm' ts' mu' nbnode'.
+         apply /idP/idP.
+         + move: nbnode'; case: trm'=> []b //= _; elim: ts'=> [//| t tl IHl] /=.
+           rewrite !nodes_terms_cons !mem_undup !mem_cat=> /orP[].
+           rewrite {1}/node_triple !in_cons in_nil=> /orP[/eqP| /orP[/eqP | //]].
+           rewrite projs_rel=> <-; rewrite eqxx //.
+           rewrite projo_rel => <-; rewrite eqxx //; by case (_ == _).
+           + by move=> /IHl ->; rewrite orbT.
+           rewrite !nodes_terms_cons !mem_undup !mem_cat=> /orP[].
+           rewrite {1}/node_triple !in_cons in_nil=> /orP[/eqP| /orP[/eqP | //]].
+           rewrite projs_rel=> <-; rewrite eqxx //.
+           rewrite projo_rel => <-; rewrite eqxx //; by case (_ == _).
+           + by move=> /IHl ->; rewrite orbT.
+         + move: nbnode'; case: trm'=> []b //= _; elim: ts'=> [//| t tl IHl] /=.
+           rewrite !nodes_terms_cons !mem_undup !mem_cat=> /orP[].
+           rewrite {1}/node_triple !in_cons in_nil=> /orP[/eqP| /orP[/eqP | //]].
+           by rewrite projs_rel; case: (subject t)=> //i ->; rewrite eqxx.
+           by rewrite projo_rel; case: (object t)=> //i ->; rewrite eqxx; case (_ == _).
+           + by move=> /IHl ->; rewrite orbT.
+           rewrite !nodes_terms_cons !mem_undup !mem_cat=> /orP[].
+           rewrite {1}/node_triple !in_cons in_nil=> /orP[/eqP| /orP[/eqP | //]].
+           by rewrite projs_rel; case: (subject t)=> //i ->; rewrite eqxx.
+           by rewrite projo_rel; case: (object t)=> //i ->; rewrite eqxx; case (_ == _).
+           + by move=> /IHl ->; rewrite orbT.
     by case: trm nbnode trmin.
   (*  *)
   + split.

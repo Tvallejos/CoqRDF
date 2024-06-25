@@ -783,10 +783,7 @@ Section Rdf.
         Lemma is_pre_iso_ts_inv ts1 ts2 mu :
           is_pre_iso_ts ts1 ts2 mu ->
             exists nu, is_pre_iso_ts ts2 ts1 nu /\
-                    map (nu \o mu) (get_bts ts1) = get_bts ts1
-                                                           .
-                       (* /\ *)
-                       (*   map (mu \o nu) (get_bts ts2) = get_bts ts2. *)
+                    map (nu \o mu) (get_bts ts1) = get_bts ts1.
         Proof.
         wlog dflt :/ B.
           move=> hwlog; rewrite /is_pre_iso_ts/get_b/bnode_map_bij.
@@ -801,24 +798,15 @@ Section Rdf.
           rewrite -map_comp in rhoP; apply: rhoP; first by rewrite (perm_uniq mu_pre_iso).
             by rewrite (perm_size mu_pre_iso).
           have [tau [/and3P[_ _ tauP1] tauP2]] := hwlog _ rhoP.
-          (* have [tau [/and3P[_ _ tauP1] [tauP21 tauP22]]] := hwlog _ rhoP. *)
           exists (tau \o rho); split=> //.
           rewrite /bnode_map_bij perm_sym !uniq_get_bts -tauP2 /=.
-          (* rewrite /bnode_map_bij perm_sym !uniq_get_bts -tauP21 /=. *)
           have:=  (perm_map (tau \o rho) mu_pre_iso).
           by rewrite -map_comp.
-          (* split. *)
-          (* by rewrite -compA tauP21. *)
-          (* rewrite -rhoP -map_comp. rewrite /=. *)
         have [nu nuP] := map_of_seq (get_bts ts2) (get_bts ts1) dflt.
         have  {nuP} nuP : [seq nu i | i <- get_bts ts2] = get_bts ts1.
           by apply: nuP=> //; rewrite -map_mu size_map.
         exists nu; split=> //.
         - rewrite /bnode_map_bij !uniq_get_bts nuP; exact: perm_refl.
-        (* have invP : *)
-        (*   [seq (mu \o nu) i | i <- get_bts ts2] = get_bts ts2. *)
-        (*   apply (f_equal (map mu)) in nuP. *)
-        (*   by rewrite (map_comp mu nu) nuP. *)
         by rewrite map_comp map_mu.
         Qed.
 
@@ -890,12 +878,15 @@ Section Rdf.
 
       End PreIsomorphism.
 
-      Definition is_iso_ts ts1 ts2 mu :=
-        [&& is_pre_iso_ts ts1 ts2 mu,
-          uniq (relabeling_seq_triple mu ts1) &
-            perm_eq (relabeling_seq_triple mu ts1) ts2] /\
-          (forall t, forall wf_s wf_p, @mkTriple I B L (relabeling_term mu (subject t)) (predicate t) (relabeling_term mu (object t)) wf_s wf_p \in ts2 -> t \in ts1).
 
+      Definition is_effective_iso_ts ts1 ts2 mu :=
+       [&& is_pre_iso_ts ts1 ts2 mu,
+          uniq (relabeling_seq_triple mu ts1) &
+            perm_eq (relabeling_seq_triple mu ts1) ts2].
+
+      Definition is_iso_ts ts1 ts2 mu :=
+        is_effective_iso_ts ts1 ts2 mu /\
+          (forall t, forall wf_s wf_p, @mkTriple I B L (relabeling_term mu (subject t)) (predicate t) (relabeling_term mu (object t)) wf_s wf_p \in ts2 -> t \in ts1).
 
       Definition is_iso g1 g2 mu : Prop :=
         [&& is_pre_iso g1 g2 mu,
@@ -904,17 +895,25 @@ Section Rdf.
           (forall t, forall wf_s wf_p, @mkTriple I B L (relabeling_term mu (subject t)) (predicate t) (relabeling_term mu (object t)) wf_s wf_p \in g2 -> t \in g1).
 
 
+      Definition effective_iso_ts ts1 ts2 := exists mu, @is_effective_iso_ts ts1 ts2 mu.
       Definition iso_ts ts1 ts2 := exists mu, @is_iso_ts ts1 ts2 mu.
       Definition iso g1 g2 := iso_ts g1 g2.
 
+      Remark is_iso_effective_is_pre_iso ts1 ts2 mu: is_effective_iso_ts ts1 ts2 mu -> is_pre_iso_ts ts1 ts2 mu.
+      Proof. by move=> /and3P[piso]. Qed.
+
       Remark is_iso_is_pre_iso g1 g2 mu: is_iso g1 g2 mu -> is_pre_iso g1 g2 mu.
-      Proof. by move=> [/and3P[piso]]. Qed.
+      Proof. move=> [/is_iso_effective_is_pre_iso //]. Qed.
+
+      Definition effective_iso_ts_refl ts : uniq ts -> is_effective_iso_ts ts ts id.
+      Proof.
+      move=> uts.
+      rewrite /is_effective_iso_ts/is_pre_iso_ts/bnode_map_bij.
+      by rewrite uniq_get_bts! relabeling_seq_triple_id /= uts /is_pre_iso/is_pre_iso_ts map_id !perm_refl.
+      Qed.
 
       Definition iso_refl g : iso g g.
-      Proof. exists id; split.
-             + rewrite /is_iso/is_iso_ts/is_pre_iso_ts/bnode_map_bij.
-               case g=> g' ug /=.
-               by rewrite uniq_get_bts! relabeling_seq_triple_id ug  /= /is_pre_iso/is_pre_iso_ts map_id !perm_refl.
+      Proof. exists id. split; first by case: g; apply effective_iso_ts_refl.
              + move=> t wfs wfp.
                suffices -> : {|
                                subject := relabeling_term id (subject t);
@@ -968,13 +967,17 @@ Section Rdf.
 
       End eqb_rdf_perm_eq.
 
+      Remark eq_effective_iso_ts ts1 ts2 (u1 : uniq ts1) : perm_eq ts1 ts2 -> is_effective_iso_ts ts1 ts2 id.
+      Proof.
+      have usid: uniq (relabeling_seq_triple id ts1) by rewrite relabeling_seq_triple_id.
+      rewrite /is_iso_ts/is_effective_iso_ts usid /is_pre_iso_ts/bnode_map_bij.
+      rewrite map_id relabeling_seq_triple_id /= !uniq_get_bts /=.
+      by rewrite andbC=> peq; rewrite peq /=; exact: peq_get_bts.
+      Qed.
+
       Remark eqiso_ts ts1 ts2 (u1 : uniq ts1) : perm_eq ts1 ts2 -> iso_ts ts1 ts2.
       Proof.
-        exists id.
-        have usid: uniq (relabeling_seq_triple id ts1) by rewrite relabeling_seq_triple_id.
-        rewrite /is_iso/is_iso_ts usid /is_pre_iso/is_pre_iso_ts/bnode_map_bij.
-        rewrite map_id relabeling_seq_triple_id /= !uniq_get_bts /=; split.
-        + apply/andP; split=> //=; exact: peq_get_bts.
+        exists id; split; first by apply eq_effective_iso_ts.
         + move=> t wfs wfp.
           suffices -> : {|
                           subject := relabeling_term id (subject t);
@@ -986,19 +989,20 @@ Section Rdf.
           by apply triple_inj; rewrite //= relabeling_term_id.
       Qed.
 
-
       Remark eqiso g1 g2 : eqb_rdf g1 g2 -> iso g1 g2.
       Proof. by apply : eqiso_ts (uniq_rdf_graph _). Qed.
 
-      Lemma projs_rel (t : triple I B L) (B2 : Type) (mu : B -> B2) :  (subject (relabeling_triple mu t)) = relabeling_term mu (subject t).
-      Proof. by case:t. Qed. 
+      Lemma projs_rel (t : triple I B L) (B2 : Type) (mu : B -> B2) :
+        (subject (relabeling_triple mu t)) = relabeling_term mu (subject t).
+      Proof. by case:t. Qed.
 
-      Lemma projp_rel (t : triple I B L) (B2 : Type) (mu : B -> B2) :  (predicate (relabeling_triple mu t)) = relabeling_term mu (predicate t).
-      Proof. by case:t. Qed. 
+      Lemma projp_rel (t : triple I B L) (B2 : Type) (mu : B -> B2) :
+        (predicate (relabeling_triple mu t)) = relabeling_term mu (predicate t).
+      Proof. by case:t. Qed.
 
-      Lemma projo_rel (t : triple I B L) (B2 : Type) (mu : B -> B2) :  (object (relabeling_triple mu t)) = relabeling_term mu (object t).
-        Proof. by case:t. Qed. 
-
+      Lemma projo_rel (t : triple I B L) (B2 : Type) (mu : B -> B2) :
+        (object (relabeling_triple mu t)) = relabeling_term mu (object t).
+      Proof. by case:t. Qed.
 
       Lemma pred_relab (t : triple I B L) (mu : B -> B) :
         predicate (relabeling_triple mu t) = predicate t.
@@ -1006,7 +1010,7 @@ Section Rdf.
 
       Lemma not_perm_eq (T : eqType) (s1 s2: seq T) :
         uniq s1 -> uniq s2 -> size s1 = size s2 -> negb (perm_eq s1 s2) -> exists (t : T), (t \in s1) && (t \notin s2).
-      Proof. 
+      Proof.
         move=> us1 us2 eqsize nperm.
         suff : ~~ all (mem s2) s1 by case/allPn=> x s1x s2x; exists x; rewrite s1x.
         apply: contra nperm => s21; apply: uniq_perm=> //.
@@ -1015,41 +1019,125 @@ Section Rdf.
         by case: (uniq_min_size us1 sub12 leqs21).
       Qed.
 
+      Lemma effective_iso_ts_sym ts1 ts2 (u1 : uniq ts1) (u2 : uniq ts2) : effective_iso_ts ts1 ts2 <-> effective_iso_ts ts2 ts1.
+      Proof.
+        suffices imp h1 h2 : uniq h1 -> effective_iso_ts h1 h2 -> effective_iso_ts h2 h1 by split; exact: imp.
+        move=> uh1; case=> mu /and3P[pre_iso_mu uniq_relab perm_relab].
+        move:(is_pre_iso_ts_inv pre_iso_mu); rewrite /pre_iso/is_pre_iso; move=> [nu [pre_iso_nu /map_comp_in_id_ts/can_bs_can_rtbs nuP]].
+        exists nu.
+        suffices /(perm_eq_relab_uniq_ts uh1) [peq urel] : perm_eq (relabeling_seq_triple nu h2) h1.
+          by apply /and3P; split=> //.
+        move: perm_relab; rewrite perm_sym=> /(perm_map (relabeling_triple nu))=> perm_relab.
+        by apply: perm_trans perm_relab _; rewrite relabeling_triple_map_comp map_id_in //.
+      Qed.
+
+      Lemma effective_iso_outside_eq_inv G H (uG : uniq G):
+          forall mu,
+            is_pre_iso_ts G H mu ->
+          forall (nu : B -> B), (is_pre_iso_ts H G nu /\ [seq (nu \o mu) i | i <- get_bts G] = get_bts G) ->
+          exists rho, is_pre_iso_ts H G rho /\
+                        (forall b : B, rho b \in get_bts G -> b \in get_bts H) /\
+                        {in (get_bts H), nu =1 rho}.
+      Proof.
+        move=> mu pre_iso_mu.
+        rewrite /iso_ts/is_iso/is_iso_ts=> nu [pre_iso_nu /map_comp_in_id_ts mu_inv].
+        move: pre_iso_mu => /and3P[_ _ pre_iso_mu].
+        case_eq (perm_eq (get_bts H) (get_bts G)).
+        + set rho := (fun b => if (b \in (get_bts H)) then nu b else b).
+          have eq1_nu_rho : {in (get_bts H), nu =1 rho} by rewrite /rho => b ->.
+          move=> peq_bnodes; exists rho; split; last first.
+          - split=> //; rewrite /rho=> b.
+            case_eq (b \in get_bts H)=> //.
+            by rewrite (perm_mem peq_bnodes)=> ->.
+          - rewrite /is_pre_iso_ts/bnode_map_bij.
+            by move/eq_in_map : eq1_nu_rho=> <-.
+        + move=> not_peq.
+          suffices  [b0 /andP[bin_H bnin_G]] : exists b, (b \in (get_bts H)) && (negb (b \in (get_bts G))).
+            set rho := (fun b => if (b \in (get_bts H)) then nu b else b0).
+            have eq1_nu_rho : {in (get_bts H), nu =1 rho} by rewrite /rho=> b ->.
+            exists rho; split=> //; last first.
+            - split=> //; rewrite /rho=> b.
+              case_eq (b \in get_bts H)=> //.
+              by move=> _; apply contraTT.
+            - rewrite /is_pre_iso_ts/bnode_map_bij.
+              by move/eq_in_map : eq1_nu_rho=> <-.
+          apply: not_perm_eq=> //.
+          + by move: pre_iso_mu=> /perm_size <-; rewrite size_map.
+          + by rewrite not_peq.
+      Qed.
+
+      Lemma effective_iso_outside_domain G H (uG : uniq G) :
+        effective_iso_ts G H ->
+          exists rho : B -> B,
+            is_effective_iso_ts H G rho /\
+              forall b, rho b \in (get_bts G) -> b \in get_bts H.
+      Proof.
+        case=> mu /and3P[pre_iso_mu uniq_relab perm_relab].
+        rewrite /iso_ts/is_iso/is_iso_ts.
+        move:(is_pre_iso_ts_inv pre_iso_mu); rewrite /pre_iso/is_pre_iso; move=> [nu [pre_iso_nu eq]].
+        rewrite /is_pre_iso_ts/bnode_map_bij in pre_iso_mu.
+        suffices [rho [piso_rho [rho_part eq1_rho_nu]]]: exists rho, is_pre_iso_ts H G rho /\
+                                  (forall b : B, rho b \in get_bts G -> b \in get_bts H) /\
+                                 {in (get_bts H), nu =1 rho}.
+          suffices /perm_eq_relab_uniq_ts step : perm_eq (relabeling_seq_triple rho H) G.
+            move : step=> /(_ uG) [peq_rho urho].
+            by exists rho; split=> //; apply/and3P; rewrite piso_rho peq_rho urho.
+          move: perm_relab; rewrite perm_sym=> /(perm_map (relabeling_triple rho))=> perm_relab.
+          apply: perm_trans perm_relab _; rewrite relabeling_triple_map_comp map_id_in //.
+          move: eq=> /map_comp_in_id_ts mu_inv.
+          suffices : {in (get_bts G), (rho \o mu) =1 (nu \o mu)}.
+            move=> eq1_rhomu_numu /= t tin; apply triple_inj.
+            + rewrite projs_rel; move: t tin; case=> [[]]s p o sib pii //=.
+              suffices bin : Bnode s \in bnodes_triple  {| subject := Bnode s; predicate := p; object := o; subject_in_IB := sib; predicate_in_I := pii |}.
+                move=> /mem_ts_mem_triple_bts /(_ bin) sin.
+                congr Bnode.
+                rewrite /comp in eq1_rhomu_numu mu_inv.
+                by rewrite eq1_rhomu_numu // mu_inv.
+              by rewrite /bnodes_triple/terms_triple filter_undup mem_undup in_cons eqxx.
+            + by rewrite projp_rel; move: t tin; case=> [[]]s []p o sib pii.
+            + rewrite projo_rel; move: t tin; case=> s p []o sib pii //=.
+              suffices bin : Bnode o \in bnodes_triple {| subject := s; predicate := p; object := Bnode o; subject_in_IB := sib; predicate_in_I := pii |}.
+                move=> /mem_ts_mem_triple_bts /(_ bin) sin.
+                congr Bnode. rewrite /comp in eq1_rhomu_numu mu_inv.
+                by rewrite eq1_rhomu_numu // mu_inv.
+              by rewrite /bnodes_triple/terms_triple filter_undup mem_undup -mem_rev -filter_rev in_cons eqxx.
+          move=> b bin.
+          suffices mub_inH : mu b \in get_bts H.
+            by rewrite /= -eq1_rho_nu // mu_inv.
+          move: pre_iso_mu => /and3P[_ _ pre_iso_mu].
+          by apply (map_f mu) in bin; rewrite (perm_mem pre_iso_mu) in bin.
+        by apply (effective_iso_outside_eq_inv uG pre_iso_mu).
+      Qed.
+
       Lemma iso_ts_sym ts1 ts2 (u1 : uniq ts1) (u2 : uniq ts2) : iso_ts ts1 ts2 <-> iso_ts ts2 ts1.
       Proof.
         suffices imp G H : uniq G -> iso_ts G H -> iso_ts H G by split; exact: imp.
         move=> /= uG; case=> mu [/and3P[pre_iso_mu uniq_relab perm_relab] mem_eq].
-        move:(is_pre_iso_ts_inv pre_iso_mu); rewrite /pre_iso/is_pre_iso; move=> [nu [pre_iso_nu eq]].
-        have eq2 := eq.
-        move: eq=> /map_comp_in_id_ts mu_inv.
-        have /can_bs_can_rtbs eq := mu_inv.
-          rewrite /iso_ts/is_iso/is_iso_ts.
-          suffices [rho [/andP[piso_rho peq_rho] mu_part]]: exists rho : B -> B,
-              (is_pre_iso_ts H G rho && perm_eq (relabeling_seq_triple rho H) G) /\
+        rewrite /iso_ts/is_iso/is_iso_ts.
+        suffices [rho [/and3P[piso_rho urG peq_rho] mu_part]]: exists rho : B -> B,
+                is_effective_iso_ts H G rho /\
                 forall b, rho b \in (get_bts G) -> b \in get_bts H.
-            exists rho; split.
-            + by move/(perm_eq_relab_uniq_ts uG) : peq_rho => [-> ->]; rewrite piso_rho.
-            + move=> t wfs wfp.
-              suffices -> : {|
-                              subject := relabeling_term rho (subject t);
-                              predicate := predicate t;
-                                                   object := relabeling_term rho (object t);
-                                                             subject_in_IB := wfs;
-                                                                              predicate_in_I := wfp
-                         |} = relabeling_triple rho t.
-                  suffices /(_ I L) SH : forall s s', s' \in get_bts H -> Bnode (rho s) = Bnode (rho s') -> s \in get_bts H.
-                    rewrite -(perm_mem peq_rho)=> /mapP/=[t' t'inh2 eqtt' ].
-                    have /and3P[/eqP eqs /eqP eqp /eqP eqo] := triple_case eqtt'.
-                    rewrite !projo_rel in eqo.
-                    rewrite !projs_rel in eqs.
-                    rewrite !projp_rel in eqp.
-                    case_eq ((is_bnode (subject t)) || (is_bnode (object t))).
-                    + move=> /orP[].
-                  case: t t' t'inh2 wfs wfp eqtt' eqo eqs eqp=> //= [[]]s p o sib pii; case=> //= [[]]s' p' o' sib' pii' //= t'inh2 wfs wfp eqtt' eqo eqs eqp.
-                  suffices s'inh2 : s' \in (get_bts H).
-                    have sinh2 := SH s s' s'inh2 eqs.
-                    apply is_pre_iso_ts_inj2 in piso_rho.
-                    move: eqs=> []/(piso_rho _ _ sinh2 s'inh2) eqs.
+          exists rho; split.
+          + by apply /and3P.
+          + have rho_inj_in := is_pre_iso_ts_inj2 piso_rho.
+            move=> t wfs wfp.
+            suffices -> : {|
+                            subject := relabeling_term rho (subject t);
+                            predicate := predicate t;
+                                                 object := relabeling_term rho (object t);
+                                                           subject_in_IB := wfs;
+                                                                            predicate_in_I := wfp
+                       |} = relabeling_triple rho t.
+              suffices /(_ I L) SH : forall s s', s' \in get_bts H -> Bnode (rho s) = Bnode (rho s') -> s \in get_bts H.
+                rewrite -(perm_mem peq_rho)=> /mapP/=[t' t'inh2 eqtt' ].
+                have /and3P[] := triple_case eqtt'.
+                rewrite !projo_rel !projs_rel !projp_rel=> /eqP eqs /eqP eqp /eqP eqo.
+                case_eq ((is_bnode (subject t)) || (is_bnode (object t))).
+                + move=> /orP[].
+                  - case: t t' t'inh2 wfs wfp eqtt' eqo eqs eqp=> //= [[]]s p o sib pii; case=> //= [[]]s' p' o' sib' pii' //= t'inh2 wfs wfp eqtt' eqo eqs eqp.
+                    suffices s'inh2 : s' \in (get_bts H).
+                      have sinh2 := SH s s' s'inh2 eqs.
+                      move: eqs=> []/(rho_inj_in _ _ sinh2 s'inh2) eqs.
                       suffices -> : {| subject := Bnode s; predicate := p; object := o; subject_in_IB := sib; predicate_in_I := pii |} = {| subject := Bnode s'; predicate := p'; object := o'; subject_in_IB := sib'; predicate_in_I := pii' |}.
                         by [].
                       apply triple_inj=> //; rewrite eqs //=.
@@ -1057,31 +1145,29 @@ Section Rdf.
                       + move: o o' eqo t'inh2 eqtt' wfp=> []o []o' //= eqo t'inh2.
                         suffices o'inh2 : o' \in (get_bts H).
                           have oinh2 := SH o o' o'inh2 eqo.
-                          by move: eqo=> []/(piso_rho _ _ oinh2 o'inh2) eqo _ _; rewrite eqo.
+                          by move: eqo=> []/(rho_inj_in _ _ oinh2 o'inh2) eqo _ _; rewrite eqo.
                         suffices bnode_in :  Bnode o' \in bnodes_triple  {|
-                                                         subject := Bnode s';
-                                                           predicate := p';
-                                                           object := Bnode o';
-                                                           subject_in_IB := sib';
-                                                           predicate_in_I := pii'
-                                                         |}.
-                          by apply (mem_ts_mem_triple_bts t'inh2 bnode_in).
-                        by rewrite /bnodes_triple/terms_triple filter_undup mem_undup -mem_rev -filter_rev /= in_cons eqxx.
-                      suffices bnode_in :  Bnode s' \in bnodes_triple  {|
                                                        subject := Bnode s';
                                                          predicate := p';
-                                                         object := o';
+                                                         object := Bnode o';
                                                          subject_in_IB := sib';
                                                          predicate_in_I := pii'
                                                        |}.
-                        by apply (mem_ts_mem_triple_bts t'inh2 bnode_in).
-                      by rewrite /bnodes_triple/terms_triple filter_undup mem_undup /= in_cons eqxx.
-                      (* === *)
-                  case: t t' t'inh2 wfs wfp eqtt' eqo eqs eqp=> //= s p []o sib pii; case=> //= s' p' []o' sib' pii' //= t'inh2 wfs wfp eqtt' eqo eqs eqp.
-                  suffices o'inh2 : o' \in (get_bts H).
-                    have oinh2 := SH o o' o'inh2 eqo.
-                    apply is_pre_iso_ts_inj2 in piso_rho.
-                    move: eqo=> []/(piso_rho _ _ oinh2 o'inh2) eqo.
+                          by apply (mem_ts_mem_triple_bts t'inh2 bnode_in).
+                        by rewrite /bnodes_triple/terms_triple filter_undup mem_undup -mem_rev -filter_rev /= in_cons eqxx.
+                    suffices bnode_in :  Bnode s' \in bnodes_triple  {|
+                                                     subject := Bnode s';
+                                                       predicate := p';
+                                                       object := o';
+                                                       subject_in_IB := sib';
+                                                       predicate_in_I := pii'
+                                                     |}.
+                      by apply (mem_ts_mem_triple_bts t'inh2 bnode_in).
+                    by rewrite /bnodes_triple/terms_triple filter_undup mem_undup /= in_cons eqxx.
+                  - case: t t' t'inh2 wfs wfp eqtt' eqo eqs eqp=> //= s p []o sib pii; case=> //= s' p' []o' sib' pii' //= t'inh2 wfs wfp eqtt' eqo eqs eqp.
+                    suffices o'inh2 : o' \in (get_bts H).
+                      have oinh2 := SH o o' o'inh2 eqo.
+                      move: eqo=> []/(rho_inj_in _ _ oinh2 o'inh2) eqo.
                       suffices -> : {| subject := s; predicate := p; object := Bnode o; subject_in_IB := sib; predicate_in_I := pii |} = {| subject := s'; predicate := p'; object := Bnode o'; subject_in_IB := sib'; predicate_in_I := pii' |}.
                         by [].
                       apply triple_inj=> //; rewrite eqo //=; first last.
@@ -1089,7 +1175,7 @@ Section Rdf.
                       + move: s s' eqs sib sib' eqtt' wfs t'inh2=> []s []s' //= eqs sib sib' eqtt' wfs t'inh2.
                         suffices s'inh2 : s' \in (get_bts H).
                           have sinh2 := SH s s' s'inh2 eqs.
-                          by move: eqs=> []/(piso_rho _ _ sinh2 s'inh2) ->.
+                          by move: eqs=> []/(rho_inj_in _ _ sinh2 s'inh2) ->.
                         suffices bnode_in :  Bnode s' \in bnodes_triple  {|
                                                          subject := Bnode s';
                                                            predicate := p';
@@ -1099,7 +1185,7 @@ Section Rdf.
                                                          |}.
                           by apply (mem_ts_mem_triple_bts t'inh2 bnode_in).
                         by rewrite /bnodes_triple/terms_triple filter_undup mem_undup in_cons eqxx.
-                      suffices bnode_in :  Bnode o' \in bnodes_triple
+                        suffices bnode_in :  Bnode o' \in bnodes_triple
                                                          {|
                                                                    subject := s';
                                                                    predicate := p';
@@ -1107,16 +1193,16 @@ Section Rdf.
                                                                    subject_in_IB := sib';
                                                                    predicate_in_I := pii'
                                                                  |}.
-                        by apply (mem_ts_mem_triple_bts t'inh2 bnode_in).
-                      by rewrite /bnodes_triple/terms_triple filter_undup mem_undup -mem_rev -filter_rev /= in_cons eqxx.
-                    rewrite Bool.orb_false_iff.
-                    case: t t' t'inh2 wfs wfp eqtt' eqo eqs eqp=> //= [[]]s []p []o sib pii; case=> //= [[]]s' []p' []o' sib' pii' //= t'inh2 wfs wfp eqtt' eqo eqs eqp [] // _ _.
-                    suffices -> : {|
-    subject := Iri s;
-    predicate := Iri p;
-    object := Iri o;
-    subject_in_IB := sib;
-    predicate_in_I := pii
+                          by apply (mem_ts_mem_triple_bts t'inh2 bnode_in).
+                        by rewrite /bnodes_triple/terms_triple filter_undup mem_undup -mem_rev -filter_rev /= in_cons eqxx.
+                +  rewrite Bool.orb_false_iff.
+                   case: t t' t'inh2 wfs wfp eqtt' eqo eqs eqp=> //= [[]]s []p []o sib pii; case=> //= [[]]s' []p' []o' sib' pii' //= t'inh2 wfs wfp eqtt' eqo eqs eqp [] // _ _.
+                   suffices -> : {|
+                                      subject := Iri s;
+                                      predicate := Iri p;
+                                      object := Iri o;
+                                      subject_in_IB := sib;
+                                      predicate_in_I := pii
                                |} = {|
                                       subject := Iri s';
                                       predicate := Iri p';
@@ -1124,14 +1210,14 @@ Section Rdf.
                                       subject_in_IB := sib';
                                       predicate_in_I := pii'
                                     |}.
-                    by [].
+                      by [].
                     by apply triple_inj.
                     suffices -> : {|
-    subject := Iri s;
-    predicate := Iri p;
-    object := Lit o;
-    subject_in_IB := sib;
-    predicate_in_I := pii
+                                      subject := Iri s;
+                                      predicate := Iri p;
+                                      object := Lit o;
+                                      subject_in_IB := sib;
+                                      predicate_in_I := pii
                                |} = {|
                                       subject := Iri s';
                                       predicate := Iri p';
@@ -1139,72 +1225,16 @@ Section Rdf.
                                       subject_in_IB := sib';
                                       predicate_in_I := pii'
                                     |}.
-                    by [].
+                      by [].
                     by apply triple_inj.
-                  + move=> ? ? b b' /(map_f (rho)).
-                    move: piso_rho=> /and3P[_ _ /perm_mem ->] rho_b'in []eq_rho.
-                    by move: rho_b'in; rewrite -eq_rho=> /mu_part.
-                + apply triple_inj=> //=.
-                  - by rewrite projs_rel.
-                  - by rewrite projp_rel; case: (predicate t) wfp.
-                  - by rewrite projo_rel.
-              + rewrite /is_pre_iso_ts/bnode_map_bij in pre_iso_mu.
-                move: pre_iso_mu => /and3P[_ _ pre_iso_mu].
-                suffices [rho [piso_rho [rho_part eq1_rho_nu]]]: exists rho, is_pre_iso_ts H G rho /\
-                                          (forall b : B, rho b \in get_bts G -> b \in get_bts H) /\
-                                         {in (get_bts H), nu =1 rho}.
-                 exists rho. rewrite piso_rho; split=> //=.
-            move: perm_relab; rewrite perm_sym=> /(perm_map (relabeling_triple rho))=> perm_relab.
-            apply: perm_trans perm_relab _; rewrite relabeling_triple_map_comp map_id_in //.
-            suffices : {in (get_bts G), (rho \o mu) =1 (nu \o mu)}.
-              + move=> eq1_rhomu_numu /= t tin; apply triple_inj.
-                + rewrite projs_rel; move: t tin; case=> [[]]s p o sib pii //=.
-                  suffices bin : Bnode s \in bnodes_triple  {| subject := Bnode s; predicate := p; object := o; subject_in_IB := sib; predicate_in_I := pii |}.
-                    move=> /mem_ts_mem_triple_bts /(_ bin) sin.
-                    congr Bnode. rewrite /comp in eq1_rhomu_numu mu_inv.
-                    by rewrite eq1_rhomu_numu // mu_inv.
-                  by rewrite /bnodes_triple/terms_triple filter_undup mem_undup in_cons eqxx.
-                + by rewrite projp_rel; move: t tin; case=> [[]]s []p o sib pii.
-                + rewrite projo_rel; move: t tin; case=> s p []o sib pii //=.
-                  suffices bin : Bnode o \in bnodes_triple {| subject := s; predicate := p; object := Bnode o; subject_in_IB := sib; predicate_in_I := pii |}.
-                    move=> /mem_ts_mem_triple_bts /(_ bin) sin.
-                    congr Bnode. rewrite /comp in eq1_rhomu_numu mu_inv.
-                    by rewrite eq1_rhomu_numu // mu_inv.
-                  by rewrite /bnodes_triple/terms_triple filter_undup mem_undup -mem_rev -filter_rev in_cons eqxx.
-                move=> b bin.
-                suffices mub_inH : mu b \in get_bts H.
-                  by rewrite /= -eq1_rho_nu // mu_inv.
-                by apply (map_f mu) in bin; rewrite (perm_mem pre_iso_mu) in bin.
-                case_eq (perm_eq (get_bts H) (get_bts G)).
-                set rho := (fun b => if (b \in (get_bts H)) then nu b else b).
-                suffices eq1_nu_rho : {in (get_bts H), nu =1 rho}.
-                exists rho; split.
-                  + apply /and3P; rewrite !uniq_get_bts /=; apply /and3P=> /=.
-                    apply eq_in_map in eq1_nu_rho; rewrite -eq1_nu_rho.
-                    by move: pre_iso_nu=> /and3P[_ _ ->].
-                  + split=> //.
-                    rewrite /rho=> b.
-                    case_eq (b \in get_bts H)=> //.
-                    by rewrite (perm_mem H0)=> ->.
-                  + by rewrite /rho => b ->.
-                move=> not_peq.
-                suffices  [b0 /andP[bin_H bnin_G]] : exists b, (b \in (get_bts H)) && (negb (b \in (get_bts G))).
-                set rho := (fun b => if (b \in (get_bts H)) then nu b else b0).
-                suffices eq1_nu_rho : {in (get_bts H), nu =1 rho}.
-                  exists rho; split=> //.
-                  + apply /and3P; rewrite !uniq_get_bts /=; apply /and3P=> /=.
-                    apply eq_in_map in eq1_nu_rho; rewrite -eq1_nu_rho.
-                    by move: pre_iso_nu=> /and3P[_ _ ->].
-                  + split=> //.
-                    rewrite /rho=> b.
-                    case_eq (b \in get_bts H)=> //.
-                    by move=> _; apply contraTT.
-                    rewrite /rho=> b.
-                    case_eq (b \in get_bts H)=> //.
-                    eapply (@not_perm_eq _ (get_bts H) (get_bts G))=> //.
-                    move: pre_iso_mu=> [/perm_size pre_iso_mu].
-                    by rewrite size_map in pre_iso_mu.
-                    by rewrite not_peq.
+              move=> ? ? b b' /(map_f (rho)).
+              move: piso_rho=> /and3P[_ _ /perm_mem ->] rho_b'in []eq_rho.
+              by move: rho_b'in; rewrite -eq_rho=> /mu_part.
+            + apply triple_inj=> //=.
+                - by rewrite projs_rel.
+                - by rewrite projp_rel; case: (predicate t) wfp.
+                - by rewrite projo_rel.
+        by apply effective_iso_outside_domain=> //; exists mu; apply /and3P; split=> //.
       Qed.
 
       Lemma iso_sym g1 g2 : iso g1 g2 <-> iso g2 g1.
@@ -1714,11 +1744,6 @@ Section RDF_Spec.
   Lemma map_filter_nodes ts (mu : B -> B)  :
     [seq x <- [seq relabeling_term mu i | i <- node_terms ts] | is_bnode x] = [seq relabeling_term mu i | i <- [seq x <- node_terms ts | is_bnode x]].
   Proof. by elim: (node_terms ts) => [//| []h tl IHl]; rewrite /= IHl. Qed.
-
-  (* Lemma relabeling_nodes ts (mu : B -> B)  : *)
-  (*   [seq relabeling_term mu i | i <- node_terms ts] = *)
-  (*     node_terms (relabeling_seq_triple mu ts). *)
-  (* Proof. elim: ts=> [//| h tl IHl]. rewrite /=. rewrite !nodes_terms_cons. *)
 
   Lemma in_nt_in_ts (trm: term I B L) (ts : seq (triple I B L)) :
     trm \in node_terms ts -> exists t, (t \in ts) && (((subject t) == trm) || ((object t) == trm)).

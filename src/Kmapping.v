@@ -254,7 +254,7 @@ Section Kmapping.
        then mu is also an isomorphism from ts1 to ts3. *)
     Lemma ts_pre_iso_iso_mem [ts1 ts2: seq (triple I B L)] [mu : B -> B]:
       uniq ts1 -> uniq ts2 ->
-      is_iso_ts ts1 ts2 mu -> forall (ts3 : (seq (triple I B L))), (perm_eq ts3 ts2) -> is_iso_ts ts1 ts3 mu.
+      is_effective_iso_ts ts1 ts2 mu -> forall (ts3 : (seq (triple I B L))), (perm_eq ts3 ts2) -> is_effective_iso_ts ts1 ts3 mu.
     Proof.
     move=> u1 u2 /and3P[piso urel peq] ts3 p13.
     apply/and3P; split=> //.
@@ -275,14 +275,14 @@ Section Kmapping.
 
     (* For any duplicate-free sequence of triples: ts,
        k_mapping returns a sequence which is isomorphic_ts to ts *)
-    Lemma kmapping_iso_out_ts ts (uts : uniq ts) : iso_ts ts (k_mapping_ts ts).
+    Lemma kmapping_iso_out_ts ts (uts : uniq ts) : effective_iso_ts ts (k_mapping_ts ts).
     Proof.
     have := uniq_k_mapping_ts uts.
     rewrite /iso_ts/is_iso_ts/k_mapping_ts.
     case : (foldl_max_st (map (sort le_triple) (candidates ts)) [::]); first by move=> /k_mapping_nil_is_nil -> _; exists id.
     move=> /mapP/= [s /mapP[/= p pin ->] ->]; rewrite sort_uniq=> ukres.
     exists (kth_map p).
-    suffices /(ts_pre_iso_iso ukres) preiso : is_pre_iso_ts ts (relabeling_seq_triple (kth_map p) ts) (kth_map p).
+    suffices /(ts_pre_iso_effective_iso ukres) preiso : is_pre_iso_ts ts (relabeling_seq_triple (kth_map p) ts) (kth_map p).
       apply: (ts_pre_iso_iso_mem uts ukres preiso); apply: uniq_perm=> //.
        + by rewrite sort_uniq.
        + by move=> ?; rewrite mem_sort.
@@ -290,7 +290,7 @@ Section Kmapping.
     Qed.
 
     (* For any RDF graph g, k_mapping returns a graph which is isomorphic to g *)
-    Lemma kmapping_iso_out g: iso g (k_mapping g).
+    Lemma kmapping_iso_out g: effective_iso g (k_mapping g).
     Proof. by apply: kmapping_iso_out_ts (ugraph _). Qed.
 
 (******************************************************************************)
@@ -300,7 +300,7 @@ Section Kmapping.
     (* Move for RDF For any two sequences of triples ts1 and ts2 which are isomorphic,
        either both are the empty sequence, or both are different from the empty sequence *)
     Lemma iso_structure (ts1 ts2: seq (triple I B L)) :
-      iso_ts ts1 ts2 -> ((ts1 == [::]) && (ts2 == [::]) || (ts1 != [::]) && (ts2 != [::])).
+      effective_iso_ts ts1 ts2 -> ((ts1 == [::]) && (ts2 == [::]) || (ts1 != [::]) && (ts2 != [::])).
     Proof.
     rewrite /iso_ts/is_iso_ts /=; move=> [? /and3P [_ _]] ; case: ts1=> [|h1 tl1].
     + by rewrite relabeling_seq_triple_nil perm_sym=> /perm_nilP ->.
@@ -340,9 +340,9 @@ Section Kmapping.
 
     (* For any two RDF graphs g and h which are isomorphic,
        the image of g and h under k_mapping is isomorphic *)
-    Lemma iso_isokmap g h (igh: iso g h) : iso (k_mapping g) (k_mapping h).
+    Lemma iso_isokmap g h (igh: effective_iso g h) : effective_iso (k_mapping g) (k_mapping h).
     Proof.
-    by apply: iso_can_trans _ igh; rewrite /mapping_is_iso_mapping; apply kmapping_iso_out.
+    by apply: effective_iso_can_trans _ igh; rewrite /mapping_is_effective_iso_mapping; apply kmapping_iso_out.
     Qed.
 
     (* For any permutation p of the blank nodes of a duplicate-free sequence of triples: ts,
@@ -375,7 +375,7 @@ Section Kmapping.
        then for any graph in the sequence of sorted graph candidates of ts1,
        it is also in the sequence of sorted graph candidates of ts2 *)
     Lemma iso_s_can_mem ts1 ts2:
-      uniq ts1 -> iso_ts ts1 ts2 -> forall sc, sc \in s_can ts1 -> sc \in s_can ts2.
+      uniq ts1 -> effective_iso_ts ts1 ts2 -> forall sc, sc \in s_can ts1 -> sc \in s_can ts2.
     Proof.
     move=> /= u1 iso12 sc /mapP /= [cc1 /mapP[/= p pinperm ->] ->].
     apply/mapP => /=.
@@ -411,16 +411,17 @@ Section Kmapping.
        and an isomorphism from ts1 to ts2,
        the sequences of sorted graph candidates of ts1 and ts2 have the same graphs *)
     Lemma iso_memeq_s_can ts1 ts2 :
-      uniq ts1 -> uniq ts2 -> iso_ts ts1 ts2 -> s_can ts1 =i s_can ts2.
+      uniq ts1 -> uniq ts2 -> effective_iso_ts ts1 ts2 -> s_can ts1 =i s_can ts2.
     Proof.
     move=> u1 u2 isogh sc; apply/idP/idP.
     + by apply iso_s_can_mem.
-    + rewrite iso_ts_sym // in isogh; by apply iso_s_can_mem.
+    + have isohg: effective_iso_ts ts2 ts1. by apply effective_iso_ts_sym.
+      by apply iso_s_can_mem.
     Qed.
 
     (* For any two graphs g and h which are isomorphic,
        k_mapping returns set-equal results for g and h *)
-    Lemma kmapping_can_invariant ts1 ts2 (u1 : uniq ts1) (u2 : uniq ts2) (isogh : iso_ts ts1 ts2) :
+    Lemma kmapping_can_invariant ts1 ts2 (u1 : uniq ts1) (u2 : uniq ts2) (isogh : effective_iso_ts ts1 ts2) :
       perm_eq (k_mapping_ts ts1) (k_mapping_ts ts2).
     Proof.
     rewrite /k_mapping_ts.
@@ -432,12 +433,13 @@ Section Kmapping.
     Qed.
 
     (* k_mapping is an isocanonical mapping *)
-    Theorem iso_can_kmapping : isocanonical_mapping k_mapping.
+    Theorem iso_can_kmapping : effective_isocanonical_mapping k_mapping.
     Proof.
     split=> [|g h].
+    move=> g. rewrite /iso.
     + by apply kmapping_iso_out.
     + split.
-      - by apply same_res_impl_iso_mapping; rewrite /mapping_is_iso_mapping; apply kmapping_iso_out.
+      - by apply same_res_impl_effective_iso_mapping; rewrite /mapping_is_effective_iso_mapping; apply kmapping_iso_out.
       - by apply: kmapping_can_invariant (ugraph _) (ugraph _).
     Qed.
 

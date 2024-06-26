@@ -889,14 +889,16 @@ Section Rdf.
           (forall t, forall wf_s wf_p, @mkTriple I B L (relabeling_term mu (subject t)) (predicate t) (relabeling_term mu (object t)) wf_s wf_p \in ts2 -> t \in ts1).
 
       Definition is_iso g1 g2 mu : Prop :=
-        [&& is_pre_iso g1 g2 mu,
-          uniq (relabeling_seq_triple mu g1) &
-            perm_eq (relabeling_seq_triple mu g1) g2] /\
-          (forall t, forall wf_s wf_p, @mkTriple I B L (relabeling_term mu (subject t)) (predicate t) (relabeling_term mu (object t)) wf_s wf_p \in g2 -> t \in g1).
+        is_iso_ts g1 g2 mu.
+      (*   [&& is_pre_iso g1 g2 mu, *)
+      (*     uniq (relabeling_seq_triple mu g1) & *)
+      (*       perm_eq (relabeling_seq_triple mu g1) g2] /\ *)
+      (*     (forall t, forall wf_s wf_p, @mkTriple I B L (relabeling_term mu (subject t)) (predicate t) (relabeling_term mu (object t)) wf_s wf_p \in g2 -> t \in g1). *)
 
 
       Definition effective_iso_ts ts1 ts2 := exists mu, @is_effective_iso_ts ts1 ts2 mu.
       Definition iso_ts ts1 ts2 := exists mu, @is_iso_ts ts1 ts2 mu.
+      Definition effective_iso g1 g2 := effective_iso_ts g1 g2.
       Definition iso g1 g2 := iso_ts g1 g2.
 
       Remark is_iso_effective_is_pre_iso ts1 ts2 mu: is_effective_iso_ts ts1 ts2 mu -> is_pre_iso_ts ts1 ts2 mu.
@@ -1019,9 +1021,9 @@ Section Rdf.
         by case: (uniq_min_size us1 sub12 leqs21).
       Qed.
 
-      Lemma effective_iso_ts_sym ts1 ts2 (u1 : uniq ts1) (u2 : uniq ts2) : effective_iso_ts ts1 ts2 <-> effective_iso_ts ts2 ts1.
+      Lemma effective_iso_ts_sym ts1 ts2 (u1 : uniq ts1) : effective_iso_ts ts1 ts2 -> effective_iso_ts ts2 ts1.
       Proof.
-        suffices imp h1 h2 : uniq h1 -> effective_iso_ts h1 h2 -> effective_iso_ts h2 h1 by split; exact: imp.
+        suffices imp h1 h2 : uniq h1 -> effective_iso_ts h1 h2 -> effective_iso_ts h2 h1. by apply imp.
         move=> uh1; case=> mu /and3P[pre_iso_mu uniq_relab perm_relab].
         move:(is_pre_iso_ts_inv pre_iso_mu); rewrite /pre_iso/is_pre_iso; move=> [nu [pre_iso_nu /map_comp_in_id_ts/can_bs_can_rtbs nuP]].
         exists nu.
@@ -1109,14 +1111,16 @@ Section Rdf.
         by apply (effective_iso_outside_eq_inv uG pre_iso_mu).
       Qed.
 
-      Lemma iso_ts_sym ts1 ts2 (u1 : uniq ts1) (u2 : uniq ts2) : iso_ts ts1 ts2 <-> iso_ts ts2 ts1.
+      Lemma effective_iso_ts_iso_inv ts1 ts2 (u1 : uniq ts1) : effective_iso_ts ts1 ts2 -> iso_ts ts2 ts1.
       Proof.
-        suffices imp G H : uniq G -> iso_ts G H -> iso_ts H G by split; exact: imp.
-        move=> /= uG; case=> mu [/and3P[pre_iso_mu uniq_relab perm_relab] mem_eq].
+        (* suffices imp G H : uniq G -> iso_ts G H -> iso_ts H G by split; exact: imp. *)
+        (* move=> /= uG; *)
+        (* move{u2}. *)
+               case=> mu /and3P[pre_iso_mu uniq_relab perm_relab].
         rewrite /iso_ts/is_iso/is_iso_ts.
         suffices [rho [/and3P[piso_rho urG peq_rho] mu_part]]: exists rho : B -> B,
-                is_effective_iso_ts H G rho /\
-                forall b, rho b \in (get_bts G) -> b \in get_bts H.
+                is_effective_iso_ts ts2 ts1 rho /\
+                forall b, rho b \in (get_bts ts1) -> b \in get_bts ts2.
           exists rho; split.
           + by apply /and3P.
           + have rho_inj_in := is_pre_iso_ts_inj2 piso_rho.
@@ -1128,14 +1132,14 @@ Section Rdf.
                                                            subject_in_IB := wfs;
                                                                             predicate_in_I := wfp
                        |} = relabeling_triple rho t.
-              suffices /(_ I L) SH : forall s s', s' \in get_bts H -> Bnode (rho s) = Bnode (rho s') -> s \in get_bts H.
+              suffices /(_ I L) SH : forall s s', s' \in get_bts ts2 -> Bnode (rho s) = Bnode (rho s') -> s \in get_bts ts2.
                 rewrite -(perm_mem peq_rho)=> /mapP/=[t' t'inh2 eqtt' ].
                 have /and3P[] := triple_case eqtt'.
                 rewrite !projo_rel !projs_rel !projp_rel=> /eqP eqs /eqP eqp /eqP eqo.
                 case_eq ((is_bnode (subject t)) || (is_bnode (object t))).
                 + move=> /orP[].
                   - case: t t' t'inh2 wfs wfp eqtt' eqo eqs eqp=> //= [[]]s p o sib pii; case=> //= [[]]s' p' o' sib' pii' //= t'inh2 wfs wfp eqtt' eqo eqs eqp.
-                    suffices s'inh2 : s' \in (get_bts H).
+                    suffices s'inh2 : s' \in (get_bts ts2).
                       have sinh2 := SH s s' s'inh2 eqs.
                       move: eqs=> []/(rho_inj_in _ _ sinh2 s'inh2) eqs.
                       suffices -> : {| subject := Bnode s; predicate := p; object := o; subject_in_IB := sib; predicate_in_I := pii |} = {| subject := Bnode s'; predicate := p'; object := o'; subject_in_IB := sib'; predicate_in_I := pii' |}.
@@ -1143,7 +1147,7 @@ Section Rdf.
                       apply triple_inj=> //; rewrite eqs //=.
                       + by move: p p' pii pii' eqp t'inh2 eqtt' wfp=> []p []p'.
                       + move: o o' eqo t'inh2 eqtt' wfp=> []o []o' //= eqo t'inh2.
-                        suffices o'inh2 : o' \in (get_bts H).
+                        suffices o'inh2 : o' \in (get_bts ts2).
                           have oinh2 := SH o o' o'inh2 eqo.
                           by move: eqo=> []/(rho_inj_in _ _ oinh2 o'inh2) eqo _ _; rewrite eqo.
                         suffices bnode_in :  Bnode o' \in bnodes_triple  {|
@@ -1165,7 +1169,7 @@ Section Rdf.
                       by apply (mem_ts_mem_triple_bts t'inh2 bnode_in).
                     by rewrite /bnodes_triple/terms_triple filter_undup mem_undup /= in_cons eqxx.
                   - case: t t' t'inh2 wfs wfp eqtt' eqo eqs eqp=> //= s p []o sib pii; case=> //= s' p' []o' sib' pii' //= t'inh2 wfs wfp eqtt' eqo eqs eqp.
-                    suffices o'inh2 : o' \in (get_bts H).
+                    suffices o'inh2 : o' \in (get_bts ts2).
                       have oinh2 := SH o o' o'inh2 eqo.
                       move: eqo=> []/(rho_inj_in _ _ oinh2 o'inh2) eqo.
                       suffices -> : {| subject := s; predicate := p; object := Bnode o; subject_in_IB := sib; predicate_in_I := pii |} = {| subject := s'; predicate := p'; object := Bnode o'; subject_in_IB := sib'; predicate_in_I := pii' |}.
@@ -1173,7 +1177,7 @@ Section Rdf.
                       apply triple_inj=> //; rewrite eqo //=; first last.
                       + by move: p p' pii pii' eqp t'inh2 eqtt' wfp=> []p []p'.
                       + move: s s' eqs sib sib' eqtt' wfs t'inh2=> []s []s' //= eqs sib sib' eqtt' wfs t'inh2.
-                        suffices s'inh2 : s' \in (get_bts H).
+                        suffices s'inh2 : s' \in (get_bts ts2).
                           have sinh2 := SH s s' s'inh2 eqs.
                           by move: eqs=> []/(rho_inj_in _ _ sinh2 s'inh2) ->.
                         suffices bnode_in :  Bnode s' \in bnodes_triple  {|
@@ -1237,11 +1241,37 @@ Section Rdf.
         by apply effective_iso_outside_domain=> //; exists mu; apply /and3P; split=> //.
       Qed.
 
+      Lemma iso_ts_sym ts1 ts2 (u1 : uniq ts1) (u2 : uniq ts2) : iso_ts ts1 ts2 <-> iso_ts ts2 ts1.
+      Proof.
+        suffices imp G H : uniq G -> iso_ts G H -> iso_ts H G by split; exact: imp.
+        move=> uG [mu [eiso] _].
+        by apply effective_iso_ts_iso_inv=> //; exists mu.
+      Qed.
+
+      Lemma effective_iso_iso ts1 ts2 (u1 : uniq ts1) (u2 : uniq ts2) : effective_iso_ts ts1 ts2 -> iso_ts ts1 ts2.
+      Proof. by move=> /(effective_iso_ts_iso_inv u1) /(iso_ts_sym u1 u2). Qed.
+
       Lemma iso_sym g1 g2 : iso g1 g2 <-> iso g2 g1.
       Proof. by apply: iso_ts_sym (uniq_rdf_graph _) (uniq_rdf_graph _). Qed.
 
       Lemma eq_mem_in (T : eqType) (s : seq T) (a b : T) : a = b -> a \in s -> b \in s.
       Proof. by move => ->. Qed.
+
+
+      Lemma effective_iso_ts_trans ts1 ts2 ts3 : effective_iso_ts ts1 ts2 -> effective_iso_ts ts2 ts3 -> effective_iso_ts ts1 ts3.
+      Proof.
+        rewrite /iso/is_iso; move=> [mu12 /and3P[pre_iso12 urel12 perm12]] [mu23 /and3P[pre_iso23 urel23 perm23]].
+        exists (mu23 \o mu12).
+        suffices ucomp: uniq (relabeling_seq_triple (mu23 \o mu12) ts1).
+        apply /and3P; split=> //.
+        + by apply: is_pre_iso_ts_trans pre_iso12 pre_iso23.
+        + by apply : perm_eq_comp perm12 perm23.
+        + rewrite -relabeling_seq_triple_comp /relabeling_seq_triple.
+          have /eq_uniq -> //: size [seq relabeling_triple mu23 i | i <- [seq relabeling_triple mu12 i | i <- ts1]] =
+                             size (relabeling_seq_triple mu23 ts2).
+          by move: perm12=> /perm_size; rewrite !size_map.
+          by apply eq_mem_map; apply perm_mem.
+      Qed.
 
       Lemma iso_ts_trans ts1 ts2 ts3 : iso_ts ts1 ts2 -> iso_ts ts2 ts3 -> iso_ts ts1 ts3.
       Proof. rewrite /iso/is_iso; move=> [mu12 [/and3P[pre_iso12 urel12 perm12] mu12_part]] [mu23 [/and3P[pre_iso23 urel23 perm23] mu23_part]].
@@ -1305,25 +1335,42 @@ Section Rdf.
       Proof. by apply iso_ts_trans. Qed.
 
       (* TODO *)
-      (* Lemma ts_pre_iso_iso ts mu (urel: uniq (relabeling_seq_triple mu ts)) : *)
-      (*   is_pre_iso_ts ts (relabeling_seq_triple mu ts) mu -> *)
-      (*     is_iso_ts ts (relabeling_seq_triple mu ts) mu. *)
-      (* Proof. by move=> pre_iso; rewrite /is_iso/is_iso_ts pre_iso urel /=; apply perm_refl. Qed. *)
+      Lemma ts_pre_iso_effective_iso ts mu (urel: uniq (relabeling_seq_triple mu ts)) :
+        is_pre_iso_ts ts (relabeling_seq_triple mu ts) mu ->
+          is_effective_iso_ts ts (relabeling_seq_triple mu ts) mu.
+      Proof. by move=> pre_iso; apply/and3P; rewrite pre_iso urel /=. Qed.
 
       Section Isocanonical.
+
+        Definition effective_isocanonical_mapping (M : rdf_graph I B L -> rdf_graph I B L) :=
+          (forall g, effective_iso_ts g (M g)) /\
+            (forall g1 g2, eqb_rdf (M g1) (M g2) <-> effective_iso_ts g1 g2).
 
         Definition isocanonical_mapping (M : rdf_graph I B L -> rdf_graph I B L) :=
           (forall g, iso g (M g)) /\
             (forall g1 g2, eqb_rdf (M g1) (M g2) <-> iso g1 g2).
 
-        Definition isocanonical_mapping' M :=
-          (forall g, iso g (M g)) /\
-            (forall g1 g2, eqb_rdf (M g1) (M g2) <-> iso g1 g2).
+        (* Definition isocanonical_mapping' M := *)
+        (*   (forall g, iso g (M g)) /\ *)
+        (*     (forall g1 g2, eqb_rdf (M g1) (M g2) <-> iso g1 g2). *)
 
+        Definition mapping_is_effective_iso_mapping (M : rdf_graph I B L -> rdf_graph I B L) := forall g, effective_iso g (M g).
         Definition mapping_is_iso_mapping (M : rdf_graph I B L -> rdf_graph I B L) := forall g, iso g (M g).
 
         Definition dt_names_mapping (M : rdf_graph I B L -> rdf_graph I B L) := forall g1 g2,
             iso g1 g2 -> eqb_rdf (M g1) (M g2).
+
+        Lemma same_res_impl_effective_iso_mapping M g1 g2 (iso_output : mapping_is_effective_iso_mapping M) :
+          eqb_rdf (M g1) (M g2) -> effective_iso_ts g1 g2.
+        Proof.
+          have isog1k1 : effective_iso g1 (M g1). by apply iso_output.
+          have isog2k2 : effective_iso (M g2) g2. apply effective_iso_ts_sym=> //; first by case g2. apply iso_output.
+          have umg1 : uniq (M g1). move: isog1k1=> [mu /and3P[piso _ peq ]].
+            rewrite -(perm_uniq peq). rewrite map_inj_in_uniq; first by case g1. apply inj_get_b_inj_g. apply (is_pre_iso_inj piso). 
+          move=> /(eq_effective_iso_ts umg1) peqm.
+          have {}peqm: effective_iso_ts (M g1) (M g2) by exists id.
+          apply: (effective_iso_ts_trans (effective_iso_ts_trans isog1k1 peqm) isog2k2).
+        Qed.
 
         Lemma same_res_impl_iso_mapping M g1 g2 (iso_output : mapping_is_iso_mapping M) :
           eqb_rdf (M g1) (M g2) -> iso g1 g2.
@@ -1331,6 +1378,22 @@ Section Rdf.
           have isog1k1 : iso g1 (M g1). by apply iso_output.
           have isog2k2 : iso (M g2) g2. by rewrite iso_sym; apply iso_output.
           by move=> /eqiso peqm; apply: iso_trans (iso_trans isog1k1 peqm) isog2k2.
+        Qed.
+
+        Lemma effective_iso_can_trans_ts (M : seq (triple I B L) -> seq (triple I B L)) ts1 ts2 (u1 : uniq ts1) (u2 : uniq ts2) (uniq_output : forall ts, uniq ts -> uniq (M ts)) (iso_output : forall ts, uniq ts -> effective_iso_ts ts (M ts)) :
+          effective_iso_ts ts1 ts2 -> effective_iso_ts (M ts1) (M ts2).
+        Proof.
+          have isog1k1 : effective_iso_ts (M ts1) ts1. by apply effective_iso_ts_sym=> //; apply iso_output.
+          have isog2k2 : effective_iso_ts ts2 (M ts2). by apply iso_output.
+          by move=> peqm; apply: (effective_iso_ts_trans (effective_iso_ts_trans isog1k1 peqm) isog2k2).
+        Qed.
+
+        Lemma effective_iso_can_trans M g1 g2 (iso_output : mapping_is_effective_iso_mapping M) :
+          effective_iso g1 g2 -> effective_iso (M g1) (M g2).
+        Proof.
+          have isog1k1 : effective_iso (M g1) g1. apply effective_iso_ts_sym; first by case g1. apply iso_output.
+          have isog2k2 : effective_iso g2 (M g2). by apply iso_output.
+          move=> peqm; apply: (effective_iso_ts_trans (effective_iso_ts_trans isog1k1 peqm) isog2k2).
         Qed.
 
         Lemma iso_can_trans_ts (M : seq (triple I B L) -> seq (triple I B L)) ts1 ts2 (u1 : uniq ts1) (u2 : uniq ts2) (uniq_output : forall ts, uniq ts -> uniq (M ts)) (iso_output : forall ts, uniq ts -> iso_ts ts (M ts)) :
@@ -1777,9 +1840,10 @@ Section RDF_Spec.
 
   Theorem iso_equiv (ts1 ts2 : seq (triple I B L)) :
     (uniq ts1) -> (uniq ts2) ->
-      iso_ts ts1 ts2 <-> spec_iso ts1 ts2.
+      effective_iso_ts ts1 ts2 <-> spec_iso ts1 ts2.
   Proof.
   move=> u1 u2; split.
+  move=> /(effective_iso_iso u1 u2).
   move=> [mu [/and3P[piso wf_ret adj]] mu_part].
   exists (relabeling_term mu); split.
   have piso2 := piso.
@@ -1887,9 +1951,10 @@ Section RDF_Spec.
         split.
          + case t=> s /= _ _ sib _. by apply relabeling_term_preserves_is_in_ib.
          + by case t=> _ p /= _ _ pii.
-+ move=> [mu_trm [b_to_b [l_id [i_id /= adj_pres]]]].
-  rewrite /adj_pres/= in adj_pres.
-  rewrite /iso_ts/is_iso_ts.
++ move=> /= [mu_trm [b_to_b [l_id [i_id /= adj_pres]]]].
+  (* suffices : exists mu, *)
+  (* rewrite /adj_pres/= in adj_pres. *)
+  (* rewrite /iso_ts/is_iso_ts. *)
   Admitted.
 
 

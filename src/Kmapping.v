@@ -433,7 +433,7 @@ Section Kmapping.
     Qed.
 
     (* k_mapping is an isocanonical mapping *)
-    Theorem iso_can_kmapping : effective_isocanonical_mapping k_mapping.
+    Theorem effective_iso_can_kmapping : effective_isocanonical_mapping k_mapping.
     Proof.
     split=> [|g h].
     move=> g. rewrite /iso.
@@ -442,6 +442,9 @@ Section Kmapping.
       - by apply same_res_impl_effective_iso_mapping; rewrite /mapping_is_effective_iso_mapping; apply kmapping_iso_out.
       - by apply: kmapping_can_invariant (ugraph _) (ugraph _).
     Qed.
+
+    Theorem spec_iso_can_kmapping : spec_isocanonical_mapping k_mapping.
+    Proof. by apply (effective_iso_can_spec_iso_can effective_iso_can_kmapping). Qed.
 
   End Kmapping_isocan.
 

@@ -1350,6 +1350,20 @@ Section Rdf.
           (forall g, iso g (M g)) /\
             (forall g1 g2, eqb_rdf (M g1) (M g2) <-> iso g1 g2).
 
+        Lemma effective_isocanonical_mapping_isocanonical (M : rdf_graph I B L -> rdf_graph I B L) :
+          effective_isocanonical_mapping M -> isocanonical_mapping M.
+        Proof. move=> [iso_out can].
+               split.
+               + move=> g.
+                 have ug := uniq_rdf_graph g.
+                 apply effective_iso_iso=> //.
+                 - have [mu /and3P[piso urg peq]] := iso_out g.
+                   by rewrite -(perm_uniq peq) urg.
+               + move=> g h; split.
+                 by move=> /can/(effective_iso_iso (uniq_rdf_graph _) (uniq_rdf_graph _)).
+               + by move=> [mu [eiso _]]; apply can; exists mu.
+       Qed.
+
         (* Definition isocanonical_mapping' M := *)
         (*   (forall g, iso g (M g)) /\ *)
         (*     (forall g1 g2, eqb_rdf (M g1) (M g2) <-> iso g1 g2). *)
@@ -1714,10 +1728,12 @@ Section RDF_Spec.
     forall (trm : term I B L), is_bnode trm -> is_bnode (mu trm).
 
   Definition lit_to_lit (ts: seq (triple I B L)) (mu : term I B L -> term I B L) :=
-    forall (trm : term I B L), trm \in (node_terms ts) -> is_lit trm -> is_lit (mu trm).
+    forall l: L,
+      (Lit l) \in (node_terms ts) -> mu (Lit l) = (Lit l).
 
   Definition iri_to_iri (ts: seq (triple I B L)) (mu : term I B L -> term I B L) :=
-    forall (trm : term I B L), trm \in (node_terms ts) -> is_iri trm -> is_iri (mu trm).
+    forall i: I,
+      (Iri i) \in (node_terms ts) -> mu (Iri i) = (Iri i).
 
   Lemma rel_pres_ib (ts : seq (triple I B L)) (mu : term I B L -> term I B L) (trm : term I B L) :
     bnodes_to_bnodes mu ->
@@ -1727,14 +1743,14 @@ Section RDF_Spec.
             is_in_ib (mu trm).
   Proof.
   case: trm=> [i|l|b] btb iti in_node // iib; rewrite /is_in_ib.
-  + have := iti (Iri i) in_node. by move ->.
+  by rewrite (iti i in_node).
   + have := btb (Bnode b). by rewrite Bool.orb_comm=> ->.
   Qed.
 
   Lemma rel_pres_i ts (mu : term I B L -> term I B L) (trm : term I B L) :
     iri_to_iri ts mu -> trm \in (node_terms ts) ->
                                 is_in_i  trm -> is_in_i (mu trm).
-  Proof. by case: trm=> [i|l|b] iti in_node //=> /(iti (Iri i) in_node). Qed.
+  Proof. by case: trm=> [i|l|b] iti in_node //=; rewrite (iti i in_node). Qed.
 
   Definition spec_rel_triple_iso (t : triple I B L) (mu : term I B L -> term I B L)
     (pres_s: is_in_ib (mu (subject t)))
@@ -1768,6 +1784,15 @@ Section RDF_Spec.
     by move=> /IH; apply in_nodes_cons.
   Qed.
 
+  Lemma in_triple_o_in_node_terms (t: triple I B L) (ts : seq (triple I B L)) :
+    t \in ts -> (object t) \in (node_terms ts).
+  Proof.
+    elim: ts=> [|t' ts' IH]; first by rewrite in_nil.
+    rewrite in_cons. move=> /orP[/eqP->|].
+    by rewrite /node_terms undup_in // /fix_node_terms !in_cons eqxx orbC.
+    by move=> /IH; apply in_nodes_cons.
+  Qed.
+
   Definition adj_pres (ts1 ts2: seq (triple I B L)) (mu : term I B L -> term I B L) :=
     pres_wf ts1 mu ->
     forall t, t \in ts1 <-> forall wf_s wf_p, @mkTriple I B L (mu (subject t)) (predicate t) (mu (object t)) wf_s wf_p \in ts2.
@@ -1780,7 +1805,7 @@ Section RDF_Spec.
             adj_pres ts1 ts2 mu.
 
   Definition spec_iso (ts1 ts2 : seq (triple I B L)) :=
-    exists mu, spec_is_iso ts1 ts2 mu.
+    exists (mu : term I B L -> term I B L), spec_is_iso ts1 ts2 mu.
 
   Lemma nodes_terms_cons (trpl : triple I B L) (ts : seq (triple I B L)):
     node_terms (trpl :: ts) = undup (node_triple trpl ++ node_terms ts).
@@ -1837,6 +1862,31 @@ Section RDF_Spec.
                                                               relabeling_term mu trm1 = relabeling_term mu trm2 ->
                                                               trm1 = trm2.
   Proof. by case: trm1; case: trm2=> //. Qed.
+
+  Lemma the_function :
+    forall (mu : term I B L -> term I B L), bnodes_to_bnodes mu ->
+       exists (nu : B -> B),
+           Bnode \o nu =1 mu \o Bnode.
+  Proof.
+    move=> mu btb.
+    exists (fun b => let fb := mu (Bnode b) in
+                     let fPb := btb (Bnode b) isT in
+                     match fb as fb' return is_bnode fb' -> B with
+                     | Iri i => fun bfb=> False_rect _ (notF bfb)
+                     | Bnode b2 => fun _ => b2
+                     | Lit l => fun bfb=> False_rect _ (notF bfb)
+                     end fPb).
+    move=> b /=; move : (btb (Bnode b) isT).
+    by case: (mu (Bnode b)).
+  Qed.
+
+  Lemma relabeling_and_constructing : forall (mu : B -> B) (b : B),
+      (Bnode (I := I) (L := L) \o mu) b = relabeling_term mu (Bnode b).
+  Proof. by move=> mu b. Qed.
+
+  Lemma relabeling_and_constructing1 : forall (mu : B -> B),
+      (Bnode (I := I) (L := L) \o mu) =1 (relabeling_term mu) \o Bnode.
+  Proof. by move=> mu. Qed.
 
   Theorem iso_equiv (ts1 ts2 : seq (triple I B L)) :
     (uniq ts1) -> (uniq ts2) ->
@@ -1929,9 +1979,9 @@ Section RDF_Spec.
   + split.
   + by move=> []//.
   + split.
-    - by move=> []//.
+    - move=> //.
     - split.
-      * by move=> []//.
+      * by move=> //.
         ++ rewrite /adj_pres/pres_wf /==> p_wf t; split=> tin.
           move=> wf_s wf_p.
           apply perm_mem in adj.
@@ -1951,14 +2001,187 @@ Section RDF_Spec.
         split.
          + case t=> s /= _ _ sib _. by apply relabeling_term_preserves_is_in_ib.
          + by case t=> _ p /= _ _ pii.
-+ move=> /= [mu_trm [b_to_b [l_id [i_id /= adj_pres]]]].
-  (* suffices : exists mu, *)
-  (* rewrite /adj_pres/= in adj_pres. *)
-  (* rewrite /iso_ts/is_iso_ts. *)
-  Admitted.
++ move=> /= [mu_trm [bij_nodes [b_to_b [l_id [i_id /= adj_pres]]]]].
+  (* rewrite /= mu_trm. *)
+  have [mu muP] := (the_function b_to_b).
+  exists mu.
+   suffices piso_mu : is_pre_iso_ts ts1 ts2 mu.
+    suffices /(perm_eq_relab_uniq_ts u2) [u peq] : perm_eq (relabeling_seq_triple mu ts1) ts2.
+      by apply /and3P; split=> //.
+      rewrite /adj_pres /= in adj_pres.
+      suffices pwf : pres_wf ts1 mu_trm.
+      move: adj_pres=> /(_ pwf) adj_pres.
+      apply uniq_perm=> //.
+      (**)
+      rewrite map_inj_in_uniq //.
+      apply inj_get_bts_inj_ts.
+      by apply: (is_pre_iso_ts_inj2 piso_mu).
+      (* admit. *)
+      move=> t.
+      apply /idP/idP.
+      move=> /mapP[/= t' tin ->].
+      have tin2 := tin.
+      rewrite (adj_pres t') in tin.
+      suffices /andP[wfs wfp]: is_in_ib (mu_trm (subject t')) && is_in_i (predicate t').
+      have := tin wfs wfp.
+      suffices -> : {|
+                      subject := mu_trm (subject t');
+                      predicate := predicate t';
+                      object := mu_trm (object t');
+                      subject_in_IB := wfs;
+                      predicate_in_I := wfp
+                    |} = relabeling_triple mu t'.
+      done.
+      (**)
+      apply triple_inj=> //=.
+      rewrite !projs_rel.
+      apply in_triple_s_in_node_terms in tin2.
+      case: (subject t') wfs tin2=> //= x _ irinx.
+      by apply i_id.
+      by apply l_id.
+      rewrite /comp/= in muP.
+      by rewrite muP.
+      rewrite !projp_rel.
+      by case: (predicate t') wfp.
+      rewrite !projo_rel.
+      apply in_triple_o_in_node_terms in tin2.
+      case: (object t') tin2 => //= x.
+      rewrite /comp/= in muP.
+      by rewrite muP.
+      (**)
+      have [h1 _]:= pwf (subject t') (in_triple_s_in_node_terms tin2).
+      apply /andP; split.
+       by rewrite h1; case : t' tin2 tin h1.
+       by case t'.
+      rewrite /bij_nodes/bnode_map_bij in bij_nodes.
+      move: bij_nodes=> /and3P[_ _ bij_nodes].
+      move=> tin2.
+      have /andP[sin_nodes oin_nodes] := in_ts_in_nt tin2.
+      rewrite -!(perm_mem bij_nodes) in sin_nodes oin_nodes.
+      move/mapP : sin_nodes => [/= s' s'in seq].
+      move/mapP : oin_nodes => [/= o' o'in oeq].
+      suffices [sib' pii'] : is_in_ib s' /\ is_in_i (predicate t).
+      pose t' := mkTriple o' sib' pii'.
+      suffices : t' \in ts1.
+        move=> /(map_f (relabeling_triple mu)).
+        suffices -> :  relabeling_triple mu t' = t.
+          done.
+        apply triple_inj.
+        + rewrite projs_rel. rewrite seq.
+          rewrite /=.
+          move {t'}.
+          case: s' sib' s'in {seq}=> //x.
+          - by move=> _ /i_id ->.
+          - by move=> _ _ /=; rewrite /comp in muP; rewrite muP.
+            + by rewrite projp_rel /==> {t'}; case: (predicate t) pii'.
+            + rewrite projo_rel oeq /=.
+              case: o' o'in oeq {t'}=> //=x.
+          - by move=> /i_id ->.
+          - by move=> /l_id ->.
+          - by move=> _ _ /=; rewrite /comp in muP; rewrite muP.
+            (**)
+            apply adj_pres.
+            move=> wfs wfp.
+            rewrite /=.
+            suffices <- : t =
+                         {| subject := mu_trm s'; predicate := predicate t; object := mu_trm o'; subject_in_IB := wfs; predicate_in_I := wfp |}.
+              done.
+            by apply triple_inj=> //=.
+            split; last by (case t).
+            case: t {tin2} seq {oeq}=> /= s _ _ sib _ eq.
+            rewrite {}eq in sib.
+            move: sib.
+            case: s' s'in seq=> //x.
+            move=> /l_id -> //.
+            (* *)
+      rewrite /pres_wf /==> trm tin; split.
+      rewrite /is_in_ib=> /orP[].
+      + by case: trm tin=> //=i tin _; rewrite i_id.
+      + by case: trm tin=> //=i tin _; rewrite b_to_b // orbT.
+      + by case: trm tin=> //=i tin _; rewrite i_id.
+        (* piso *)
+  apply /and3P; split; rewrite ?uniq_get_bts //.
+  rewrite -perm_relabel_bts.
+  apply uniq_perm; rewrite ?uniq_bnodes_ts //.
+  rewrite /bij_nodes/bnode_map_bij in bij_nodes.
+  move: bij_nodes=> /and3P[_ _ bij_nodes].
+  have umap : uniq [seq mu_trm i | i <- node_terms ts1] by rewrite (perm_uniq bij_nodes) uniq_node_terms.
+  have /(_ ts1) inj_mu := (in_map_injP (mu_trm ) (uniq_node_terms _)).
+  move: umap=> /inj_mu {}inj_mu_trm.
+  rewrite bnodes_map_get_bts -map_comp.
+
+  have /eq_map <- := relabeling_and_constructing1 mu.
+  rewrite (eq_map muP) map_comp -bnodes_map_get_bts.
+  rewrite map_inj_in_uniq ?uniq_bnodes_ts //.
+  move=> b1 b2 b1in b2in. apply inj_mu_trm.
+  have /permEl /perm_mem <- := perm_filterC (@is_bnode I B L) (node_terms ts1).
+  by rewrite mem_cat -(perm_mem (bnodes_nodes ts1)) b1in.
+  have /permEl /perm_mem <- := perm_filterC (@is_bnode I B L) (node_terms ts1).
+  by rewrite mem_cat -(perm_mem (bnodes_nodes ts1)) b2in.
+  (**)
+  move=> b.
+  apply /idP/idP.
+  have /(eq_mem_map (relabeling_term mu)) H := (perm_mem (bnodes_nodes ts1)).
+  rewrite bnodes_map_get_bts -map_comp.
+  have /eq_map <- := relabeling_and_constructing1 mu.
+  rewrite (eq_map muP) map_comp -bnodes_map_get_bts.
+  rewrite /bij_nodes/bnode_map_bij in bij_nodes.
+  move: bij_nodes=> /and3P[_ _ bij_nodes].
+  move=> bin.
+  suffices : b \in [seq mu_trm i | i <- node_terms ts1].
+    rewrite (perm_mem bij_nodes).
+    have : is_bnode b. move/mapP : bin=> /= [t2 t2in ].
+      have /allP := (all_bnodes_ts ts1).
+      move=> /(_ t2 t2in).
+      by case: t2 t2in=> //b2 bin /b_to_b H2 -> //.
+    have /permEl /perm_mem <- := perm_filterC (@is_bnode I B L) (node_terms ts2).
+    rewrite mem_cat. rewrite -(perm_mem (bnodes_nodes ts2)).
+    by rewrite mem_filter /==> -> /=; rewrite orbF.
+    have /permEl /perm_mem H2 := perm_filterC (@is_bnode I B L) (node_terms ts1).
+    rewrite -(eq_mem_map mu_trm H2).
+    rewrite map_cat mem_cat.
+    have /(eq_mem_map mu_trm) H3 := (perm_mem (bnodes_nodes ts1)).
+    rewrite H3 in bin.
+    by rewrite bin.
+    (**)
+  rewrite /bij_nodes/bnode_map_bij in bij_nodes.
+  move: bij_nodes=> /and3P[_ _ bij_nodes].
+  rewrite (perm_mem (bnodes_nodes ts2)).
+  apply (perm_filter (@is_bnode I B L)) in bij_nodes.
+  rewrite -(perm_mem bij_nodes).
+  rewrite mem_filter.
+  rewrite bnodes_map_get_bts -map_comp.
+  have /eq_map <- := relabeling_and_constructing1 mu.
+  rewrite (eq_map muP) map_comp -bnodes_map_get_bts.
+  move=> /andP[bb /mapP[/= t tin c]].
+  suffices H: t \in bnodes_ts ts1.
+  apply /mapP=> /=.
+  exists t=> //.
+    suffices bt : is_bnode t.
+      rewrite (perm_mem (bnodes_nodes ts1)).
+      by rewrite mem_filter bt tin.
+      rewrite c in bb.
+      move: bb.
+        case: t tin {c}=> []//x tin.
+      by rewrite (i_id x tin).
+      by rewrite (l_id x tin).
+      Qed.
 
 
+  Definition spec_isocanonical_mapping (M : rdf_graph I B L -> rdf_graph I B L) :=
+    (forall (g : rdf_graph I B L), spec_iso g (M g)) /\
+      (forall (g1 g2 : rdf_graph I B L) , eqb_rdf (M g1) (M g2) <-> spec_iso g1 g2).
 
+  Lemma effective_iso_can_spec_iso_can (M : rdf_graph I B L -> rdf_graph I B L) :
+    effective_isocanonical_mapping M -> spec_isocanonical_mapping M.
+  Proof.
+    move=> [iso_out can].
+    split.
+    + move=> g. apply (iso_equiv (ugraph _) (ugraph _)). apply iso_out.
+    + move=> g h; split.
+      - by move=> /can /(iso_equiv (ugraph _) (ugraph _)).
+      - by move=> siso; apply can; apply (iso_equiv (ugraph _) (ugraph _)).
+  Qed.
 
 
 End RDF_Spec.

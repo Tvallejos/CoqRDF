@@ -444,7 +444,7 @@ Section Kmapping.
     Qed.
 
     Theorem spec_iso_can_kmapping : spec_isocanonical_mapping k_mapping.
-    Proof. by apply (effective_iso_can_spec_iso_can effective_iso_can_kmapping). Qed.
+    Proof. by apply effective_iso_can_spec_iso_can; apply effective_iso_can_kmapping. Qed.
 
   End Kmapping_isocan.
 

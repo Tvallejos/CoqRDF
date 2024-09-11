@@ -1133,7 +1133,7 @@ Section Rdf.
                                                                             predicate_in_I := wfp
                        |} = relabeling_triple rho t.
               suffices /(_ I L) SH : forall s s', s' \in get_bts ts2 -> Bnode (rho s) = Bnode (rho s') -> s \in get_bts ts2.
-                rewrite -(perm_mem peq_rho)=> /mapP/=[t' t'inh2 eqtt' ].
+                rewrite -(perm_mem peq_rho) => /mapP/=[t' t'inh2 eqtt' ].
                 have /and3P[] := triple_case eqtt'.
                 rewrite !projo_rel !projs_rel !projp_rel=> /eqP eqs /eqP eqp /eqP eqo.
                 case_eq ((is_bnode (subject t)) || (is_bnode (object t))).
@@ -1246,6 +1246,12 @@ Section Rdf.
         suffices imp G H : uniq G -> iso_ts G H -> iso_ts H G by split; exact: imp.
         move=> uG [mu [eiso] _].
         by apply effective_iso_ts_iso_inv=> //; exists mu.
+      Qed.
+
+      Corollary effective_iso_ts_sym' ts1 ts2 (u1 : uniq ts1) (u2 : uniq ts2) : effective_iso_ts ts1 ts2 <-> effective_iso_ts ts2 ts1.
+      Proof.
+        suffices imp G H : uniq G -> effective_iso_ts G H -> effective_iso_ts H G by split; exact: imp.
+        by move=> uG /(effective_iso_ts_iso_inv uG) [nu [eiso] _]; exists nu.
       Qed.
 
       Lemma effective_iso_iso ts1 ts2 (u1 : uniq ts1) (u2 : uniq ts2) : effective_iso_ts ts1 ts2 -> iso_ts ts1 ts2.
@@ -1921,7 +1927,7 @@ Section RDF_Spec.
       effective_iso_ts ts1 ts2 <-> spec_iso ts1 ts2.
   Proof.
   move=> u1 u2; split=> [ /(effective_iso_iso u1 u2) [mu [/and3P[piso wf_ret adj]] mu_part] | ].
-  + exists (relabeling_term mu); split=> //.
+  + exists (relabeling_term mu); split => //.
      - have mu_inj_bnodes := is_pre_iso_ts_bnodes_inj piso.
        move : piso=> /and3P[_ _]; rewrite -perm_relabel_bts=> piso.
        suffices peq : perm_eq [seq relabeling_term mu i | i <- node_terms ts1] (node_terms ts2).
@@ -2113,12 +2119,15 @@ Section RDF_Spec.
       (forall (g1 g2 : rdf_graph I B L) , eqb_rdf (M g1) (M g2) <-> spec_iso g1 g2).
 
   Lemma effective_iso_can_spec_iso_can (M : rdf_graph I B L -> rdf_graph I B L) :
-    effective_isocanonical_mapping M -> spec_isocanonical_mapping M.
+    effective_isocanonical_mapping M <-> spec_isocanonical_mapping M.
   Proof.
-    move=> [iso_out can].
-    split.
-    + move=> g. apply (iso_equiv (ugraph _) (ugraph _)). apply iso_out.
-    + move=> g h; split.
+    split; move=> [iso_out can]; split=> g.
+    + by apply (iso_equiv (ugraph _) (ugraph _)); apply iso_out.
+    + move=> h; split.
+      - by move=> /can /(iso_equiv (ugraph _) (ugraph _)).
+      - by move=> siso; apply can; apply (iso_equiv (ugraph _) (ugraph _)).
+    + by apply (iso_equiv (ugraph _) (ugraph _)); apply iso_out.
+    + move=> h; split.
       - by move=> /can /(iso_equiv (ugraph _) (ugraph _)).
       - by move=> siso; apply can; apply (iso_equiv (ugraph _) (ugraph _)).
   Qed.

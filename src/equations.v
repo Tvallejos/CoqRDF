@@ -281,6 +281,16 @@ Section Template.
       by apply preiso_out_template.
     Qed.
 
+    Lemma eiso_correct_complete (g h : seq (triple I B L)) (ug: uniq g) (uh: uniq h) :
+      effective_iso_ts g h <-> (template g) == (template h).
+    Proof.
+    split; last first.
+    move=> /eqP eqmgmh.
+    have := eiso_out_template g ug.
+    rewrite eqmgmh=> mgh.
+    have /(effective_iso_ts_sym uh) hmh := eiso_out_template h uh.
+    by apply: (effective_iso_ts_trans mgh hmh).
+
 
   End Distinguish.
 

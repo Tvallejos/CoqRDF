@@ -102,13 +102,16 @@ Section Template.
                                           uniq [seq fun_of_hash_map hm i | i <- get_bts g].
     Admitted.
 
-    Lemma uniq_label_is_fine :
-      forall (g : seq (triple I B L)) hm, bnodes_hm hm =i get_bts g ->
-                                          is_fine (gen_partition hm [::]) ->
-                                          uniq (relabeling_seq_triple (fun_of_hash_map hm) g).
-    Admitted.
-
-  
+    Lemma uniq_label_is_fine (g : seq (triple I B L)) (ug: uniq g) (hm : hash_map) :
+      bnodes_hm hm =i get_bts g ->
+      is_fine (gen_partition hm [::]) ->
+      uniq (relabeling_seq_triple (fun_of_hash_map hm) g).
+    Proof. move=> mem_eq fine.
+           have := uniq_get_bts_is_fine _ mem_eq fine.
+           move=> /(in_map_injP _ (uniq_get_bts _)) mu_inj.
+           rewrite map_inj_in_uniq=> //.
+           by apply inj_get_bts_inj_ts.
+    Qed.
 
     Hypothesis good_mark : forall (g : seq (triple I B L)) hm, bnodes_hm hm =i get_bts g -> forall b, b \in bnodes_hm hm -> bnodes_hm (mark b hm) =i get_bts g.
 
@@ -232,7 +235,7 @@ Section Template.
       - by right; rewrite intail orbT.
     Qed.
 
-    Lemma uniq_distinguish (g : seq (triple I B L)) hm :
+    Lemma uniq_distinguish (g : seq (triple I B L)) (ug: uniq g) hm :
       bnodes_hm hm =i get_bts g -> (negb \o is_fine) (gen_partition hm [::]) -> uniq (distinguish g hm).
     Proof.
       have : M hm < S (M hm) by apply ltnSn.
@@ -260,10 +263,9 @@ Section Template.
     Lemma uniq_template (g : seq (triple I B L)) (ug: uniq g) : uniq (template g).
     Proof. rewrite /template.
            case: ifP=> H. rewrite sort_uniq.
-           apply uniq_label_is_fine.
+           apply uniq_label_is_fine=> //.
            by move=> h; rewrite color_bnodes init_hash_bnodes.
-           by rewrite /= H.
-           apply uniq_distinguish.
+           apply uniq_distinguish=> //.
            apply color_good_hm.
            apply good_init.
            by rewrite /= H.

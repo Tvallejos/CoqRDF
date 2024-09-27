@@ -95,11 +95,20 @@ Section Template.
     Variable bnodes_hm : hash_map -> seq B.
     Hypothesis in_part_in_bnodes : forall bn hm, bn \in choose_part hm -> bn.1 \in bnodes_hm hm.
     Variable (init_hash : seq (triple I B L) -> hash_map).
+
+    Lemma uniq_get_bts_is_fine :
+      forall (g : seq (triple I B L)) hm, bnodes_hm hm =i get_bts g ->
+                                          is_fine (gen_partition hm [::]) ->
+                                          uniq [seq fun_of_hash_map hm i | i <- get_bts g].
+    Admitted.
+
     Lemma uniq_label_is_fine :
       forall (g : seq (triple I B L)) hm, bnodes_hm hm =i get_bts g ->
                                           is_fine (gen_partition hm [::]) ->
                                           uniq (relabeling_seq_triple (fun_of_hash_map hm) g).
     Admitted.
+
+  
 
     Hypothesis good_mark : forall (g : seq (triple I B L)) hm, bnodes_hm hm =i get_bts g -> forall b, b \in bnodes_hm hm -> bnodes_hm (mark b hm) =i get_bts g.
 
@@ -315,11 +324,23 @@ Section Template.
       by apply mem_eq_get_bts=> b'; rewrite mem_sort.
       Qed.
 
+    Lemma uniq_map_pre_iso (mu : B -> B) (ts : seq (triple I B L)) :
+      uniq (map mu (get_bts ts)) ->
+      is_pre_iso_ts ts (relabeling_seq_triple mu ts) mu.
+    Proof. move=> umu. rewrite /is_pre_iso_ts. rewrite /bnode_map_bij. rewrite !uniq_get_bts /=.
+           apply perm_eq_bts_relabel_inj_in.
+           apply /in_map_injP=> //. apply uniq_get_bts.
+           by apply perm_refl.
+    Qed.
+
+
     Lemma piso_funof (g : seq (triple I B L)) (hm: hash_map) :
         bnodes_hm hm =i get_bts g ->
         is_fine (gen_partition hm [::]) ->
         is_pre_iso_ts g (relabeling_seq_triple (fun_of_hash_map hm) g) (fun_of_hash_map hm).
-    Admitted.
+    Proof.
+      move=> mem_eq fine. apply uniq_map_pre_iso. by apply uniq_get_bts_is_fine.
+    Qed.
 
     Lemma nil_is_nil (g : seq (triple I B L)) (hm : hash_map) :
       distinguish g hm = can -> g = can.
@@ -381,11 +402,16 @@ Section Template.
       by apply distinguish_piso.
     Qed.
 
-    Lemma eiso_sort : forall (g: seq (triple I B L)) (mu : B -> B),
-        effective_iso_ts g (relabeling_seq_triple mu g) ->
-
-        effective_iso_ts g (sort le_triple (relabeling_seq_triple mu g)).
-    Admitted.
+    Lemma eiso_sort (g: seq (triple I B L)) (mu : B -> B) :
+        is_effective_iso_ts g (relabeling_seq_triple mu g) mu ->
+        is_effective_iso_ts g (sort le_triple (relabeling_seq_triple mu g)) mu.
+    Proof. move=> /and3P/= [piso urel peq].
+           apply /and3P; split=> //.
+           by apply piso_sort.
+           apply uniq_perm=> //.
+           by rewrite sort_uniq.
+           by move=> b; rewrite mem_sort.
+    Qed.
 
     Lemma eiso_out_template (g : seq (triple I B L)) (ug : uniq g) : effective_iso_ts g (template g).
     Proof.
@@ -393,10 +419,9 @@ Section Template.
       move: (uniq_template g ug).
       suffices [mu  [-> piso utg]]: exists mu, (template g) = sort le_triple (relabeling_seq_triple mu g) /\ is_pre_iso_ts g (template g) mu.
       rewrite sort_uniq in utg.
-      apply eiso_sort.
+      exists mu; apply eiso_sort.
       have {piso}piso : is_pre_iso_ts g (relabeling_seq_triple mu g) mu. apply piso_sort in piso. by apply piso.
-      move : (ts_pre_iso_effective_iso utg piso)=> eiso.
-      by exists mu.
+      move : (ts_pre_iso_effective_iso utg piso)=> eiso //.
       by apply preiso_out_template.
     Qed.
 

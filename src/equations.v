@@ -77,9 +77,7 @@ Section Template.
   Qed.
 
   Lemma foldl_foldl_eq {T R : eqType} (s : list T) (f : R -> T -> R) z :
-
-    @foldl_In _ _ s (fun r t (_ : t \in s) => f r t) z =
-      foldl f z s.
+    @foldl_In _ _ s (fun r t (_ : t \in s) => f r t) z = foldl f z s.
   Proof.
     funelim (foldl_In s _ z).
     - by [].
@@ -116,26 +114,27 @@ Section Template.
       forall (g : seq (triple I B L)) hm,
                  bnodes_hm hm =i get_bts g -> bnodes_hm (color_refine g hm) =i get_bts g.
 
-      Equations? distinguish
+    Notation le_triple := (@le_triple disp I B L).
+
+    Variable can : seq (triple I B L).
+    Hypothesis ucan : uniq can.
+
+    Equations? distinguish__
       (g : seq (triple I B L))
         (hm : hash_map)
         (gbot : seq (triple I B L))
         : seq (triple I B L) by wf (M hm) lt :=
-      distinguish g hm gbot :=
+      distinguish__ g hm gbot :=
       let p := choose_part hm in
 	    let d := fun bn inP =>
-	    (* let d := fun bn => *)
 	               let hm' := color_refine g (mark bn.1 hm) in
 	               if is_fine (gen_partition hm' [::]) then
-	                 let candidate := relabeling_seq_triple (fun_of_hash_map hm') g in
+	                 let candidate := sort le_triple (relabeling_seq_triple (fun_of_hash_map hm') g) in
 	                 candidate
-	               else (distinguish g hm' gbot) in
+	               else (distinguish__ g hm' gbot) in
       let f := fun gbot bn inP  =>
-      (* let f := fun gbot bn  => *)
-                 (* let candidate := d bn in *)
                  let candidate := d bn inP in
                  if cmp gbot candidate then candidate else gbot in
-      (* foldl f gbot p. *)
       foldl_In p f gbot.
       Proof.
         apply /ltP.
@@ -144,93 +143,100 @@ Section Template.
         by apply : (markP (s,n)).
       Qed.
 
+    Definition distinguish (g : seq (triple I B L)) (hm : hash_map) : seq (triple I B L) :=
+      distinguish__ g hm can.
+
     Definition distinguish_ (g : seq (triple I B L))
         (hm : hash_map)
-        (gbot : seq (triple I B L))
+        (* (gbot : seq (triple I B L)) *)
         : seq (triple I B L) :=
       let p := choose_part hm in
 	    let d := fun bn =>
 	               let hm' := color_refine g (mark bn.1 hm) in
 	               if is_fine (gen_partition hm' [::]) then
-	                 let candidate := relabeling_seq_triple (fun_of_hash_map hm') g in
+	                 let candidate := sort le_triple (relabeling_seq_triple (fun_of_hash_map hm') g) in
 	                 candidate
-	               else (distinguish g hm' gbot) in
+	               else (distinguish g hm') in
       let f := fun gbot bn  =>
                  let candidate := d bn in
                  if cmp gbot candidate then candidate else gbot in
-      foldl f gbot p.
+      foldl f can p.
 
-    Lemma eq_distinguish (g : seq (triple I B L)) (hm : hash_map) (gbot : seq (triple I B L)) :
-      distinguish g hm gbot = distinguish_ g hm gbot.
-    Proof. rewrite /distinguish_. rewrite -foldl_foldl_eq.
-           autorewrite with distinguish. by []. Qed.
+    Lemma eq_distinguish (g : seq (triple I B L)) (hm : hash_map)
+      (* (gbot : seq (triple I B L)) *)
+      :
+      distinguish g hm = distinguish_ g hm.
+    Proof. rewrite /distinguish_/distinguish. rewrite -foldl_foldl_eq.
+           autorewrite with distinguish__. by []. Qed.
 
     Definition canonicalize (g : seq (triple I B L)) (hm : hash_map)
-      (gbot : seq (triple I B L)) (bn : (B * nat)) :=
+      (* (gbot : seq (triple I B L)) *)
+      (bn : (B * nat)) :=
 	      let hm' := color_refine g (mark bn.1 hm) in
 	      if is_fine (gen_partition hm' [::]) then
-	        let candidate := relabeling_seq_triple (fun_of_hash_map hm') g in
+	        let candidate := sort le_triple (relabeling_seq_triple (fun_of_hash_map hm') g) in
 	        candidate
-	      else (distinguish g hm' gbot).
+	      else (distinguish g hm').
 
     Definition choose_graph (gbot candidate : seq (triple I B L)) :=
       if cmp gbot candidate then candidate else gbot.
 
     Definition distinguish_fold (g : seq (triple I B L))
       (hm : hash_map)
-      (gbot : seq (triple I B L))
+      (* (gbot : seq (triple I B L)) *)
       : seq (triple I B L) :=
       let p := choose_part hm in
-      foldl choose_graph gbot (map (canonicalize g hm gbot) p).
+      foldl choose_graph can (map (canonicalize g hm) p).
 
     Lemma fold_map (T1 T2 R : Type) (f : R -> T2 -> R) (g : T1 -> T2) (z : R) (s : seq T1) :
       foldl (fun r1 t1=> f r1 (g t1)) z s = foldl f z (map g s).
-    Proof. elim: s z=> [//| a tl IHl] /= z.
-           by rewrite -IHl. Qed.
+    Proof. by elim: s z=> [//| a tl IHl] /= z; rewrite -IHl. Qed.
 
-    Lemma distinguish_fold_map (g : seq (triple I B L)) (hm : hash_map) (gbot : seq (triple I B L)) :
-      distinguish g hm gbot = distinguish_fold g hm gbot.
-    Proof. by rewrite /distinguish_fold eq_distinguish /distinguish_ /= -fold_map. Qed.
+    Lemma distinguish_fold_map (g : seq (triple I B L)) (hm : hash_map)
+      (* (gbot : seq (triple I B L)) *)
+      :
+      distinguish g hm = distinguish_fold g hm.
+    Proof. by rewrite /distinguish_fold eq_distinguish /distinguish_  -fold_map /canonicalize. Qed.
 
     Hypothesis init_hash_bnodes : forall (g : seq (triple I B L)), bnodes_hm (init_hash g) =i get_bts g.
+
     Hypothesis color_bnodes : forall (g : seq (triple I B L)) hm, bnodes_hm (color g hm) =i bnodes_hm hm.
-
-    Variable can : seq (triple I B L).
-    Hypothesis ucan : uniq can.
-
-    Notation le_triple := (@le_triple disp I B L).
 
     Definition template (g : seq (triple I B L)) :=
       let hm := init_hash g in
       let hm' := color g hm in
       let iso_g := if is_fine (gen_partition hm' [::])
                    then (sort le_triple (relabeling_seq_triple (fun_of_hash_map hm') g))
-                   else distinguish g hm' can in
+                   else distinguish g hm' in
       iso_g.
 
-
-    Lemma distinguish_choice : forall (g : seq (triple I B L)) (hm: hash_map) (gcan : seq (triple I B L)),
-      let f := fun bn =>
-	               let hm' := color_refine g (mark bn.1 hm) in
-	               if is_fine (gen_partition hm' [::]) then
-	                 let candidate := sort le_triple (relabeling_seq_triple (fun_of_hash_map hm') g) in
-	                 candidate
-	               else (distinguish g hm' gcan) in
-      distinguish g hm gcan = gcan \/ distinguish g hm gcan \in (map f (choose_part hm)).
-      Admitted.
+    Lemma distinguish_choice (g : seq (triple I B L)) (hm: hash_map) :
+      distinguish g hm = can \/ distinguish g hm \in (map (canonicalize g hm) (choose_part hm)).
+    Proof.
+      rewrite distinguish_fold_map/distinguish_fold.
+      set l := (choose_part hm).
+      set x0 := can.
+      elim: l x0 => [//| t ts IHts] x0; first by left.
+      + rewrite in_cons /=. case: (IHts (choose_graph x0 (canonicalize g hm t)))=> [ -> |intail] /=.
+      - rewrite /choose_graph; case: ifP=> _; first by right; rewrite eqxx.
+        * by left.
+      - by right; rewrite intail orbT.
+    Qed.
 
     Lemma uniq_distinguish (g : seq (triple I B L)) hm :
-      bnodes_hm hm =i get_bts g -> (negb \o is_fine) (gen_partition hm [::]) -> uniq (distinguish g hm can).
+      bnodes_hm hm =i get_bts g -> (negb \o is_fine) (gen_partition hm [::]) -> uniq (distinguish g hm).
     Proof.
       have : M hm < S (M hm) by apply ltnSn.
       move: hm (M hm).+1.
       move=> hm n; move: n hm=> n.
       elim: n => [//| n IHn hm].
-      case: (distinguish_choice g hm can); first by move=> ->; rewrite ucan.
+      case: (distinguish_choice g hm); first by move=> ->; rewrite ucan.
       move=> /mapP/= [bn pin ->].
       move=> MH eqbns finePn.
-      case : ifP.
-      -  move=> isFine. rewrite sort_uniq. apply uniq_label_is_fine=> //. apply color_refine_good_hm. apply good_mark. apply eqbns.
+      rewrite /canonicalize.
+      case: ifP.
+      -  move=> isFine; rewrite sort_uniq.
+         apply uniq_label_is_fine=> //. apply color_refine_good_hm. apply good_mark. apply eqbns.
          by apply in_part_in_bnodes.
       - move=> finePn1. apply IHn.
         eapply Order.POrderTheory.le_lt_trans.
@@ -283,8 +289,6 @@ Section Template.
       by rewrite !mem_filter mem_eq.
     Qed.
 
-
-
     Lemma mem_eq_get_bts (g h : seq (triple I B L)) :
       g =i h -> get_bts g =i get_bts h.
     Proof.
@@ -311,18 +315,23 @@ Section Template.
       by apply mem_eq_get_bts=> b'; rewrite mem_sort.
       Qed.
 
-    Lemma piso_funof : forall (g : seq (triple I B L)) (hm: hash_map),
-        bnodes_hm hm =i get_bts g -> is_fine (gen_partition hm [::]) -> is_pre_iso_ts g (relabeling_seq_triple (fun_of_hash_map hm) g) (fun_of_hash_map hm). Admitted.
+    Lemma piso_funof (g : seq (triple I B L)) (hm: hash_map) :
+        bnodes_hm hm =i get_bts g ->
+        is_fine (gen_partition hm [::]) ->
+        is_pre_iso_ts g (relabeling_seq_triple (fun_of_hash_map hm) g) (fun_of_hash_map hm).
+    Admitted.
 
-    Lemma nil_is_nil : forall g hm, distinguish g hm can = can -> g = can. Admitted.
+    Lemma nil_is_nil (g : seq (triple I B L)) (hm : hash_map) :
+      distinguish g hm = can -> g = can.
+    Admitted.
     (* prove this *)
 
     Hypothesis sort_can : sort le_triple can = can.
 
     Lemma distinguish_piso : forall (g : seq (triple I B L)) (ug: uniq g),
       exists mu : B -> B,
-        distinguish g (color g (init_hash g)) can = sort le_triple (relabeling_seq_triple mu g) /\
-          is_pre_iso_ts g (distinguish g (color g (init_hash g)) can) mu.
+        distinguish g (color g (init_hash g)) = sort le_triple (relabeling_seq_triple mu g) /\
+          is_pre_iso_ts g (distinguish g (color g (init_hash g))) mu.
     Proof.
       move=> g ug.
       set hm := (color g (init_hash g)).
@@ -331,9 +340,9 @@ Section Template.
       move: hm (M hm).+1.
       move=> hm n; move: n hm=> n.
       elim: n => [//| n IHn hm' ghm hmM].
-      move: (distinguish_choice g hm' can)=> /=[].
+      move: (distinguish_choice g hm')=> /=[].
       + move=> H. rewrite H. exists id. split. apply nil_is_nil in H.
-        by rewrite relabeling_seq_triple_id H sort_can.
+        by rewrite relabeling_seq_triple_id H.
         apply nil_is_nil in H.
         rewrite H.
         rewrite /is_pre_iso_ts /= /bnode_map_bij.
@@ -342,12 +351,14 @@ Section Template.
         case_eq  (is_fine (gen_partition (color_refine g (mark bn.1 hm')) [::]))=> H.
         exists (fun_of_hash_map (color_refine g (mark bn.1 hm'))).
         split=> //.
+        by rewrite /canonicalize H.
+        rewrite /canonicalize H.
         apply piso_sort.
         apply piso_funof.
         apply color_refine_good_hm. apply good_mark=> //.
         by apply in_part_in_bnodes.
         by apply H.
-      + apply IHn.
+      + rewrite /canonicalize H. apply IHn.
         apply color_refine_good_hm.
         apply good_mark=> //.
         by apply in_part_in_bnodes.
@@ -370,10 +381,11 @@ Section Template.
       by apply distinguish_piso.
     Qed.
 
-    Hypothesis eiso_sort : forall (g: seq (triple I B L)) (mu : B -> B),
+    Lemma eiso_sort : forall (g: seq (triple I B L)) (mu : B -> B),
         effective_iso_ts g (relabeling_seq_triple mu g) ->
 
         effective_iso_ts g (sort le_triple (relabeling_seq_triple mu g)).
+    Admitted.
 
     Lemma eiso_out_template (g : seq (triple I B L)) (ug : uniq g) : effective_iso_ts g (template g).
     Proof.
@@ -390,24 +402,25 @@ Section Template.
 
 
     Hypothesis iso_color_fine : forall (g h : seq (triple I B L)),
-        uniq g -> uniq h -> 
-    effective_iso_ts g h ->
-    is_fine (gen_partition (color g (init_hash g)) [::]) = is_fine (gen_partition (color h (init_hash h)) [::]).
+      uniq g -> uniq h ->
+      effective_iso_ts g h ->
+      is_fine (gen_partition (color g (init_hash g)) [::]) =
+        is_fine (gen_partition (color h (init_hash h)) [::]).
 
     Hypothesis iso_color_fine_can : forall (g h : seq (triple I B L)),
-          uniq g -> uniq h -> 
+        uniq g -> uniq h ->
         effective_iso_ts g h ->
         relabeling_seq_triple (fun_of_hash_map (color g (init_hash g))) g
         =i relabeling_seq_triple (fun_of_hash_map (color h (init_hash h))) h.
 
     Hypothesis distinguish_complete : forall (g h : seq (triple I B L)),
-        uniq g -> uniq h -> 
+        uniq g -> uniq h ->
         effective_iso_ts g h ->
         is_fine (gen_partition (color g (init_hash g)) [::]) = false ->
-        distinguish g (color g (init_hash g)) can == distinguish h (color h (init_hash h)) can.
+        distinguish g (color g (init_hash g)) == distinguish h (color h (init_hash h)).
 
-    Hypothesis choose_graphA : associative choose_graph. 
-    Hypothesis choose_graphC : commutative choose_graph. 
+    Hypothesis choose_graphA : associative choose_graph.
+    Hypothesis choose_graphC : commutative choose_graph.
     Hypothesis choose_graph_idem : idempotent choose_graph.
     Hypothesis gbot_lid : left_id can choose_graph.
 
@@ -419,11 +432,9 @@ Section Template.
       gbot_lid.
 
     Hypothesis eiso_mem_eq_canonicalize : forall (g h : seq (triple I B L)) (ug: uniq g) (uh: uniq h),
-      effective_iso_ts g h ->
-               is_fine (gen_partition (color g (init_hash g)) [::]) = false ->
-
-               map (canonicalize g (color g (init_hash g)) can) (choose_part (color g (init_hash g))) =i
-               map (canonicalize h (color h (init_hash h)) can) (choose_part (color h (init_hash h))).
+        effective_iso_ts g h ->
+        is_fine (gen_partition (color g (init_hash g)) [::]) = false ->
+        map (canonicalize g (color g (init_hash g))) (choose_part (color g (init_hash g))) =i                                                                                                  map (canonicalize h (color h (init_hash h))) (choose_part (color h (init_hash h))).
 
     Lemma eiso_correct_complete (g h : seq (triple I B L)) (ug: uniq g) (uh: uniq h) :
       effective_iso_ts g h <-> (template g) == (template h).

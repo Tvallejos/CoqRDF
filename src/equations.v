@@ -62,11 +62,11 @@ Section Template.
       else
         b.
 
-  Fixpoint bnodes_hm (hm : hash_map): seq B :=
-    match hm with
-    | [::] => [::]
-    | (b,n)::tl => b::(bnodes_hm tl)
-    end.
+  Definition bnodes_hm (hm : hash_map): seq B :=
+    map fst hm.
+
+  Definition hashes_hm (hm : hash_map): seq nat :=
+    map snd hm.
 
     Equations? foldl_In {T R : eqType} (s : seq T) (f : R -> forall (y : T), y \in s -> R) (z : R) : R :=
     foldl_In nil f z := z;
@@ -92,22 +92,150 @@ Section Template.
 
     Hypothesis (markP : forall (bn : B * nat) (hm : hash_map), bn \in choose_part hm -> M (mark bn.1 hm) < M hm).
     Hypothesis (color_refineP : forall (g : seq (triple I B L)) (hm : hash_map) , M (color_refine g hm) <= M hm).
-    Variable bnodes_hm : hash_map -> seq B.
     Hypothesis in_part_in_bnodes : forall bn hm, bn \in choose_part hm -> bn.1 \in bnodes_hm hm.
     Variable (init_hash : seq (triple I B L) -> hash_map).
 
-    Lemma uniq_get_bts_is_fine :
-      forall (g : seq (triple I B L)) hm, bnodes_hm hm =i get_bts g ->
-                                          is_fine (gen_partition hm [::]) ->
-                                          uniq [seq fun_of_hash_map hm i | i <- get_bts g].
+    Lemma bnodes_hm_exists (hm : hash_map) :
+      forall b, b \in bnodes_hm hm -> exists n, (b,n) \in hm.
+    Proof.
+      move=> b /mapP/=[[b' n] bin ->]/=. by exists n.
+    Qed.
+
+    Lemma bnodes_hm_has_eq_bnodes (hm : hash_map) :
+        forall b, b \in bnodes_hm hm -> has (eq_bnode b) hm.
+    Proof.
+    move=> b /bnodes_hm_exists/=[n bnin].
+    apply /hasP. exists (b,n)=> //.
+    by rewrite /eq_bnode/pred_eq eqxx.
+    Qed.
+
+    Lemma find_index_eq_bnode bs s (bn : B) :
+      size s = size bs ->
+      find (eq_bnode bn) (zip bs s) = index bn bs.
+    Proof.
+      elim: bs s => [| a l IHl]; first by move=> ?; rewrite zip0s.
+      by case =>  [//| b l2] /= [eqsize_tl]; rewrite eq_sym IHl //.
+    Qed.
+
+    Lemma is_fine_uniq (hm : hash_map) :
+      is_fine (gen_partition hm [::]) -> uniq (map snd hm).
+    Proof.
+    (* elim: hm=> [//| [b n] tl IHtl]. *)
+    funelim (gen_partition hm [::]); first by [].
+    rewrite /==> fine.
+    apply /andP; split.
+    admit.
+    apply H.
+    rewrite /=.
+    case: ifP.
+    case : bn H Heqcall fine=> b n H Heqcall fine=> /=.
+    + case_eq (eq_hash n (b,n)); first by [].
+      move=> eqhash _.
+      apply DepElim.pack_sigma_eq_nondep.
+      Set Printing All. congr .
+      apply IHtl.
+      move/allP : fine=> /==> fineIn.
+      apply /allP.
+      move=> /= p pin.
+      apply fineIn.
+
+      autorewrite with gen_partition=> /=; rewrite eqhash /=. => fine.
+
+      rewrite /=.
+
+      rewrite eq_hash.
+    rewrite /negb. move=> neq_hash. rewrite neq_hash.
+    move /eqP.
+    rewrite /eq_hash.
+
     Admitted.
+
+    Lemma size_proj (T1 T2 : Type) (s : seq (T1 * T2)) : size [seq i.2 | i <- s] = size [seq i.1 | i <- s].
+    Proof. by elim: s=> [//| h tl IHtl] /=; rewrite IHtl. Qed.
+
+    Lemma nth_funof (g : seq (triple I B L)) (hm : hash_map) :
+      bnodes_hm hm =i get_bts g ->
+          is_fine (gen_partition hm [::]) ->
+          forall (b : B) dfb dfn (bin : b \in get_bts g),
+      exists n, (nth (dfb, dfn) hm (index b [seq i.1 | i <- hm])) = (b,n).
+    Proof. move=> mem_eq fine b bdf dfn. rewrite -mem_eq.
+           exists (nth dfn [seq i.2 | i <- hm] (index b [seq i.1 | i <- hm])).
+           have hm_zip : hm = zip (map fst hm) (map snd hm).
+           rewrite zip_map; elim: hm {mem_eq fine bin}=> [//| [h1 h2] tl IHtl] /=; by rewrite -IHtl.
+           rewrite hm_zip.
+           rewrite nth_zip; last by rewrite size_proj.
+           congr pair.
+           by rewrite -hm_zip nth_index.
+           by rewrite -hm_zip.
+    Qed.
+
+    Lemma funof_snd_inj (g : seq (triple I B L)) (hm : hash_map) :
+      bnodes_hm hm =i get_bts g ->
+      is_fine (gen_partition hm [::]) ->
+      uniq (hashes_hm hm) ->
+      {in hm &, injective [eta snd]}.
+    Proof.
+    have hm_zip : hm = zip (map fst hm) (map snd hm).
+    rewrite zip_map; elim: hm=> [//| [h1 h2] tl IHtl] /=; by rewrite -IHtl.
+    rewrite hm_zip.
+    set hm' := zip _ _.
+    move=> mem_eq fine uhm /= bn bn' bnin bn'in.
+    eapply (zip_uniq_proj2 ).
+    apply is_fine_uniq; apply fine.
+    symmetry; by apply size_proj.
+    by rewrite /hm' -hm_zip.
+    by rewrite /hm' -hm_zip.
+    Qed.
+
+    Lemma uniq_get_bts_is_fine (g : seq (triple I B L)) hm :
+      bnodes_hm hm =i get_bts g ->
+      is_fine (gen_partition hm [::]) ->
+      uniq [seq fun_of_hash_map hm i | i <- get_bts g].
+    Proof.
+      have hm_zip : hm = zip (map fst hm) (map snd hm).
+      rewrite zip_map; elim: hm=> [//| [h1 h2] tl IHtl] /=; by rewrite -IHtl.
+      move=> mem_eq fine.
+      apply /in_map_injP; first by apply uniq_get_bts.
+      move=> b b' bin b'in.
+      rewrite /fun_of_hash_map.
+      rewrite -!mem_eq in bin b'in.
+      have  hasb:= (bnodes_hm_has_eq_bnodes _ _ bin).
+      have hasb' := (bnodes_hm_has_eq_bnodes _ _ b'in).
+      rewrite hasb hasb'.
+      move=> /nat_inj_.
+      rewrite hm_zip.
+      have eqsize: size [seq i.2 | i <- hm] = size [seq i.1 | i <- hm] by apply size_proj.
+      rewrite !find_index_eq_bnode //.
+      rewrite -!hm_zip.
+      move=> eq_nth.
+      have [n nin]:= bnodes_hm_exists hm b bin.
+      have [n' n'in]:= bnodes_hm_exists hm b' b'in.
+      move/eqP : eq_nth.
+      suffices [inb inb'] : (index b [seq i.1 | i <- hm] < size hm)%N /\ (index b' [seq i.1 | i <- hm] < size hm)%N.
+      rewrite (nth_map (b,O)) // (nth_map (b',O)) //.
+      have [n'' n''P]: exists n, (nth (b, O) hm (index b [seq i.1 | i <- hm])) = (b,n). by apply (nth_funof g)=> //; rewrite -mem_eq.
+      rewrite n''P.
+      have [n''' n'''P]: exists n, (nth (b', O) hm (index b' [seq i.1 | i <- hm])) = (b',n). by apply (nth_funof g)=> //; rewrite -mem_eq.
+      rewrite n'''P.
+      move=> /eqP eqpair.
+      apply (funof_snd_inj g hm mem_eq fine) in eqpair.
+      by move : eqpair => [->].
+      by apply is_fine_uniq.
+      by rewrite -n''P; apply mem_nth.
+      by rewrite -n'''P; apply mem_nth.
+      split.
+      rewrite -(find_index_eq_bnode (map fst hm) (map snd hm)) //.
+      by rewrite -hm_zip -has_find.
+      rewrite -(find_index_eq_bnode (map fst hm) (map snd hm)) //.
+      by rewrite -hm_zip -has_find.
+    Qed.
 
     Lemma uniq_label_is_fine (g : seq (triple I B L)) (ug: uniq g) (hm : hash_map) :
       bnodes_hm hm =i get_bts g ->
       is_fine (gen_partition hm [::]) ->
       uniq (relabeling_seq_triple (fun_of_hash_map hm) g).
     Proof. move=> mem_eq fine.
-           have := uniq_get_bts_is_fine _ mem_eq fine.
+           have := uniq_get_bts_is_fine _ _ mem_eq fine.
            move=> /(in_map_injP _ (uniq_get_bts _)) mu_inj.
            rewrite map_inj_in_uniq=> //.
            by apply inj_get_bts_inj_ts.
@@ -158,10 +286,7 @@ Section Template.
     Definition distinguish (g : seq (triple I B L)) (hm : hash_map) : seq (triple I B L) :=
       distinguish__ g hm can.
 
-    Definition distinguish_ (g : seq (triple I B L))
-        (hm : hash_map)
-        (* (gbot : seq (triple I B L)) *)
-        : seq (triple I B L) :=
+    Definition distinguish_ (g : seq (triple I B L)) (hm : hash_map) : seq (triple I B L) :=
       let p := choose_part hm in
 	    let d := fun bn =>
 	               let hm' := color_refine g (mark bn.1 hm) in
@@ -174,9 +299,7 @@ Section Template.
                  if cmp gbot candidate then candidate else gbot in
       foldl f can p.
 
-    Lemma eq_distinguish (g : seq (triple I B L)) (hm : hash_map)
-      (* (gbot : seq (triple I B L)) *)
-      :
+    Lemma eq_distinguish (g : seq (triple I B L)) (hm : hash_map) :
       distinguish g hm = distinguish_ g hm.
     Proof. rewrite /distinguish_/distinguish. rewrite -foldl_foldl_eq.
            autorewrite with distinguish__. by []. Qed.
@@ -193,10 +316,7 @@ Section Template.
     Definition choose_graph (gbot candidate : seq (triple I B L)) :=
       if cmp gbot candidate then candidate else gbot.
 
-    Definition distinguish_fold (g : seq (triple I B L))
-      (hm : hash_map)
-      (* (gbot : seq (triple I B L)) *)
-      : seq (triple I B L) :=
+    Definition distinguish_fold (g : seq (triple I B L)) (hm : hash_map) : seq (triple I B L) :=
       let p := choose_part hm in
       foldl choose_graph can (map (canonicalize g hm) p).
 
@@ -204,9 +324,7 @@ Section Template.
       foldl (fun r1 t1=> f r1 (g t1)) z s = foldl f z (map g s).
     Proof. by elim: s z=> [//| a tl IHl] /= z; rewrite -IHl. Qed.
 
-    Lemma distinguish_fold_map (g : seq (triple I B L)) (hm : hash_map)
-      (* (gbot : seq (triple I B L)) *)
-      :
+    Lemma distinguish_fold_map (g : seq (triple I B L)) (hm : hash_map) :
       distinguish g hm = distinguish_fold g hm.
     Proof. by rewrite /distinguish_fold eq_distinguish /distinguish_  -fold_map /canonicalize. Qed.
 
@@ -344,19 +462,51 @@ Section Template.
       move=> mem_eq fine. apply uniq_map_pre_iso. by apply uniq_get_bts_is_fine.
     Qed.
 
+    Lemma init_hash_nil : init_hash [::] = [::].
+    Proof.
+    move: (good_init [::]).
+    case: (init_hash [::]) ; first by [].
+    move=> [b n] l; rewrite /get_bts/==> contr.
+    have := in_nil b.
+    by rewrite -contr in_cons eqxx.
+    Qed.
+
+    Lemma color_nil_nil : color [::] [::] = [::].
+    Proof.
+    move: (color_good_hm [::] [::]).
+    rewrite /get_bts/=.
+    have /(_ B) H : [::] =i [::] by move=> b.
+    move=> /(_ H){H}.
+    case: (color [::] [::]) ; first by [].
+    move=> [b n] l contr.
+    have := in_nil b.
+    by rewrite -contr in_cons eqxx.
+    Qed.
+
+    Lemma template_nil_nil : template [::] = [::].
+    Proof.
+    rewrite /template/=; case: ifP; first by [].
+    rewrite init_hash_nil. rewrite color_nil_nil.
+    autorewrite with gen_partition.
+    by [].
+    Qed.
+
     Lemma nil_is_nil (g : seq (triple I B L)) (hm : hash_map) :
+      ~~ is_fine (gen_partition (color g (init_hash g)) [::]) ->
       distinguish g hm = can -> g = can.
+    Proof.
     Admitted.
     (* prove this *)
 
     Hypothesis sort_can : sort le_triple can = can.
 
     Lemma distinguish_piso : forall (g : seq (triple I B L)) (ug: uniq g),
+        ~~ is_fine (gen_partition (color g (init_hash g)) [::]) ->
       exists mu : B -> B,
         distinguish g (color g (init_hash g)) = sort le_triple (relabeling_seq_triple mu g) /\
           is_pre_iso_ts g (distinguish g (color g (init_hash g))) mu.
     Proof.
-      move=> g ug.
+      move=> g ug finePn.
       set hm := (color g (init_hash g)).
       have : M hm < S (M hm) by apply ltnSn.
       have : bnodes_hm hm =i get_bts g by apply color_good_hm; apply good_init.
@@ -364,9 +514,9 @@ Section Template.
       move=> hm n; move: n hm=> n.
       elim: n => [//| n IHn hm' ghm hmM].
       move: (distinguish_choice g hm')=> /=[].
-      + move=> H. rewrite H. exists id. split. apply nil_is_nil in H.
+      + move=> H. rewrite H. exists id. split. apply (nil_is_nil _ _ finePn) in H.
         by rewrite relabeling_seq_triple_id H.
-        apply nil_is_nil in H.
+        apply (nil_is_nil _ _ finePn) in H.
         rewrite H.
         rewrite /is_pre_iso_ts /= /bnode_map_bij.
         by rewrite (uniq_get_bts _) /= map_id perm_refl.
@@ -401,7 +551,7 @@ Section Template.
       exists (fun_of_hash_map (color g (init_hash g))).
       split=> //. apply piso_sort. apply piso_funof=> //.
       apply color_good_hm; apply good_init.
-      by apply distinguish_piso.
+      by apply distinguish_piso=> //; rewrite is_fine.
     Qed.
 
     Lemma eiso_sort (g: seq (triple I B L)) (mu : B -> B) :
@@ -461,7 +611,8 @@ Section Template.
     Hypothesis eiso_mem_eq_canonicalize : forall (g h : seq (triple I B L)) (ug: uniq g) (uh: uniq h),
         effective_iso_ts g h ->
         is_fine (gen_partition (color g (init_hash g)) [::]) = false ->
-        map (canonicalize g (color g (init_hash g))) (choose_part (color g (init_hash g))) =i                                                                                                  map (canonicalize h (color h (init_hash h))) (choose_part (color h (init_hash h))).
+        map (canonicalize g (color g (init_hash g))) (choose_part (color g (init_hash g))) =i
+             map (canonicalize h (color h (init_hash h))) (choose_part (color h (init_hash h))).
 
     Lemma eiso_correct_complete (g h : seq (triple I B L)) (ug: uniq g) (uh: uniq h) :
       effective_iso_ts g h <-> (template g) == (template h).

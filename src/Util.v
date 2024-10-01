@@ -1,3 +1,4 @@
+From HB Require Import structures.
 From mathcomp Require Import all_ssreflect.
 Set Implicit Arguments.
 Unset Strict Implicit.
@@ -266,7 +267,8 @@ Definition mapi {A B : Type} (f : A -> nat ->  B) (s : seq A) : seq B :=
   map (fun an => (f an.1) an.2) (zip s (iota 0 (size s))).
 
 Definition fun_to_fin (T : eqType) (s : seq T) (f : T -> T) : seq_sub s -> T:=
-  fun s0=> let (ssval,_) := s0 in (f ssval).
+  \val.
+  (* fun s0=> let (ssval,_) := s0 in (f ssval). *)
 
 Lemma eq_to_fin (T: eqType) (ft ft' : finType)
   (f : T -> T) (injF: injective f)
@@ -407,9 +409,56 @@ Proof.
   by rewrite size_map in jsize; apply: ltn_trans ijle jsize.
 Qed.
 
+HB.howto finType.
+HB.about isFinite.Build.
+
+
+(* Lemma in_map_injP (T1 : eqType) (T2 : eqType) (s : seq T1) (f : T1 -> T2) (us: uniq s): *)
+Lemma in_map_injP' (T1 : choiceType) (T2 : choiceType) (s : seq T1) (f : T1 -> T2) (us: uniq s):
+  reflect {in s&, injective f} (uniq (map f s)).
+Proof.
+  (* pose T := seq_sub s. *)
+  pose T := fintype_seq_sub__canonical__fintype_Finite s.
+  (* pose T := adhoc_seq_sub_finType s. *)
+  pose g := finfun (fun (x:T) =>  f (\val x)).
+  have eq_fg: forall (t:T1) (tin:(t \in s)), f t = (g (@Sub T1 _ T t tin)).
+  by move=> t tin; rewrite ffunE SubK.
+  have eq_fg': forall (t:T), f (\val t) = (g t).
+  by move=> t; rewrite ffunE.
+  (* have eq_uniq: uniq [seq f i | i <- s] = uniq [seq f i | i <- (map \val (enum T))]. *)
+  (* have eq_uniq: uniq [seq f i | i <- s] = uniq [seq g i | i <- (seq_sub_enum s)]. *)
+  have eq_uniq: uniq [seq f i | i <- s] = uniq [seq g i | i <- (enum T)].
+  have /eq_map eq_map_fg : g =1 (f \o \val). by move=> y /=; rewrite eq_fg'.
+  apply eq_uniq.
+  by rewrite !size_map -enumT -cardE card_seq_sub.
+  rewrite eq_map_fg (map_comp f \val).
+  apply eq_mem_map.
+  by rewrite -codomE; move=> x; rewrite codom_val.
+  (* Unset Printing Notations. *)
+  have eq_injective : {in s&, injective f} <-> injective g.
+  split=> [inj_f|inj_g].
+  + move=> [x xin] [y yin].
+    rewrite -!eq_fg'=> /(inj_f _ _ (ssvalP _) (ssvalP _)) /= eq_xy.
+    move: yin; elim: eq_xy=> yin.
+    apply f_equal; apply bool_irrelevance.
+  + move=> x y xin yin. rewrite !eq_fg=> eq_gxy.
+    suffices [->]: (@Sub _ _ T x xin) = (Sub y yin). by [].
+    by apply inj_g in eq_gxy.
+    rewrite eq_uniq.
+    apply (iffP idP).
+    move=> ufs t t' tin t'in.
+    rewrite !eq_fg=> eq_gxy.
+    suffices : (@Sub _ _ T t tin) = (Sub t' t'in).
+    by move=> [->].
+    move: eq_gxy.
+    by move:ufs=> /injectiveP inj_g /inj_g ->.
+    by move=> /eq_injective/injectiveP //.
+ Qed.
+
 Lemma in_map_injP (T1 : eqType) (T2 : eqType) (s : seq T1) (f : T1 -> T2) (us: uniq s):
   reflect {in s&, injective f} (uniq (map f s)).
-Proof. rewrite -[uniq (map f s)]negbK.
+Proof.
+  rewrite -[uniq (map f s)]negbK.
        case: in_map_injPn=> // [noinjf | injf]; constructor.
          case: noinjf => x Dx [y /andP[neqxy /= Dy] eqfxy] injf.
          by case/eqP: neqxy; apply: injf.
@@ -420,7 +469,7 @@ Qed.
 Lemma zip_uniq_proj (T1 T2 : eqType) (s1 : seq T1) (s2 : seq T2) :
   (uniq s1) ->
   (size s1 = size s2) ->
-  forall x y, x \in zip s1 s2 ->
+  forall (x y: T1 * T2), x \in zip s1 s2 ->
                y \in zip s1 s2 ->
                      x.1 = y.1 -> x = y.
   Proof. move=> us1 eqsize /= [x1 x2] [y1 y2].
@@ -431,6 +480,26 @@ Lemma zip_uniq_proj (T1 T2 : eqType) (s1 : seq T1) (s2 : seq T2) :
            move=> /nthP /= /(_ (x0,y0)) [xn]; rewrite size_zip -eqsize minnrefl=> sizes1.
            rewrite nth_zip // => /eqP; rewrite xpair_eqE=> /andP[/eqP x1nth /eqP x2nth].
            move=> /nthP /= /(_ (x0,y0)) [yn]; rewrite size_zip -eqsize minnrefl=> sizes2.
+           rewrite nth_zip // => /eqP; rewrite xpair_eqE=> /andP[/eqP y1nth /eqP y2nth].
+           rewrite -x1nth{x1nth} -x2nth{x2nth} -y1nth{y1nth} -y2nth{y2nth}.
+           by move=> /eqP; rewrite nth_uniq // => /eqP ->; apply/eqP; rewrite eqxx.
+           by rewrite /minn; case e: (_ < _)%N.
+  Qed.
+
+  Lemma zip_uniq_proj2 (T1 T2 : eqType) (s1 : seq T1) (s2 : seq T2) :
+    (uniq s2) ->
+    (size s1 = size s2) ->
+    forall (x y: T1 * T2), x \in zip s1 s2 ->
+                      y \in zip s1 s2 ->
+                            x.2 = y.2 -> x = y.
+  Proof. move=> us1 eqsize /= [x1 x2] [y1 y2].
+         wlog p0 :/ ((T1 * T2)%type).
+         by move=> hwlog; apply: hwlog (x1,x2).
+         case: p0=> x0 y0.
+         suffices minnrefl : minn (size s1) (size s1) = size s1.
+         move=> /nthP /= /(_ (x0,y0)) [xn]; rewrite size_zip -eqsize minnrefl eqsize => sizes1.
+           rewrite nth_zip // => /eqP; rewrite xpair_eqE=> /andP[/eqP x1nth /eqP x2nth].
+           move=> /nthP /= /(_ (x0,y0)) [yn]; rewrite size_zip -eqsize minnrefl eqsize => sizes2.
            rewrite nth_zip // => /eqP; rewrite xpair_eqE=> /andP[/eqP y1nth /eqP y2nth].
            rewrite -x1nth{x1nth} -x2nth{x2nth} -y1nth{y1nth} -y2nth{y2nth}.
            by move=> /eqP; rewrite nth_uniq // => /eqP ->; apply/eqP; rewrite eqxx.

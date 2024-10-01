@@ -151,6 +151,7 @@ Section Kmapping.
     suffices lh_inj: {in u&, injective (lookup_hash_default_ n0)}.
       move=> /lh_inj; rewrite -eqnnthx -eqmnthy.
       move : (mem_has x xin) (mem_has y yin); rewrite !has_find=> nthxin nthyin.
+      rewrite !mem_nth // => /(_ isT isT). rewrite eqnnthx eqmnthy; move=> [->].
       by rewrite !mem_nth // => /(_ isT isT); rewrite eqnnthx eqmnthy; move=> [->].
     by apply (in_perm_luh_inj mem).
    apply get_bts_in_l_perm. rewrite /hash_perm in mem. apply mem.

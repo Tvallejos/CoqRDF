@@ -16,20 +16,128 @@ From RDF Require Export Rdf Triple Term Util IsoCan.
 
 Section Template.
   Variable disp : unit.
+(* TODO : check that order is needed, since below comes a comparison comp on graphs *)
   Variable I B L : orderType disp.
+  Notation le_triple := (@le_triple disp I B L).
 
+
+(* Enumeration of b-nodes *)
   Hypothesis nat_inj : nat -> B.
   Hypothesis nat_inj_ : injective nat_inj.
 
+  (* comparison on graphs, morally an order relation. 
+     TODO : we can relax all assumptions on cmp/choose_graph to the relabelling of
+    the graph to be canonized, is it relevant? *)
+    Variable (cmp : seq (triple I B L) -> seq (triple I B L) -> bool).
+    
+    Definition choose_graph (g1 g2 : seq (triple I B L)) :=
+      if cmp g1 g2 then g2 else g1.
+
+    Hypothesis choose_graphA : associative choose_graph.
+    Hypothesis choose_graphC : commutative choose_graph.
+    Hypothesis choose_graph_idem : idempotent choose_graph.
+
+    (* A default graph *)
+   Variable can : seq (triple I B L).
+   Hypothesis ucan : uniq can.
+   Hypothesis sort_can : sort le_triple can = can.
+  (* Determines a choice of default graph can *)
+   Hypothesis gbot_lid : left_id can choose_graph.
+   
+   HB.instance Definition _ :=
+   Monoid.isComLaw.Build
+     (seq (triple I B L)) can
+     (choose_graph) choose_graphA
+     choose_graphC
+     gbot_lid.
+
+(* Hash maps as sequences of pairs of a b-node and a hash *)
   Definition hash_map := seq (B * nat).
+  (* Initial hash map from a graph *)
+  Definition bnodes_hm (hm : hash_map): seq B := map fst hm.
+
+  Variable (init_hash : seq (triple I B L) -> hash_map).
+  (* init_hash g has the same bnodes as the graph g *)
+  Hypothesis good_init :
+  forall (g : seq (triple I B L)), bnodes_hm (init_hash g) =i get_bts g.
+(* TODO : Remove, duplicate of the previous *)
+  Hypothesis init_hash_bnodes : forall (g : seq (triple I B L)), bnodes_hm (init_hash g) =i get_bts g.
+
+(* Type of an element of a partition *)
   Definition part := seq (B * nat).
+(* Pick a part p from a failed attempt at computing a fine partition from the input hashmap hm. Expected:
+- (map fst p) is included in (map fst hm) 
+- elements of p have the same hash 
+- p is non empty and non singleton *)
+Variable choose_part : hash_map -> part.
+(* all nodes in choose_part hm lead to bnodes of hm, but with possibly changed hashes.
+   remember the list of bnodes of a graph is unique *)
+ Hypothesis in_part_in_bnodes : forall bn hm, bn \in choose_part hm -> bn.1 \in bnodes_hm hm.
+
+ 
+(* Type of partitions *)
   Definition partition := seq part.
+(* TODO : remove *)
   Definition pred_eq {T : eqType} (t: T):= fun t'=> t == t'.
+(* Tests whether the hash of p is n *)
   Definition eq_hash (n : nat) (p: B * nat) := pred_eq n p.2.
+(* Tests whether the node of p is b *) 
   Definition eq_bnode (b : B) (p: B * nat) := pred_eq b p.1.
+(* splits hm according to hash n *)
   Definition partitionate (n : nat) (hm : hash_map) :=
     (filter (eq_hash n) hm, filter (negb \o eq_hash n) hm).
-  (* Definition inspect {A} (x : A) : { y : A | x = y } := @exist _ _ x (eq_refl x). *)
+
+(* update a hashmap from an input graph, without increasing the measure *)
+Variables (color color_refine : seq (triple I B L) -> hash_map -> hash_map).
+
+(* coloring a hashmap of a graph using the same graph does not change its bnodes 
+  TODO : Pick one of the versions, color_bnodes is stronger but may be not needed.
+*)
+Hypothesis color_good_hm :
+    forall (g : seq (triple I B L)) hm,
+      bnodes_hm hm =i get_bts g -> bnodes_hm (color g hm) =i get_bts g.
+Hypothesis color_bnodes : forall (g : seq (triple I B L)) hm, bnodes_hm (color g hm) =i bnodes_hm hm.
+
+(* Same for color_refine *)
+Hypothesis color_refine_good_hm :
+    forall (g : seq (triple I B L)) hm,
+               bnodes_hm hm =i get_bts g -> bnodes_hm (color_refine g hm) =i get_bts g.
+
+ (* Marks a bnode in a hashmap*)
+Variable (mark : B -> hash_map -> hash_map).
+(* Marking a hashmap with one of its bnodes does not change its bnodes (but only the hashes)*)
+Hypothesis good_mark : forall (g : seq (triple I B L)) (hm : hash_map), 
+       bnodes_hm hm =i get_bts g -> forall b, b \in bnodes_hm hm -> bnodes_hm (mark b hm) =i get_bts g.
+(* TODO : to be simplified into 
+    Hypothesis good_mark : forall (hm : hash_map), 
+     forall b, b \in bnodes_hm hm -> bnodes_hm (mark b hm) =i bnodes_hm hm.
+*)
+ 
+(* Measure on hash_map*)
+Variable (M : hash_map -> nat).
+
+(* Mark decreases the measure *)
+Hypothesis (markP : forall (bn : B * nat) (hm : hash_map), bn \in choose_part hm -> M (mark bn.1 hm) < M hm).
+(* color_refine does not increase the measure *)
+Hypothesis (color_refineP : forall (g : seq (triple I B L)) (hm : hash_map) , M (color_refine g hm) <= M hm).
+
+(* TODO: remove this local def *)
+Local Definition n0 := 0.
+
+Definition fun_of_hash_map (hm : hash_map) : B -> B :=
+    fun b =>
+      if has (eq_bnode b) hm then
+        let the_label := nth n0 (map snd hm) (find (eq_bnode b) hm) in
+        nat_inj the_label
+      else
+        b.
+
+Hypothesis iso_color_fine_can : forall (g h : seq (triple I B L)),
+uniq g -> uniq h ->
+effective_iso_ts g h ->
+relabeling_seq_triple (fun_of_hash_map (color g (init_hash g))) g
+=i relabeling_seq_triple (fun_of_hash_map (color h (init_hash h))) h.
+
 
   Lemma size_filter {T : Type} (f : T -> bool) (l : seq T) : size (filter f l ) <= size l.
   Proof. elim: l=> // hd tl IHl /=. case (f hd)=> //.
@@ -51,20 +159,8 @@ Section Template.
 
   Definition is_trivial (p : part) : bool := size p == 1.
   Definition is_fine (P : partition) : bool := all is_trivial P.
-  Variable choose_part : hash_map -> part.
-  Definition n0 := 0.
-
-  Definition fun_of_hash_map (hm : hash_map) : B -> B :=
-    fun b =>
-      if has (eq_bnode b) hm then
-        let the_label := nth n0 (map snd hm) (find (eq_bnode b) hm) in
-        nat_inj the_label
-      else
-        b.
-
-  Definition bnodes_hm (hm : hash_map): seq B :=
-    map fst hm.
-
+  
+  
   Definition hashes_hm (hm : hash_map): seq nat :=
     map snd hm.
 
@@ -85,16 +181,8 @@ Section Template.
   Qed.
 
   Section Distinguish.
-    Variables (color color_refine : seq (triple I B L) -> hash_map -> hash_map).
-    Variable (mark : B -> hash_map -> hash_map).
-    Variable (cmp : seq (triple I B L) -> seq (triple I B L) -> bool).
-    Variable (M : hash_map -> nat).
 
-    Hypothesis (markP : forall (bn : B * nat) (hm : hash_map), bn \in choose_part hm -> M (mark bn.1 hm) < M hm).
-    Hypothesis (color_refineP : forall (g : seq (triple I B L)) (hm : hash_map) , M (color_refine g hm) <= M hm).
-    Hypothesis in_part_in_bnodes : forall bn hm, bn \in choose_part hm -> bn.1 \in bnodes_hm hm.
-    Variable (init_hash : seq (triple I B L) -> hash_map).
-
+    
     Lemma bnodes_hm_exists (hm : hash_map) :
       forall b, b \in bnodes_hm hm -> exists n, (b,n) \in hm.
     Proof.
@@ -117,6 +205,7 @@ Section Template.
       by case =>  [//| b l2] /= [eqsize_tl]; rewrite eq_sym IHl //.
     Qed.
 
+    
     Lemma is_fine_uniq (hm : hash_map) :
       is_fine (gen_partition hm [::]) -> uniq (map snd hm).
     Proof.
@@ -132,7 +221,7 @@ Section Template.
     + case_eq (eq_hash n (b,n)); first by [].
       move=> eqhash _.
       apply DepElim.pack_sigma_eq_nondep.
-      Set Printing All. congr .
+      (* Set Printing All. congr .
       apply IHtl.
       move/allP : fine=> /==> fineIn.
       apply /allP.
@@ -146,7 +235,7 @@ Section Template.
       rewrite eq_hash.
     rewrite /negb. move=> neq_hash. rewrite neq_hash.
     move /eqP.
-    rewrite /eq_hash.
+    rewrite /eq_hash. *)
 
     Admitted.
 
@@ -241,24 +330,6 @@ Section Template.
            by apply inj_get_bts_inj_ts.
     Qed.
 
-    Hypothesis good_mark : forall (g : seq (triple I B L)) hm, bnodes_hm hm =i get_bts g -> forall b, b \in bnodes_hm hm -> bnodes_hm (mark b hm) =i get_bts g.
-
-    Hypothesis good_init :
-      forall (g : seq (triple I B L)),
-        bnodes_hm (init_hash g) =i get_bts g.
-    Hypothesis color_good_hm :
-      forall (g : seq (triple I B L)) hm,
-        bnodes_hm hm =i get_bts g -> bnodes_hm (color g hm) =i get_bts g.
-
-    Hypothesis color_refine_good_hm :
-      forall (g : seq (triple I B L)) hm,
-                 bnodes_hm hm =i get_bts g -> bnodes_hm (color_refine g hm) =i get_bts g.
-
-    Notation le_triple := (@le_triple disp I B L).
-
-    Variable can : seq (triple I B L).
-    Hypothesis ucan : uniq can.
-
     Equations? distinguish__
       (g : seq (triple I B L))
         (hm : hash_map)
@@ -313,9 +384,7 @@ Section Template.
 	        candidate
 	      else (distinguish g hm').
 
-    Definition choose_graph (gbot candidate : seq (triple I B L)) :=
-      if cmp gbot candidate then candidate else gbot.
-
+   
     Definition distinguish_fold (g : seq (triple I B L)) (hm : hash_map) : seq (triple I B L) :=
       let p := choose_part hm in
       foldl choose_graph can (map (canonicalize g hm) p).
@@ -327,10 +396,6 @@ Section Template.
     Lemma distinguish_fold_map (g : seq (triple I B L)) (hm : hash_map) :
       distinguish g hm = distinguish_fold g hm.
     Proof. by rewrite /distinguish_fold eq_distinguish /distinguish_  -fold_map /canonicalize. Qed.
-
-    Hypothesis init_hash_bnodes : forall (g : seq (triple I B L)), bnodes_hm (init_hash g) =i get_bts g.
-
-    Hypothesis color_bnodes : forall (g : seq (triple I B L)) hm, bnodes_hm (color g hm) =i bnodes_hm hm.
 
     Definition template (g : seq (triple I B L)) :=
       let hm := init_hash g in
@@ -498,8 +563,6 @@ Section Template.
     Admitted.
     (* prove this *)
 
-    Hypothesis sort_can : sort le_triple can = can.
-
     Lemma distinguish_piso : forall (g : seq (triple I B L)) (ug: uniq g),
         ~~ is_fine (gen_partition (color g (init_hash g)) [::]) ->
       exists mu : B -> B,
@@ -584,29 +647,15 @@ Section Template.
       is_fine (gen_partition (color g (init_hash g)) [::]) =
         is_fine (gen_partition (color h (init_hash h)) [::]).
 
-    Hypothesis iso_color_fine_can : forall (g h : seq (triple I B L)),
-        uniq g -> uniq h ->
-        effective_iso_ts g h ->
-        relabeling_seq_triple (fun_of_hash_map (color g (init_hash g))) g
-        =i relabeling_seq_triple (fun_of_hash_map (color h (init_hash h))) h.
-
     Hypothesis distinguish_complete : forall (g h : seq (triple I B L)),
         uniq g -> uniq h ->
         effective_iso_ts g h ->
         is_fine (gen_partition (color g (init_hash g)) [::]) = false ->
         distinguish g (color g (init_hash g)) == distinguish h (color h (init_hash h)).
 
-    Hypothesis choose_graphA : associative choose_graph.
-    Hypothesis choose_graphC : commutative choose_graph.
-    Hypothesis choose_graph_idem : idempotent choose_graph.
-    Hypothesis gbot_lid : left_id can choose_graph.
+ 
 
-    HB.instance Definition _ :=
-    Monoid.isComLaw.Build
-      (seq (triple I B L)) can
-      (choose_graph) choose_graphA
-      choose_graphC
-      gbot_lid.
+    
 
     Hypothesis eiso_mem_eq_canonicalize : forall (g h : seq (triple I B L)) (ug: uniq g) (uh: uniq h),
         effective_iso_ts g h ->

@@ -417,42 +417,34 @@ HB.about isFinite.Build.
 Lemma in_map_injP' (T1 : choiceType) (T2 : choiceType) (s : seq T1) (f : T1 -> T2) (us: uniq s):
   reflect {in s&, injective f} (uniq (map f s)).
 Proof.
-  (* pose T := seq_sub s. *)
-  pose T := fintype_seq_sub__canonical__fintype_Finite s.
-  (* pose T := adhoc_seq_sub_finType s. *)
+  pose T := [finType of (seq_sub s)].
   pose g := finfun (fun (x:T) =>  f (\val x)).
   have eq_fg: forall (t:T1) (tin:(t \in s)), f t = (g (@Sub T1 _ T t tin)).
-  by move=> t tin; rewrite ffunE SubK.
+    by move=> t tin; rewrite ffunE SubK.
   have eq_fg': forall (t:T), f (\val t) = (g t).
-  by move=> t; rewrite ffunE.
-  (* have eq_uniq: uniq [seq f i | i <- s] = uniq [seq f i | i <- (map \val (enum T))]. *)
-  (* have eq_uniq: uniq [seq f i | i <- s] = uniq [seq g i | i <- (seq_sub_enum s)]. *)
+    by move=> t; rewrite ffunE.
   have eq_uniq: uniq [seq f i | i <- s] = uniq [seq g i | i <- (enum T)].
-  have /eq_map eq_map_fg : g =1 (f \o \val). by move=> y /=; rewrite eq_fg'.
-  apply eq_uniq.
-  by rewrite !size_map -enumT -cardE card_seq_sub.
-  rewrite eq_map_fg (map_comp f \val).
-  apply eq_mem_map.
-  by rewrite -codomE; move=> x; rewrite codom_val.
+    have /eq_map eq_map_fg : g =1 (f \o \val) by move=> y /=; rewrite eq_fg'.
+    apply eq_uniq; first by rewrite !size_map -enumT -cardE card_seq_sub.
+    rewrite eq_map_fg (map_comp f \val).
+    apply eq_mem_map.
+    by rewrite -codomE; move=> x; rewrite codom_val.
   (* Unset Printing Notations. *)
   have eq_injective : {in s&, injective f} <-> injective g.
   split=> [inj_f|inj_g].
-  + move=> [x xin] [y yin].
-    rewrite -!eq_fg'=> /(inj_f _ _ (ssvalP _) (ssvalP _)) /= eq_xy.
-    move: yin; elim: eq_xy=> yin.
-    apply f_equal; apply bool_irrelevance.
-  + move=> x y xin yin. rewrite !eq_fg=> eq_gxy.
-    suffices [->]: (@Sub _ _ T x xin) = (Sub y yin). by [].
-    by apply inj_g in eq_gxy.
-    rewrite eq_uniq.
-    apply (iffP idP).
-    move=> ufs t t' tin t'in.
+    + move=> [x xin] [y yin].
+      rewrite -!eq_fg'=> /(inj_f _ _ (ssvalP _) (ssvalP _)) /= eq_xy.
+      by apply val_inj.
+    + move=> x y xin yin; rewrite !eq_fg=> eq_gxy.
+      suffices [->]: (@Sub _ _ T x xin) = (Sub y yin) by [].
+      by apply inj_g in eq_gxy.
+  rewrite eq_uniq; apply (iffP idP).
+  + move=> ufs t t' tin t'in.
     rewrite !eq_fg=> eq_gxy.
-    suffices : (@Sub _ _ T t tin) = (Sub t' t'in).
-    by move=> [->].
+    suffices : (@Sub _ _ T t tin) = (Sub t' t'in) by move=> [->].
     move: eq_gxy.
     by move:ufs=> /injectiveP inj_g /inj_g ->.
-    by move=> /eq_injective/injectiveP //.
+  + by move=> /eq_injective/injectiveP //.
  Qed.
 
 Lemma in_map_injP (T1 : eqType) (T2 : eqType) (s : seq T1) (f : T1 -> T2) (us: uniq s):

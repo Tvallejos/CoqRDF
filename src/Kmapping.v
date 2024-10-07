@@ -151,10 +151,9 @@ Section Kmapping.
     suffices lh_inj: {in u&, injective (lookup_hash_default_ n0)}.
       move=> /lh_inj; rewrite -eqnnthx -eqmnthy.
       move : (mem_has x xin) (mem_has y yin); rewrite !has_find=> nthxin nthyin.
-      rewrite !mem_nth // => /(_ isT isT). rewrite eqnnthx eqmnthy; move=> [->].
       by rewrite !mem_nth // => /(_ isT isT); rewrite eqnnthx eqmnthy; move=> [->].
     by apply (in_perm_luh_inj mem).
-   apply get_bts_in_l_perm. rewrite /hash_perm in mem. apply mem.
+  by apply get_bts_in_l_perm; rewrite /hash_perm in mem; apply mem.
   Qed.
 
   (* For every duplicate-free sequence of triples: ts and a permutation of ts blank nodes: perm,
@@ -236,7 +235,7 @@ Section Kmapping.
        then ts is also the empty sequence. *)
     Lemma k_mapping_nil_is_nil ts: k_mapping_ts ts = [::] -> ts = [::].
     Proof.
-    case: ts=> // t ts' /max_foldl_minimum_in_st /orP[]//.
+    case: ts=> // t ts' /max_foldl_minimum_in_st /orP[].
     + move=> y yin.
       suffices neqs : size y != 0.
         have := join_nil_size neqs.

@@ -12,7 +12,139 @@ From RDF Require Export Rdf Triple Term Util IsoCan.
 (*                                                                            *)
 (******************************************************************************)
 
+Section Partition.
 
+  Variable B : eqType.
+
+  (* Hash maps as sequences of pairs of a b-node and a hash *)
+  Definition hash_map := seq (B * nat).
+
+  (* Type of an element of a partition *)
+  Definition part := seq (B * nat).
+  (* Type of partitions *)
+  Definition partition := seq part.
+
+  (* TODO : remove *)
+  Definition pred_eq {T : eqType} (t: T):= fun t'=> t == t'.
+  (* Tests whether the hash of p is n *)
+  Definition eq_hash (n : nat) (p: B * nat) := pred_eq n p.2.
+  (* Tests whether the node of p is b *)
+  Definition eq_bnode (b : B) (p: B * nat) := pred_eq b p.1.
+  (* splits hm according to hash n *)
+  Definition partitionate (n : nat) (hm : hash_map) :=
+    (filter (eq_hash n) hm, filter (negb \o eq_hash n) hm).
+  Equations? gen_partition (hm : hash_map) : partition by wf (size hm) lt :=
+    gen_partition nil := nil;
+    gen_partition (bn::l) :=
+      ((partitionate bn.2 (bn::l)).1) :: gen_partition (partitionate bn.2 (bn::l)).2.
+  Proof.
+    rewrite /= /eq_hash/pred_eq/negb /= eqxx /=.
+    have H := size_filter_le ((fun b : bool => if b then false else true) \o (fun p : B * nat => n == p.2)) l.
+    by apply /ltP; apply : leq_trans H _.
+  Qed.
+
+  Lemma hm_zip (hm : hash_map): hm = zip (map fst hm) (map snd hm).
+  Proof. by rewrite zip_map; elim: hm => [//| [h1 h2] tl IHtl] /=; rewrite -IHtl. Qed.
+
+  Lemma eq_hash_refl (bn : (B * nat)) : eq_hash bn.2 bn.
+  Proof. by rewrite /eq_hash/pred_eq eqxx. Qed.
+
+  Lemma eq_hash_sym (bn1 bn2 : (B * nat)) : eq_hash bn1.2 bn2 = eq_hash bn2.2 bn1.
+  Proof. by apply /idP/idP; rewrite /eq_hash/pred_eq=> /eqP->; rewrite eqxx. Qed.
+
+  Lemma part_size (hm : hash_map) : forall (p : part), p \in (gen_partition hm) -> size p > 0.
+  Proof.
+  move=> p; funelim (gen_partition hm)=> [//|].
+  rewrite in_cons=> /orP[]; last by apply H.
+  by move=> /eqP ->; rewrite /= eq_hash_refl.
+  Qed.
+
+  Lemma part_all_eq_hash (hd : B * nat) (tl : seq (B * nat)) (hm : hash_map) :
+  (hd :: tl \in gen_partition hm) -> all (eq_hash hd.2) (hd::tl).
+  Proof.
+  funelim (gen_partition hm)=> [//|].
+  rewrite in_cons=> /orP[].
+  + move=> /eqP eq.
+    suffices eqhash : bn.2 = hd.2.
+      by rewrite eq eqhash; apply filter_all.
+    by move: eq=> /=; rewrite /eq_hash/pred_eq eqxx; move=> [->].
+  move=> inP; apply H; apply inP.
+  Qed.
+
+
+  Lemma gen_partition_filter (hd a : B * nat) (tl : seq (B * nat)) (hm' : hash_map) :
+    hd :: tl \in gen_partition [seq x <- hm' | (negb \o eq_hash a.2) x] -> eq_hash hd.2 a = false.
+  Proof.
+  set hm := [seq x <- hm' | (negb \o eq_hash a.2) x].
+  have : size hm < S (size hm) by apply ltnSn.
+  have : all (negb \o eq_hash a.2) hm by apply filter_all.
+  move: hm (size hm).+1.
+  move=> hm n; move: n hm=> n.
+  elim: n hd a => [//| n' IHn hd a hm] allPn measure.
+  move: allPn.
+  case: hm measure => [//|c l].
+  autorewrite with gen_partition.
+  rewrite in_cons.
+  move=> measure allPn /orP[].
+  rewrite /=. rewrite eq_hash_refl=> /eqP[-> _].
+  by move: allPn=> /=/andP[]; rewrite eq_hash_sym; case: (eq_hash c.2 a). 
+  move=> pin.
+  have:= pin.
+  apply IHn.
+  move: allPn.
+  set hs := c :: l.
+  rewrite all_filter=> allPn.
+  apply /allP.
+  move=> /= bn bnin.
+  apply /implyP.
+  move=> _.
+  by have /=-> := in_all bnin allPn.
+  rewrite /=eq_hash_refl/=.
+  by apply (leq_ltn_trans (size_filter_le _ l) measure).
+  Qed.
+
+  Lemma part_filter (hd : B * nat) (tl : seq (B * nat)) (hm : hash_map) :
+    (hd :: tl \in gen_partition hm) -> hd :: tl = (partitionate hd.2 hm).1.
+  Proof.
+  have : size hm < S (size hm) by apply ltnSn.
+  move: hm (size hm).+1.
+  move=> hm n; move: n hm=> n.
+  elim: n hd => [//| n' IHn hd hm] measure.
+  case: hm measure => [//|a l].
+  autorewrite with gen_partition.
+  rewrite in_cons.
+  move=> measure /orP[].
+  rewrite /=. rewrite eq_hash_refl=> /eqP[-> ->].
+  by rewrite eq_hash_refl.
+  rewrite /= eq_hash_refl /==> pin.
+  suffices neq_hash : eq_hash hd.2 a = false.
+    rewrite neq_hash (IHn _ _ _ pin) /=.
+    + rewrite -filter_predI.
+      suffices /eq_filter-> : (predI (eq_hash hd.2) (negb \o eq_hash a.2)) =1 (eq_hash hd.2) by [].
+      move=> bn /=; move: neq_hash; rewrite /eq_hash/pred_eq/negb eq_sym.
+      by case_eq (hd.2 == bn.2)=> // /eqP -> ->.
+    + move: measure=> /= measure.
+      by apply (leq_ltn_trans (size_filter_le _ _) measure).
+  by apply (gen_partition_filter _ _ _ _ pin).
+  Qed.
+
+  Lemma partP (hm : hash_map):
+    forall (p : part), p \in (gen_partition hm) ->
+      (* exists (bn : B * nat), bn \in hm /\ p = (partitionate bn.2 hm).1. *)
+      exists (bn : B * nat), p = (partitionate bn.2 hm).1.
+  Proof.
+  move=> p pin.
+  have /part_size := pin.
+  move: pin.
+  by case: p=> [//|hd tl] /part_filter ->; exists hd.
+  Qed.
+
+  Lemma partition_memP (hm : hash_map) :
+    forall (p: part), p \in (gen_partition hm) -> subseq p hm.
+  Proof.
+  by move=> p /partP[bn ->]; apply filter_subseq.
+  Qed.
+End Partition.
 
 Section Template.
   Variable disp : unit.
@@ -30,29 +162,66 @@ Section Template.
      the graph to be canonized, is it relevant? *)
   Variable (cmp : seq (triple I B L) -> seq (triple I B L) -> bool).
 
+  Hypothesis cmp_anti : antisymmetric cmp.
+  Hypothesis cmp_total : total cmp.
+  Hypothesis cmp_trans : transitive cmp.
+
+  Lemma cmp_refl (g : seq (triple I B L)) : cmp g g.
+  Proof. by move: (cmp_total g g); move=> /orP[]. Qed.
+
   Definition choose_graph (g1 g2 : seq (triple I B L)) :=
     if cmp g1 g2 then g2 else g1.
 
-  Hypothesis choose_graphA : associative choose_graph.
-  Hypothesis choose_graphC : commutative choose_graph.
-  Hypothesis choose_graph_idem : idempotent choose_graph.
+  Lemma choose_graphA : associative choose_graph.
+  Proof.
+  move=> g h i; rewrite /choose_graph.
+  repeat (try case : ifP); rewrite //.
+  + by move=> _ ->.
+  + by move=> ghn ->.
+  + by move=> _ ->.
+  + by move=> gh hi; rewrite (cmp_trans gh hi).
+  + by move=> _ ->.
+  + by move=> _ ->.
+  + move=> ghn gi hin _.
+    move: (cmp_total g h) (cmp_total h i); rewrite ghn hin /==> hg ih {ghn hin}.
+    have hi := (cmp_trans hg gi).
+    have eq_hi : h = i by apply cmp_anti; rewrite hi ih.
+    by apply cmp_anti; rewrite gi -eq_hi hg.
+  Qed.
+
+  Lemma choose_graphC : commutative choose_graph.
+  Proof.
+  move=> x y; rewrite /choose_graph; case: ifP; case: ifP=> //.
+  + by move=> yx xy; apply cmp_anti; apply /andP.
+  + by move=> yxn xyn; move: (cmp_total x y); rewrite xyn yxn.
+  Qed.
+
+  Lemma choose_graph_idem : idempotent choose_graph.
+  Proof.
+  by move=> x; rewrite /choose_graph cmp_refl.
+  Qed.
 
   (* A default graph *)
   Variable can : seq (triple I B L).
   Hypothesis ucan : uniq can.
   Hypothesis sort_can : sort le_triple can = can.
+  Hypothesis can_nil : can = nil.
   (* Determines a choice of default graph can *)
-  Hypothesis gbot_lid : left_id can choose_graph.
+  Hypothesis can_extremum : forall (x : seq (triple I B L)), cmp can x.
+
+  Lemma can_lid : left_id can choose_graph.
+  Proof. by move=> x; rewrite /choose_graph can_extremum. Qed.
 
   HB.instance Definition _ :=
     Monoid.isComLaw.Build
       (seq (triple I B L)) can
       (choose_graph) choose_graphA
       choose_graphC
-      gbot_lid.
+      can_lid.
 
-  (* Hash maps as sequences of pairs of a b-node and a hash *)
-  Definition hash_map := seq (B * nat).
+  Local Notation hash_map := (@hash_map B).
+  Local Notation part := (@part B).
+  Local Notation partition := (@partition B).
   (* Initial hash map from a graph *)
   Definition bnodes_hm (hm : hash_map): seq B := map fst hm.
 
@@ -61,8 +230,6 @@ Section Template.
   Hypothesis good_init :
     forall (g : seq (triple I B L)), bnodes_hm (init_hash g) =i get_bts g.
 
-  (* Type of an element of a partition *)
-  Definition part := seq (B * nat).
   (* Pick a part p from a failed attempt at computing a fine partition from the input hashmap hm. Expected:
      - (map fst p) is included in (map fst hm)
      - elements of p have the same hash
@@ -70,21 +237,14 @@ Section Template.
   Variable choose_part : hash_map -> part.
   (* all nodes in choose_part hm lead to bnodes of hm, but with possibly changed hashes.
      remember the list of bnodes of a graph is unique *)
-  Hypothesis in_part_in_bnodes :
-    forall bn hm, bn \in choose_part hm -> bn.1 \in bnodes_hm hm.
+  Hypothesis in_part_in_bnodes' :
+    forall (bn : B * nat) hm, bn \in choose_part hm -> bn \in hm.
 
-
-  (* Type of partitions *)
-  Definition partition := seq part.
-  (* TODO : remove *)
-  Definition pred_eq {T : eqType} (t: T):= fun t'=> t == t'.
-  (* Tests whether the hash of p is n *)
-  Definition eq_hash (n : nat) (p: B * nat) := pred_eq n p.2.
-  (* Tests whether the node of p is b *)
-  Definition eq_bnode (b : B) (p: B * nat) := pred_eq b p.1.
-  (* splits hm according to hash n *)
-  Definition partitionate (n : nat) (hm : hash_map) :=
-    (filter (eq_hash n) hm, filter (negb \o eq_hash n) hm).
+  Lemma in_part_in_bnodes (bn : B * nat) hm: bn \in choose_part hm -> bn.1 \in bnodes_hm hm.
+  Proof.
+  move/in_part_in_bnodes'; rewrite /bnodes_hm; rewrite {1}(hm_zip hm).
+  by case: bn=> [b n] /in_zip/andP[->].
+  Qed.
 
   (* update a hashmap from an input graph, without increasing the measure *)
   Variables (color color_refine : seq (triple I B L) -> hash_map -> hash_map).
@@ -125,7 +285,9 @@ Section Template.
     forall (g : seq (triple I B L)) (hm : hash_map) ,
       M (color_refine g hm) <= M hm.
 
-  (* TODO: remove this local def *)
+  Local Notation eq_hash := (@eq_hash B).
+  Local Notation eq_bnode := (@eq_bnode B).
+
   Definition fun_of_hash_map (hm : hash_map) : B -> B :=
     fun b =>
       if has (eq_bnode b) hm then
@@ -141,24 +303,8 @@ Section Template.
          relabeling_seq_triple (fun_of_hash_map (color g (init_hash g))) g
       =i relabeling_seq_triple (fun_of_hash_map (color h (init_hash h))) h.
 
-  Lemma size_filter_le {T : Type} (f : T -> bool) (l : seq T) : size (filter f l ) <= size l.
-  Proof.
-  elim: l=> // hd tl IHl /=.
-  by case: ifP=> [//| _]; apply (leq_trans IHl).
-  Qed.
-
   Lemma nat_coq_nat (n m : nat) :  (n < m)%nat = (n < m). Proof. by []. Qed.
   Lemma nat_coq_le_nat (n m : nat) :  (n <= m)%N = (n <= m). Proof. by []. Qed.
-
-  Equations? gen_partition (hm : hash_map) : partition by wf (size hm) lt :=
-    gen_partition nil := nil;
-    gen_partition (bn::l) :=
-      ((partitionate bn.2 (bn::l)).1) :: gen_partition (partitionate bn.2 (bn::l)).2.
-  Proof.
-    rewrite /= /eq_hash/pred_eq/negb /= eqxx /=.
-    have H := size_filter_le ((fun b : bool => if b then false else true) \o (fun p : B * nat => n == p.2)) l.
-    by apply /ltP; apply : leq_trans H _.
-  Qed.
 
   Definition is_trivial (p : part) : bool := size p == 1.
   Definition is_fine (P : partition) : bool := all is_trivial P.
@@ -225,9 +371,6 @@ Section Template.
       by move=> neq_hx /=; rewrite neq_hx neq_hy IHtl.
     Qed.
 
-    Lemma hm_zip (hm : hash_map): hm = zip (map fst hm) (map snd hm).
-    Proof. by rewrite zip_map; elim: hm => [//| [h1 h2] tl IHtl] /=; rewrite -IHtl. Qed.
-
     Lemma size_proj (T1 T2 : Type) (s : seq (T1 * T2)) :
       size [seq i.2 | i <- s] = size [seq i.1 | i <- s].
     Proof. by elim: s=> [//| h tl IHtl] /=; rewrite IHtl. Qed.
@@ -269,7 +412,8 @@ Section Template.
       by case: ifP; case: ifP=> //neq_mh2 _ /=; rewrite ?neq_nh2; apply IHtl.
     rewrite eq_sym in neq; rewrite -eq_nh2 neq /= eq_nh2 eqxx; congr cons.
     have -> : [seq p <- tl | h.2 == p.2] = (partitionate h.2 tl).1 by [].
-    have -> : [seq p <- [seq x <- tl | m != x.2] | h.2 == p.2] = (partitionate n [seq x <- tl | (negb \o eq_hash m) x]).1.
+    have -> : [seq p <- [seq x <- tl | m != x.2] | h.2 == p.2]
+              = (partitionate n [seq x <- tl | (negb \o eq_hash m) x]).1.
       by rewrite /eq_hash/=/pred_eq/= eq_nh2.
     by rewrite -eq_nh2; apply IHtl; rewrite eq_sym.
     Qed.
@@ -314,7 +458,9 @@ Section Template.
       suffices : size wt >= 2.
         by case_eq (size wt == 1)=> //; move=> /eqP->.
       suffices -> : size wt = count (eq_hash xi) hm.
-        suffices [[b [bin nth_i]] [b' [b'in nthj]]]: (exists b, (b,xi) \in hm /\ nth (b,O) hm i = (b,xi)) /\ exists b', (b',xj) \in hm /\ nth (b',O) hm j = (b',xj).
+        suffices [[b [bin nth_i]] [b' [b'in nthj]]]:
+          (exists b, (b,xi) \in hm /\ nth (b,O) hm i = (b,xi))
+          /\ exists b', (b',xj) \in hm /\ nth (b',O) hm j = (b',xj).
           rewrite -(cat_take_drop j hm) !count_cat.
           suffices has_countxi : (1 <= count (eq_hash xi) (take j hm))%N.
             suffices has_countxj : (1 <= count (eq_hash xi) (drop j hm))%N.
@@ -629,11 +775,6 @@ Section Template.
     Qed.
 
 
-    Hypothesis cmp_refl : forall (g : seq (triple I B L)), cmp g g.
-    (* Hypothesis cmp_anti : antisymmetric cmp. *)
-    Hypothesis cmp_total : total cmp.
-    Hypothesis cmp_trans : forall (g h i: seq (triple I B L)), cmp g h -> cmp h i -> cmp g i.
-
     Lemma foldl_default (gs : seq (seq (triple I B L))) (x0 x1: seq (triple I B L)):
         foldl choose_graph x0 gs = x1 ->
         (x0 == x1) = false ->
@@ -668,9 +809,9 @@ Section Template.
     by move=> y yin; apply cmp_in; rewrite in_cons yin orbT.
     Qed.
 
-    Hypothesis cmp_can :
-      forall (hm : hash_map) (g y : seq (triple I B L)),
-        y \in [seq canonicalize g hm i | i <- choose_part hm] -> cmp can y.
+    (* Hypothesis cmp_can : *)
+    (*   forall (hm : hash_map) (g y : seq (triple I B L)), *)
+    (*     y \in [seq canonicalize g hm i | i <- choose_part hm] -> cmp can y. *)
 
     Hypothesis choose_from_not_fine :
       forall (hm : hash_map),
@@ -691,17 +832,19 @@ Section Template.
     move=> hm n; move: n hm=> n.
     elim: n => [//| n IHn hm measure mem_eq_bhm neq_fine].
     rewrite distinguish_fold_map.
-    move=> /(foldl_can_in_choose _ (cmp_can hm g))/orP[].
+    move=> /(foldl_can_in_choose _ _)/orP[]; first by move=> ?; rewrite can_extremum //.
     + by rewrite map_nil_is_nil choose_from_not_fine.
     rewrite /canonicalize; move=> /mapP[/= b bin].
-    case: ifP.
-    + admit.
+    case: ifP=> [_|].
+    + rewrite -{1}sort_can=> /rdf_leP.
+      rewrite can_nil perm_sym.
+      by move=> /perm_nilP/eqP; rewrite map_nil_is_nil=> /eqP->.
     + move=> H /eqP; rewrite eq_sym=> /eqP.
       apply IHn=> //; last by rewrite H.
       + apply: Order.POrderTheory.le_lt_trans (color_refineP _ _) _.
         by apply: Order.POrderTheory.lt_le_trans (markP _ _ _) measure.
       + by apply color_refine_good_hm; apply good_mark=> //; apply in_part_in_bnodes.
-    Admitted.
+    Qed.
     (* prove this *)
 
     Lemma distinguish_piso (g : seq (triple I B L)) (ug: uniq g):
@@ -785,8 +928,7 @@ Section Template.
         uniq g -> uniq h ->
           effective_iso_ts g h ->
             is_fine (gen_partition (color g (init_hash g))) = false ->
-              distinguish g (color g (init_hash g)) == distinguish h (color h (init_hash h)).
-
+              distinguish g (color g (init_hash g)) =i distinguish h (color h (init_hash h)).
 
     Hypothesis eiso_mem_eq_canonicalize :
       forall (g h : seq (triple I B L)) (ug: uniq g) (uh: uniq h),
@@ -821,7 +963,118 @@ Section Template.
       by apply eiso_mem_eq_canonicalize.
     Qed.
 
+    Lemma eiso_correct_complete' (g h : seq (triple I B L)) (ug: uniq g) (uh: uniq h) :
+      perm_eq (template g) (template h) <-> effective_iso_ts g h.
+    Proof.
+    split.
+    + move=> eqmgmh.
+    have gmg := eiso_out_template g ug.
+    suffices mgmh : effective_iso_ts (template g) (template h).
+      have /(effective_iso_ts_sym uh) hmh := eiso_out_template h uh.
+      apply: (effective_iso_ts_trans gmg _).
+      by apply: (effective_iso_ts_trans mgmh hmh).
+    have [mu [eiso _]]:= eqiso_ts (uniq_template _ ug) eqmgmh.
+    by exists mu.
+    rewrite /template=> eiso.
+    rewrite -(iso_color_fine _ _ eiso) //.
+    case: ifP=> [fineP|finePn].
+    + apply /rdf_leP.
+      rewrite (sorted_sort (@le_triple_trans _ _ _ _)); last by rewrite sort_sorted.
+      rewrite (@sorted_sort _ _ (@le_triple_trans _ _ _ _) (sort le_triple _)); last by rewrite sort_sorted.
+    + apply /rdf_leP.
+      apply uniq_perm.
+    - by apply uniq_label_is_fine=> //; apply color_good_hm; apply good_init.
+    - rewrite (iso_color_fine _ _ eiso) // in fineP.
+      by apply uniq_label_is_fine=> //; apply color_good_hm; apply good_init.
+      by apply iso_color_fine_can.
+      + rewrite !distinguish_fold_map /distinguish_fold.
+        set cang := (map _ (choose_part (color g (init_hash g)))).
+        set canh := (map _ (choose_part (color h (init_hash h)))).
+        suffices mem_eq : cang =i canh.
+          by rewrite !foldl_idx (eq_big_idem _ _ choose_graph_idem mem_eq) perm_refl.
+        by apply eiso_mem_eq_canonicalize.
+    Qed.
+
+    Definition template_rdf (g : rdf_graph I B L) :=
+      mkRdfGraph (uniq_template _ (ugraph g)).
+
+    Lemma template_isocan : (@effective_isocanonical_mapping I B L template_rdf).
+    Proof.
+    split; first by move=> [g ug]; apply eiso_out_template.
+    by move=> [g ug] [h uh]; apply eiso_correct_complete'.
+    Qed.
+
   End Distinguish.
+
+End Template.
+Section kmap_template.
+  Variable disp : unit.
+  (* TODO : check that order is needed, since below comes a comparison comp on graphs *)
+  Variable I B L : orderType disp.
+  Notation le_triple := (@le_triple disp I B L).
+
+
+  (* Enumeration of b-nodes *)
+  Hypothesis nat_inj : nat -> B.
+  Hypothesis nat_inj_ : injective nat_inj.
+  Definition template_isocan_ := @template_isocan disp I B L nat_inj nat_inj_
+    (@le_st disp I B L) (@le_st_anti disp I B L) (@le_st_total disp I B L) (@le_st_trans disp I B L)
+    nil isT erefl erefl (@nil_minimum disp I B L).
+
+  Check template_isocan_.
+
+  Definition init_hash_kmap (ts : seq (triple I B L)) : hash_map B :=
+    let bs := get_bts ts in
+    zip bs (nseq (size bs) 0).
+
+  Lemma zip_proj1 (T S : Type) (s1 : seq T) (s2 : seq S) :
+    size s1 = size s2 ->
+    map fst (zip s1 s2) = s1.
+  Proof.
+  elim: s1 s2=> [| hd tl IHtl] s2; first by case: s2.
+  case: s2=> [//|hd2 tl2] /=[]eq_size.
+  by congr cons; apply IHtl.
+  Qed.
+
+  Lemma good_init (g : seq (triple I B L)) : bnodes_hm (init_hash_kmap g) =i get_bts g.
+  Proof. by move=> x; rewrite /init_hash_kmap/bnodes_hm zip_proj1 // size_nseq. Qed.
+
+  Definition choose_part_kmap (hm : hash_map B) : part B :=
+    let P := gen_partition (hm) in
+    let pred := predC (@is_trivial disp B) in
+    if has pred P then
+      nth [::] P (find pred P)
+    else [::].
+
+  Lemma in_part_in_bnodes_kmap (bn : B * nat) (hm : hash_map B):
+    bn \in choose_part_kmap hm -> bn \in hm.
+  Proof.
+  rewrite /choose_part_kmap/=.
+  case: ifP=> [|//].
+  rewrite has_find=> size_find.
+  suffices /partition_memP : nth [::] (gen_partition hm) (find (predC (is_trivial (B:=B))) (gen_partition hm)) \in (gen_partition hm).
+    by move=> /mem_subseq eq bn_in; rewrite eq.
+  by apply mem_nth.
+  Qed.
+
+      (* (color color_refine : seq (triple I B L) -> hash_map B -> hash_map B) *)
+      (*    (color_good_hm : forall (g : seq (triple I B L)) (hm : hash_map B), *)
+      (*                     bnodes_hm hm =i get_bts g -> bnodes_hm (color g hm) =i get_bts g) *)
+      (*    (color_refine_good_hm : forall (g : seq (triple I B L)) (hm : hash_map B), *)
+      (*                            bnodes_hm hm =i get_bts g -> bnodes_hm (color_refine g hm) =i get_bts g) *)
+      (*    (mark : B -> hash_map B -> hash_map B) *)
+      (*    (good_mark : forall (g : seq (triple I B L)) (hm : hash_map B), *)
+      (*                 bnodes_hm hm =i get_bts g -> forall b : B, b \in bnodes_hm hm -> bnodes_hm (mark b hm) =i get_bts g) *)
+      (*    (M : hash_map B -> nat) (markP : forall (bn : B * nat) (hm : hash_map B), bn \in choose_part hm -> M (mark bn.1 hm) < M hm) *)
+      (*    (color_refineP : forall (g : seq (triple I B L)) (hm : hash_map B), M (color_refine g hm) <= M hm) *)
+      (*    (iso_color_fine_can : forall g h : seq (triple I B L), *)
+
+End kmap_template.
+
+
+
+
+
 
 
 

@@ -544,3 +544,9 @@ Lemma zip_uniq_proj (T1 T2 : eqType) (s1 : seq T1) (s2 : seq T2) :
          by move: xin; rewrite in_cons eq_sym neq /=.
   Qed.
 
+  Lemma size_filter_le {T : Type} (f : T -> bool) (l : seq T) : size (filter f l ) <= size l.
+  Proof.
+  elim: l=> // hd tl IHl /=.
+  by case: ifP=> [//| _]; apply (leq_trans IHl).
+  Qed.
+

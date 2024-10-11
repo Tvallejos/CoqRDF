@@ -573,6 +573,15 @@ Section Rdf.
           by apply triple_inj=> /=; apply (relabeling_term_inj_terms_ts mu_inj)=> //.
         Qed.
 
+        Lemma eq_in_bs_ing ts (mu nu: B -> B) :
+          {in get_bts ts, mu =1 nu} ->
+          {in ts, (relabeling_triple mu) =1 (relabeling_triple nu)}.
+        Proof.
+        move=> in_get /= [[]s []p []o pii sib] tin; apply triple_inj=> //=; congr Bnode;
+        apply in_get; apply (mem_ts_mem_triple_bts tin);
+        by rewrite /bnodes_triple/terms_triple mem_filter mem_undup !in_cons eqxx /= ?orbT.
+        Qed.
+
         Lemma can_bts_can_rtbs ts (mu nu: B -> B) :
           {in get_bts ts, nu \o mu =1 id} ->
             {in ts, [eta relabeling_triple (nu \o mu)] =1 id}.

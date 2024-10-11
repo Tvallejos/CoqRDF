@@ -1036,7 +1036,7 @@ Section kmap_template.
   by congr cons; apply IHtl.
   Qed.
 
-  Lemma good_init (g : seq (triple I B L)) : bnodes_hm (init_hash_kmap g) =i get_bts g.
+  Lemma good_init_kmap (g : seq (triple I B L)) : bnodes_hm (init_hash_kmap g) =i get_bts g.
   Proof. by move=> x; rewrite /init_hash_kmap/bnodes_hm zip_proj1 // size_nseq. Qed.
 
   Definition choose_part_kmap (hm : hash_map B) : part B :=
@@ -1057,17 +1057,132 @@ Section kmap_template.
   by apply mem_nth.
   Qed.
 
-      (* (color color_refine : seq (triple I B L) -> hash_map B -> hash_map B) *)
-      (*    (color_good_hm : forall (g : seq (triple I B L)) (hm : hash_map B), *)
-      (*                     bnodes_hm hm =i get_bts g -> bnodes_hm (color g hm) =i get_bts g) *)
-      (*    (color_refine_good_hm : forall (g : seq (triple I B L)) (hm : hash_map B), *)
-      (*                            bnodes_hm hm =i get_bts g -> bnodes_hm (color_refine g hm) =i get_bts g) *)
-      (*    (mark : B -> hash_map B -> hash_map B) *)
-      (*    (good_mark : forall (g : seq (triple I B L)) (hm : hash_map B), *)
-      (*                 bnodes_hm hm =i get_bts g -> forall b : B, b \in bnodes_hm hm -> bnodes_hm (mark b hm) =i get_bts g) *)
-      (*    (M : hash_map B -> nat) (markP : forall (bn : B * nat) (hm : hash_map B), bn \in choose_part hm -> M (mark bn.1 hm) < M hm) *)
-      (*    (color_refineP : forall (g : seq (triple I B L)) (hm : hash_map B), M (color_refine g hm) <= M hm) *)
-      (*    (iso_color_fine_can : forall g h : seq (triple I B L), *)
+  Definition color_kmap : seq (triple I B L) -> hash_map B -> hash_map B := fun _ hm=> hm.
+  Definition color_refine_kmap : seq (triple I B L) -> hash_map B -> hash_map B := fun _ hm=> hm.
+  Lemma color_good_hm_kmap (g : seq (triple I B L)) (hm : hash_map B):
+    bnodes_hm hm =i get_bts g -> bnodes_hm (color_kmap g hm) =i get_bts g.
+  Proof. by []. Qed.
+
+  Lemma color_refine_good_hm_kmap (g : seq (triple I B L)) (hm : hash_map B) :
+    bnodes_hm hm =i get_bts g -> bnodes_hm (color_refine_kmap g hm) =i get_bts g.
+  Proof. by []. Qed.
+
+  Fixpoint mark_hash_kmap (b : B) (n : nat) (hm : hash_map B) :=
+    match hm with
+    | nil => nil
+    | bn :: bns =>
+        if eq_bnode B b bn
+        then (b,n)::bns
+        else bn:: mark_hash_kmap b n bns
+    end.
+
+  Definition mark_kmap (b : B) (hm : hash_map B) :=
+    mark_hash_kmap b (count (@is_trivial disp B) (gen_partition hm)).+1 hm.
+
+  Lemma mark_hash_kmap_bnodes (hm : hash_map B) :
+    forall (b : B) (n : nat),
+    bnodes_hm (mark_hash_kmap b n hm) = bnodes_hm hm.
+  Proof.
+  elim: hm => [//|hd tl IHtl] b n /=.
+  case: ifP.
+  + by rewrite /eq_bnode/pred_eq/==> /eqP ->.
+  + by move=> _; rewrite /= IHtl.
+  Qed.
+
+  Lemma good_mark_kmap (g : seq (triple I B L)) (hm : hash_map B):
+    bnodes_hm hm =i get_bts g ->
+      forall b : B, b \in bnodes_hm hm -> bnodes_hm (mark_kmap b hm) =i get_bts g.
+  Proof.
+  move=> mem_eq b bin.
+  by rewrite mark_hash_kmap_bnodes; apply mem_eq.
+  Qed.
+
+  Definition M_kmap (hm :hash_map B) : nat :=
+    count (@is_trivial disp B) (gen_partition hm).
+
+
+  Definition template_isocan__ := @template_isocan_
+                                    init_hash_kmap good_init_kmap choose_part_kmap in_part_in_bnodes_kmap
+                                    color_kmap color_refine_kmap color_good_hm_kmap color_refine_good_hm_kmap
+                                    mark_kmap good_mark_kmap M_kmap.
+
+  Check template_isocan__.
+
+  Lemma markP_kmap (bn : B * nat) (hm : hash_map B):
+    bn \in choose_part_kmap hm -> M_kmap (mark_kmap bn.1 hm) < M_kmap hm.
+  Proof.
+  Admitted.
+
+  Lemma color_refineP_kmap (g : seq (triple I B L)) (hm : hash_map B) : M_kmap (color_refine_kmap g hm) <= M_kmap hm.
+  Proof. by []. Qed.
+
+  Lemma iso_color_fine_can_kmap (g h : seq (triple I B L)) :
+    uniq g ->
+    uniq h ->
+    effective_iso_ts g h ->
+    relabeling_seq_triple (fun_of_hash_map nat_inj (color_kmap g (init_hash_kmap g))) g
+    =i relabeling_seq_triple (fun_of_hash_map nat_inj (color_kmap h (init_hash_kmap h))) h.
+  Proof.
+  move=> ug uh [mu /and3P[piso urel peq]] /= t.
+  rewrite /color_kmap.
+  have /eq_mem_map/= peq_m := perm_mem peq.
+  rewrite -peq_m relabeling_triple_map_comp.
+  apply relabeling_ext_in.
+  move=> /= t' t'ing.
+  have := map_f (relabeling_triple mu) t'ing.
+  rewrite (perm_mem peq)=> mut'inh.
+  apply: eq_in_bs_ing; last by apply t'ing.
+  move=> b bin.
+  move/and3P: piso=> [_ _ piso].
+  have mub_in := map_f mu bin.
+  rewrite (perm_mem piso) in mub_in.
+  rewrite /=.
+  rewrite /fun_of_hash_map.
+  rewrite !bnodes_hm_has_eq_bnodes.
+  congr nat_inj.
+  rewrite /init_hash_kmap.
+  suffices map_snd_zip : forall (T U: Type) (s1 : seq T) (s2 : seq U), size s1 = size s2 -> map snd (zip s1 s2) = s2.
+    rewrite !map_snd_zip.
+    rewrite !nth_nseq.
+    by case: ifP; case: ifP.
+    - by rewrite size_nseq.
+    - by rewrite size_nseq.
+    - move=> T U s1 s2.
+      elim: s2 s1=> [//|hd tl IHtl] [//|// a tla] eq_size.
+      rewrite /=.
+      congr cons.
+      rewrite IHtl //.
+      by move: eq_size=> /=[->].
+      by rewrite good_init_kmap.
+      by rewrite good_init_kmap.
+  Qed.
+
+  Lemma choose_part_not_nil_kmap (hm : hash_map B): ~~ is_fine (gen_partition hm) -> (choose_part_kmap hm == [::]) = false.
+  Proof. Admitted.
+
+  Lemma same_is_fine (g h : seq (triple I B L)) :
+        uniq g ->
+        uniq h ->
+        effective_iso_ts g h ->
+        is_fine (gen_partition (color_kmap g (init_hash_kmap g))) = is_fine (gen_partition (color_kmap h (init_hash_kmap h))).
+  Proof. Admitted.
+
+  (* Lemma final (g h : seq (triple I B L)):  *)
+  (*   uniq g -> *)
+  (*   uniq h -> *)
+  (*   effective_iso_ts g h -> *)
+  (*   is_fine (gen_partition (color_kmap g (init_hash_kmap g))) = false -> *)
+  (*   [seq canonicalize nat_inj_ (le_st_anti (L:=L)) (le_st_total (L:=L)) (le_st_trans (L:=L)) isT erefl erefl *)
+  (*      (nil_minimum (L:=L)) init_hash_kmap good_init_kmap choose_part_kmap in_part_in_bnodes_kmap color_kmap *)
+  (*      color_refine_kmap color_good_hm_kmap color_refine_good_hm_kmap mark_kmap good_mark_kmap M_kmap markP_kmap color_refineP_kmap *)
+  (*      iso_color_fine_can_kmap g (color_kmap g (init_hash_kmap g)) i *)
+  (*   | i <- choose_part_kmap (color_kmap g (init_hash_kmap g))] *)
+  (*   =i [seq canonicalize nat_inj_ (le_st_anti (L:=L)) (le_st_total (L:=L)) (le_st_trans (L:=L)) isT erefl erefl *)
+  (*         (nil_minimum (L:=L)) init_hash_kmap good_init_kmap choose_part_kmap in_part_in_bnodes_kmap color_kmap *)
+  (*         color_refine_kmap color_good_hm_kmap color_refine_good_hm_kmap mark_kmap good_mark_kmap M_kmap markP_kmap *)
+  (*         color_refineP_kmap iso_color_fine_can_kmap h (color_kmap h (init_hash_kmap h)) i *)
+  (*      | i <- choose_part_kmap (color_kmap h (init_hash_kmap h))]. *)
+
 
 End kmap_template.
 

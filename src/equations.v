@@ -389,18 +389,24 @@ Section Template.
 
     Lemma hashes_filter_neq (n m : nat) (hm : hash_map) :
       (m == n) = false ->
-        n \in hashes_hm hm ->
-          n \in hashes_hm (filter (negb \o (fun p0 : B * nat => m == p0.2)) hm).
+        (n \in hashes_hm hm) =
+          (n \in hashes_hm (filter (negb \o (fun p0 : B * nat => m == p0.2)) hm)).
     Proof.
     set p := negb \o (fun p0 : B * nat => m == p0.2).
+    move=> neq.
+    apply /idP/idP.
     elim: hm=> [//| h tl IHtl] /=.
-    rewrite in_cons; move=> neq /orP[/eqP eq| in_tl].
+    rewrite in_cons=> /orP[/eqP eq| in_tl].
     + by rewrite /p/= -eq neq /= in_cons eq eqxx.
     + case: h=> b n'; rewrite /p/=.
       case_eq (m != n')=> H; last by apply IHtl.
       by rewrite /=; apply inweak; apply IHtl.
+    + move=> /mapP[/= bn ]. rewrite mem_filter=> /andP[].
+      rewrite /p=>/= pbn bnin ->; move: bnin.
+      elim: hm=> [//|hd tl IHtl].
+      rewrite in_cons=> /orP[/eqP->|]; first by rewrite in_cons eqxx.
+      by rewrite in_cons=> /IHtl ->; rewrite orbT.
     Qed.
-
 
     Lemma partitionate_filter (n m : nat) (hm : hash_map):
       (n == m) = false ->
@@ -441,7 +447,7 @@ Section Template.
       have -> : [seq p0 <- tl | n == p0.2] = (partitionate n tl).1 by [].
       rewrite (partitionate_filter n p.2) //; apply IHn.
       + by apply: leq_ltn_trans measure; apply size_filter_le.
-      + by apply hashes_filter_neq=> //; rewrite eq_sym neq_np.
+      + by rewrite -hashes_filter_neq=> //; rewrite eq_sym neq_np.
     Qed.
 
     Lemma is_fine_uniq (hm : hash_map) :
@@ -1155,6 +1161,20 @@ Section kmap_template.
   by rewrite has_predC; rewrite negbK.
   Qed.
 
+  Lemma map_mu_mem_partition (T U: eqType) (s : seq (T * nat)) (s' : seq T) (s'' : seq nat) (f : T -> U):
+    s \in gen_partition (zip s' s'') ->
+          zip (map (f \o fst) s) (map snd s) \in gen_partition (zip (map f s') s'').
+  Proof.
+  elim: s'' s'=> [|hd tl IHtl] s'; first by case: s'; autorewrite with gen_partition.
+  case: s'=> [|hd2 tl2] /=; autorewrite with gen_partition; first by [].
+  rewrite in_cons.
+  case_eq (s == (partitionate (hd2, hd).2 ((hd2, hd) :: zip tl2 tl)).1)=> H.
+  + move/eqP: H=> -> _.
+    rewrite /= /eq_hash/pred_eq eqxx /= in_cons /=.
+    admit.
+    rewrite /= /eq_hash/pred_eq eqxx /=.
+    Admitted.
+
   Lemma same_is_fine (g h : seq (triple I B L)) :
     uniq g ->
       uniq h ->
@@ -1166,10 +1186,70 @@ Section kmap_template.
   rewrite /color_kmap/init_hash_kmap.
   apply /idP/idP.
   (* rewrite /is_fine. *)
+  admit.
   apply contraTT.
   move=> /allPn/=[p pin not_triv].
   apply /allPn=> /=.
   exists (zip (map (mu \o fst) p) (map snd p)).
+  suffices <- : gen_partition (zip (map mu (get_bts g)) (nseq (size (map mu (get_bts g))) 0))
+                =i gen_partition (zip (get_bts h) (nseq (size (get_bts h)) 0)).
+    apply map_mu_mem_partition.
+    by rewrite size_map.
+  move/and3P: piso=> [_ _ piso].
+  suffices mem_gen_part : forall (hm1 hm2 : hash_map B), perm_eq hm1 hm2 -> gen_partition hm1 =i gen_partition hm2.
+    apply mem_gen_part.
+    apply uniq_perm. apply zip_uniq_l.
+    by rewrite (perm_uniq piso) uniq_get_bts.
+    by apply: zip_uniq_l (uniq_get_bts _).
+  suffices eq_mem_zip_nseq :
+    forall (T : eqType) (s1 s2 : seq T) (n : nat), perm_eq s1 s2 -> zip s1 (nseq (size s1) n) =i zip s2 (nseq (size s1) n).
+  move=> /= bn.
+  have ->: (size (get_bts h)) = (size [seq mu i | i <- get_bts g]).
+    by rewrite -(perm_size piso).
+    apply eq_mem_zip_nseq.
+    exact: piso.
+  move=> T s1 s2 n peqq /= [b n'].
+  apply /idP/idP.
+  move=> /nthP/= /(_ (b,n)) [i iin].
+  rewrite nth_zip. move=> <-.
+  apply /(nthP (b,n)).
+  exists (index (nth b s1 i) s2).
+  rewrite size_zip size_nseq (perm_size peqq) minn_refl index_mem.
+  rewrite -(perm_mem peqq).
+  apply mem_nth.
+  move: iin.
+  by rewrite size_zip size_nseq minn_refl.
+  set bnth := nth b _ _.
+  rewrite nth_nseq.
+  rewrite nth_zip.
+  congr pair; last by rewrite nth_nseq; case: ifP; case: ifP.
+  rewrite nth_index //.
+  rewrite -(perm_mem peqq).
+  apply mem_nth.
+  move: iin.
+  by rewrite size_zip size_nseq minn_refl.
+  by rewrite size_nseq; apply perm_size; rewrite perm_sym.
+  by rewrite size_nseq; apply perm_size.
+  move=> /nthP/= /(_ (b,n)) [i iin].
+  rewrite nth_zip. move=> <-.
+  apply /(nthP (b,n)).
+  exists (index (nth b s2 i) s1).
+  rewrite size_zip size_nseq (perm_size peqq) minn_refl -(perm_size peqq) index_mem.
+  rewrite (perm_mem peqq).
+  apply mem_nth.
+  move: iin.
+  by rewrite size_zip size_nseq -(perm_size peqq) minn_refl.
+  set bnth := nth b _ _.
+  rewrite nth_nseq.
+  rewrite nth_zip.
+  congr pair; last by rewrite nth_nseq; case: ifP; case: ifP.
+  rewrite nth_index //.
+  rewrite (perm_mem peqq).
+  apply mem_nth.
+  move: iin.
+  by rewrite size_zip size_nseq (perm_size peqq) minn_refl.
+  by rewrite size_nseq; apply perm_size.
+  by rewrite size_nseq; apply perm_size; rewrite perm_sym.
   admit.
   rewrite /is_trivial.
   by rewrite size_zip !size_map minn_refl not_triv.

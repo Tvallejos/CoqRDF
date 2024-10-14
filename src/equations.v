@@ -923,12 +923,12 @@ Section Template.
             is_fine (gen_partition (color g (init_hash g)))
             = is_fine (gen_partition (color h (init_hash h))).
 
-    Hypothesis distinguish_complete :
-      forall (g h : seq (triple I B L)),
-        uniq g -> uniq h ->
-          effective_iso_ts g h ->
-            is_fine (gen_partition (color g (init_hash g))) = false ->
-              distinguish g (color g (init_hash g)) =i distinguish h (color h (init_hash h)).
+    (* Hypothesis distinguish_complete : *)
+    (*   forall (g h : seq (triple I B L)), *)
+    (*     uniq g -> uniq h -> *)
+    (*       effective_iso_ts g h -> *)
+    (*         is_fine (gen_partition (color g (init_hash g))) = false -> *)
+    (*           distinguish g (color g (init_hash g)) =i distinguish h (color h (init_hash h)). *)
 
     Hypothesis eiso_mem_eq_canonicalize :
       forall (g h : seq (triple I B L)) (ug: uniq g) (uh: uniq h),
@@ -1123,65 +1123,83 @@ Section kmap_template.
     relabeling_seq_triple (fun_of_hash_map nat_inj (color_kmap g (init_hash_kmap g))) g
     =i relabeling_seq_triple (fun_of_hash_map nat_inj (color_kmap h (init_hash_kmap h))) h.
   Proof.
-  move=> ug uh [mu /and3P[piso urel peq]] /= t.
+  move=> ug uh [mu /and3P[/and3P[_ _ piso] urel peq]] /= t.
   rewrite /color_kmap.
   have /eq_mem_map/= peq_m := perm_mem peq.
   rewrite -peq_m relabeling_triple_map_comp.
-  apply relabeling_ext_in.
-  move=> /= t' t'ing.
+  apply relabeling_ext_in=> /= t' t'ing.
   have := map_f (relabeling_triple mu) t'ing.
   rewrite (perm_mem peq)=> mut'inh.
   apply: eq_in_bs_ing; last by apply t'ing.
-  move=> b bin.
-  move/and3P: piso=> [_ _ piso].
+  move=> b bin /=.
   have mub_in := map_f mu bin.
   rewrite (perm_mem piso) in mub_in.
-  rewrite /=.
   rewrite /fun_of_hash_map.
-  rewrite !bnodes_hm_has_eq_bnodes.
-  congr nat_inj.
-  rewrite /init_hash_kmap.
-  suffices map_snd_zip : forall (T U: Type) (s1 : seq T) (s2 : seq U), size s1 = size s2 -> map snd (zip s1 s2) = s2.
-    rewrite !map_snd_zip.
-    rewrite !nth_nseq.
-    by case: ifP; case: ifP.
-    - by rewrite size_nseq.
-    - by rewrite size_nseq.
-    - move=> T U s1 s2.
-      elim: s2 s1=> [//|hd tl IHtl] [//|// a tla] eq_size.
-      rewrite /=.
-      congr cons.
-      rewrite IHtl //.
-      by move: eq_size=> /=[->].
-      by rewrite good_init_kmap.
-      by rewrite good_init_kmap.
+  rewrite !bnodes_hm_has_eq_bnodes; rewrite ?good_init_kmap //.
+  congr nat_inj; rewrite /init_hash_kmap !map_snd_zip_size ?size_nseq //.
+  by rewrite !nth_nseq; case: ifP; case: ifP.
   Qed.
 
   Lemma choose_part_not_nil_kmap (hm : hash_map B): ~~ is_fine (gen_partition hm) -> (choose_part_kmap hm == [::]) = false.
-  Proof. Admitted.
+  Proof.
+  move=> finePn; apply: negPf; move: finePn; apply contraNN.
+  rewrite /choose_part_kmap.
+  case: ifP.
+  + rewrite has_find=> triv_in /eqP nth_eq.
+    suffices : [::] \in gen_partition hm.
+      by move=> /part_size.
+    apply /(nthP [::])=> /=.
+    by exists (find (predC (is_trivial (B:=B))) (gen_partition hm)).
+  move=> all_triv.
+  have : ~~ (has (predC (is_trivial (B:=B))) (gen_partition hm)) by rewrite all_triv.
+  by rewrite has_predC; rewrite negbK.
+  Qed.
 
   Lemma same_is_fine (g h : seq (triple I B L)) :
-        uniq g ->
-        uniq h ->
+    uniq g ->
+      uniq h ->
         effective_iso_ts g h ->
-        is_fine (gen_partition (color_kmap g (init_hash_kmap g))) = is_fine (gen_partition (color_kmap h (init_hash_kmap h))).
-  Proof. Admitted.
+          is_fine (gen_partition (color_kmap g (init_hash_kmap g)))
+          = is_fine (gen_partition (color_kmap h (init_hash_kmap h))).
+  Proof.
+  move=> ug uh [mu /and3P[piso urel peq]].
+  rewrite /color_kmap/init_hash_kmap.
+  apply /idP/idP.
+  (* rewrite /is_fine. *)
+  apply contraTT.
+  move=> /allPn/=[p pin not_triv].
+  apply /allPn=> /=.
+  exists (zip (map (mu \o fst) p) (map snd p)).
+  admit.
+  rewrite /is_trivial.
+  by rewrite size_zip !size_map minn_refl not_triv.
+  Admitted.
 
-  (* Lemma final (g h : seq (triple I B L)):  *)
-  (*   uniq g -> *)
-  (*   uniq h -> *)
-  (*   effective_iso_ts g h -> *)
-  (*   is_fine (gen_partition (color_kmap g (init_hash_kmap g))) = false -> *)
-  (*   [seq canonicalize nat_inj_ (le_st_anti (L:=L)) (le_st_total (L:=L)) (le_st_trans (L:=L)) isT erefl erefl *)
-  (*      (nil_minimum (L:=L)) init_hash_kmap good_init_kmap choose_part_kmap in_part_in_bnodes_kmap color_kmap *)
-  (*      color_refine_kmap color_good_hm_kmap color_refine_good_hm_kmap mark_kmap good_mark_kmap M_kmap markP_kmap color_refineP_kmap *)
-  (*      iso_color_fine_can_kmap g (color_kmap g (init_hash_kmap g)) i *)
-  (*   | i <- choose_part_kmap (color_kmap g (init_hash_kmap g))] *)
-  (*   =i [seq canonicalize nat_inj_ (le_st_anti (L:=L)) (le_st_total (L:=L)) (le_st_trans (L:=L)) isT erefl erefl *)
-  (*         (nil_minimum (L:=L)) init_hash_kmap good_init_kmap choose_part_kmap in_part_in_bnodes_kmap color_kmap *)
-  (*         color_refine_kmap color_good_hm_kmap color_refine_good_hm_kmap mark_kmap good_mark_kmap M_kmap markP_kmap *)
-  (*         color_refineP_kmap iso_color_fine_can_kmap h (color_kmap h (init_hash_kmap h)) i *)
-  (*      | i <- choose_part_kmap (color_kmap h (init_hash_kmap h))]. *)
+  Check template_isocan__.
+
+  Check template_rdf.
+  Definition template_rdf_kmap_ t := @template_rdf disp I B L nat_inj nat_inj_
+      (@le_st disp I B L) (@le_st_anti disp I B L) (@le_st_total disp I B L) (@le_st_trans disp I B L)
+      nil isT erefl erefl (@nil_minimum disp I B L) init_hash_kmap good_init_kmap
+      choose_part_kmap in_part_in_bnodes_kmap
+      color_kmap color_refine_kmap color_good_hm_kmap color_refine_good_hm_kmap
+      mark_kmap good_mark_kmap M_kmap
+      t color_refineP_kmap iso_color_fine_can_kmap.
+
+  Check template_rdf_kmap_.
+
+  Goal (forall (p : (forall (bn : B * nat) (hm : hash_map B), bn \in choose_part_kmap hm -> M_kmap (mark_kmap bn.1 hm) < M_kmap hm)),
+       effective_isocanonical_mapping (template_rdf_kmap_ p)).
+    move=> p. apply template_isocan__. apply choose_part_not_nil_kmap. apply same_is_fine.
+    move=> g h ug uh [mu /and3P[piso urel peq]] finePn.
+    move=> /= cand.
+    (* rewrite /color_kmap/color_refine_kmap /=. *)
+    rewrite /canonicalize.
+    apply /idP/idP.
+    move=> /mapP[/= bn bnin].
+    case: ifP.
+ Admitted.
+
 
 
 End kmap_template.

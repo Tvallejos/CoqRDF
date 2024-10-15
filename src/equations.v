@@ -144,6 +144,12 @@ Section Partition.
   Proof.
   by move=> p /partP[bn ->]; apply filter_subseq.
   Qed.
+
+  Definition is_trivial (p : part) : bool := size p == 1.
+  Definition is_fine (P : partition) : bool := all is_trivial P.
+  Definition hashes_hm (hm : hash_map): seq nat :=
+    map snd hm.
+
 End Partition.
 
 Section Template.
@@ -279,6 +285,8 @@ Section Template.
   (* Mark decreases the measure *)
   Hypothesis markP :
     forall (bn : B * nat) (hm : hash_map),
+      (* TODO: add this hypothesis *)
+      (* ~~ is_fine (gen_partition hm) -> *)
       bn \in choose_part hm -> M (mark bn.1 hm) < M hm.
   (* color_refine does not increase the measure *)
   Hypothesis color_refineP :
@@ -305,11 +313,6 @@ Section Template.
 
   Lemma nat_coq_nat (n m : nat) :  (n < m)%nat = (n < m). Proof. by []. Qed.
   Lemma nat_coq_le_nat (n m : nat) :  (n <= m)%N = (n <= m). Proof. by []. Qed.
-
-  Definition is_trivial (p : part) : bool := size p == 1.
-  Definition is_fine (P : partition) : bool := all is_trivial P.
-  Definition hashes_hm (hm : hash_map): seq nat :=
-    map snd hm.
 
   Equations? foldl_In {T R : eqType} (s : seq T) (f : R -> forall (y : T), y \in s -> R) (z : R) : R :=
     foldl_In nil f z := z;
@@ -571,7 +574,8 @@ Section Template.
       let p := choose_part hm in
 	    let d := fun bn inP =>
 	               let hm' := color_refine g (mark bn.1 hm) in
-	               if is_fine (gen_partition hm') then
+                 let fine := is_fine (gen_partition hm') in
+	               if fine then
 	                 let candidate := sort le_triple (relabeling_seq_triple (fun_of_hash_map hm') g) in
 	                 candidate
 	               else (distinguish__ g hm' gbot) in
@@ -580,7 +584,7 @@ Section Template.
                  if cmp gbot candidate then candidate else gbot in
       foldl_In p f gbot.
       Proof.
-      by apply /ltP; apply (leq_ltn_trans (color_refineP _ _) (markP _ _ inP)).
+      by apply /ltP; apply (leq_ltn_trans (color_refineP _ _)); apply (markP _ _ inP).
       Qed.
 
     Definition distinguish (g : seq (triple I B L)) (hm : hash_map) : seq (triple I B L) :=
@@ -652,7 +656,7 @@ Section Template.
     Proof. by rewrite distinguish_fold_map; apply distinguish_choice_default. Qed.
 
     Lemma uniq_distinguish (g : seq (triple I B L)) (ug: uniq g) hm :
-      bnodes_hm hm =i get_bts g -> (negb \o is_fine) (gen_partition hm) -> uniq (distinguish g hm).
+      bnodes_hm hm =i get_bts g -> (negb \o (is_fine (B:=B))) (gen_partition hm) -> uniq (distinguish g hm).
     Proof.
     have : M hm < S (M hm) by apply ltnSn.
     move: hm (M hm).+1.
@@ -1047,7 +1051,7 @@ Section kmap_template.
 
   Definition choose_part_kmap (hm : hash_map B) : part B :=
     let P := gen_partition (hm) in
-    let pred := predC (@is_trivial disp B) in
+    let pred := predC (@is_trivial B) in
     if has pred P then
       nth [::] P (find pred P)
     else [::].
@@ -1058,7 +1062,8 @@ Section kmap_template.
   rewrite /choose_part_kmap/=.
   case: ifP=> [|//].
   rewrite has_find=> size_find.
-  suffices /partition_memP : nth [::] (gen_partition hm) (find (predC (is_trivial (B:=B))) (gen_partition hm)) \in (gen_partition hm).
+  suffices /partition_memP :
+    nth [::] (gen_partition hm) (find (predC (is_trivial (B:=B))) (gen_partition hm)) \in (gen_partition hm).
     by move=> /mem_subseq eq bn_in; rewrite eq.
   by apply mem_nth.
   Qed.
@@ -1082,8 +1087,17 @@ Section kmap_template.
         else bn:: mark_hash_kmap b n bns
     end.
 
+  Definition distinguished (hm : hash_map B) : nat :=
+    count (@is_trivial B) (gen_partition hm).
+
+  Definition fresh (hm : hash_map B) : nat :=
+    (foldl maxn 0 (hashes_hm hm)).+1.
+
+  Definition M_kmap (hm :hash_map B) : nat :=
+    (size hm) - (distinguished hm).
+
   Definition mark_kmap (b : B) (hm : hash_map B) :=
-    mark_hash_kmap b (count (@is_trivial disp B) (gen_partition hm)).+1 hm.
+    mark_hash_kmap b (fresh hm) hm.
 
   Lemma mark_hash_kmap_bnodes (hm : hash_map B) :
     forall (b : B) (n : nat),
@@ -1103,9 +1117,6 @@ Section kmap_template.
   by rewrite mark_hash_kmap_bnodes; apply mem_eq.
   Qed.
 
-  Definition M_kmap (hm :hash_map B) : nat :=
-    count (@is_trivial disp B) (gen_partition hm).
-
 
   Definition template_isocan__ := @template_isocan_
                                     init_hash_kmap good_init_kmap choose_part_kmap in_part_in_bnodes_kmap
@@ -1114,10 +1125,85 @@ Section kmap_template.
 
   Check template_isocan__.
 
-  Lemma markP_kmap (bn : B * nat) (hm : hash_map B):
-    bn \in choose_part_kmap hm -> M_kmap (mark_kmap bn.1 hm) < M_kmap hm.
+  Lemma mark_size (b : B) (hm : hash_map B) :
+    size (mark_kmap b hm) = size hm.
   Proof.
+  rewrite /mark_kmap/mark_hash_kmap.
+  elim: hm (fresh hm)=> [//| hd tl IHtl] n.
+  rewrite /= /mark_kmap/mark_hash_kmap; case: ifP=> [//|].
+  by move => _ /=; rewrite IHtl.
+  Qed.
+
+  Lemma size_gen_partition (hm : hash_map B) : size (gen_partition hm) <= size hm.
+  Proof.
+  have : size hm < S (size hm) by apply ltnSn.
+  move: hm (size hm).+1.
+  move=> hm n; move: n hm=> n.
+  elim: n => [//| n' IHn [//|hd tl]] measure.
+  autorewrite with gen_partition.
+  rewrite /= eq_hash_refl .
+  suffices : (size (gen_partition (partitionate hd.2 (hd :: tl)).2)) <= size (filter (negb \o eq_hash B hd.2) (hd::tl)).
+    rewrite /= eq_hash_refl /==> le_part.
+    suffices H: (size (gen_partition [seq x <- tl | (negb \o eq_hash B hd.2) x])) <= (size tl).
+      by apply H.
+    by apply (leq_trans le_part (size_filter_le _ _)).
+  rewrite /= eq_hash_refl /=.
+  apply IHn.
+  have {}measure : size tl < n'. by apply measure.
+  by apply: (leq_ltn_trans (size_filter_le _ _) measure).
+  Qed.
+
+  Lemma distinguished_mark (bn: B * nat) (hm : hash_map B):
+    ~~ is_fine (gen_partition hm) ->
+       bn \in choose_part_kmap hm ->
+         distinguished hm < distinguished (mark_kmap bn.1 hm).
+  Proof.
+  rewrite /mark_kmap=> finePn in_part.
+  have : hm != [::].
+    move/in_part_in_bnodes_kmap : in_part. by case: hm finePn.
+  elim: hm finePn in_part => [//| hd tl IHtl] finePn in_part _.
+  rewrite /distinguished.
+  (* rewrite /=. *)
+  (* case: ifP; first by admit. *)
+  (* move=> neq_bhd _. *)
+  (* rewrite /distinguished. *)
+  (* autorewrite with gen_partition. *)
+  (* set y := gen_partition _. *)
+  (* set z := gen_partition _. *)
+  (* set p1 := partitionate _ _. *)
+  (* set p2 := partitionate _ _. *)
+  (* rewrite /=. *)
+  (* rewrite eq_hash_refl. *)
+    (* rewrite /todo. *)
+    (* autorewrite with gen_partition. *)
   Admitted.
+
+
+  Lemma markP_kmap (bn : B * nat) (hm : hash_map B):
+    ~~ is_fine (gen_partition hm) -> bn \in choose_part_kmap hm
+                                            -> M_kmap (mark_kmap bn.1 hm) < M_kmap hm.
+  Proof.
+  rewrite /M_kmap/mark_kmap.
+  set x := mark_hash_kmap _ _ _.
+  have -> : size x = size hm.
+    by rewrite mark_size.
+  move=> finePn bn_in_choose.
+  suffices : distinguished hm < distinguished x.
+    move=> lt_dhm_dx.
+    rewrite -nat_coq_nat ltn_sub2lE //.
+    rewrite /distinguished.
+    suffices le_part_size : count (is_trivial (B:=B)) (gen_partition x) <= size x.
+      apply (leq_trans le_part_size).
+      by rewrite mark_size leqnn.
+    suffices le_size_partition_x : (size (gen_partition x)) <= (size x).
+      have leq_count_size : count (is_trivial (B:=B)) (gen_partition x) <= size (gen_partition x).
+        by rewrite -nat_coq_le_nat; apply count_size.
+      by apply (leq_trans leq_count_size le_size_partition_x).
+    by apply size_gen_partition.
+  by apply distinguished_mark.
+  (* depends on distinguished_mark *)
+  Admitted.
+
 
   Lemma color_refineP_kmap (g : seq (triple I B L)) (hm : hash_map B) : M_kmap (color_refine_kmap g hm) <= M_kmap hm.
   Proof. by []. Qed.

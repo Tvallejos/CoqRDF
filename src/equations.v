@@ -342,6 +342,74 @@ Section Partition.
   apply size_ltn.
   Qed.
 
+  Lemma size_mem_filter_undup (T : eqType) (s : seq T) (t : T):
+      t \in s -> size (undup s) = (size (undup (filter (negb \o (pred_eq t)) s))).+1.
+    Proof.
+    elim: s=> [//|hd tl IHtl].
+    rewrite /= in_cons=> /orP[].
+    + move=> /eqP H /=; rewrite H {1}/pred_eq eqxx /=.
+      case: ifP; first by move=> x; rewrite IHtl H.
+      move=> neqin /=; rewrite -filter_undup size_filter.
+      suffices /eq_in_count -> : {in (undup tl), (negb \o pred_eq hd) =1 predT}.
+        by congr S.
+      move=> a /= a_in; rewrite /pred_eq.
+      suffices : count_mem a (undup tl) != count_mem hd (undup tl).
+        by move=> /neq_count_mem; rewrite /negb eq_sym.
+      move: neqin; rewrite -mem_undup=> /count_memPn ->.
+      move/count_mem_inP: a_in=> /=.
+      by rewrite -lt0n.
+    + move=> t_in; have /IHtl {}IHtl:= t_in.
+      rewrite /pred_eq /= {1}/negb.
+      case_eq (t == hd); first by move=> /eqP <-; rewrite t_in IHtl.
+      rewrite /==> t_hd_neq.
+      suffices -> : (hd \in tl = (hd \in [seq x <- tl | (negb \o [eta eq_op t]) x])).
+        by case: ifP; rewrite /= ?IHtl //.
+      by rewrite mem_filter /= /negb t_hd_neq.
+    Qed.
+
+
+    Lemma size_perm_gen_partition (hm p : hash_map):
+      perm_eq (hashes_hm hm) (hashes_hm p) -> size (gen_partition hm) = size (gen_partition p).
+    Proof.
+    suffices rewr: forall (hm : hash_map), size (gen_partition hm) = size (undup (hashes_hm hm)).
+      by rewrite !rewr=> /perm_mem/perm_undup/perm_size ->.
+    move=> {p}hm.
+    have : size hm < S (size hm) by apply ltnSn.
+    move: hm (size hm).+1.
+    move=> hm n; move: n hm=> n.
+    elim: n => [//| n' IHn [//|hd tl]] /= measure.
+      autorewrite with gen_partition=> /=; rewrite eq_hash_refl /=.
+      case: ifP.
+      + move=> /size_mem_filter_undup ->.
+        congr S. rewrite IHn ?filter_map //.
+        by apply: (leq_ltn_trans (size_filter_le _ _) measure).
+      + move=> neq_in /=.
+        have Hn : size [seq x <- tl | (negb \o eq_hash hd.2) x] < n'.
+          by apply: (leq_ltn_trans (size_filter_le _ _) measure).
+        rewrite IHn //; congr S; congr size; congr undup.
+        elim: tl neq_in {measure Hn}=> [//|a tl' IHtl] /=.
+        rewrite in_cons -[_ || _]negbK -[false]negbK=> /negb_inj; rewrite negb_or /=.
+        move=> /andP[neqhda hdnin]; rewrite /eq_hash/pred_eq neqhda /= IHtl //.
+        by move: hdnin; rewrite /negb; case: ifP.
+    Qed.
+
+    Lemma perm_hash_eq_fine (hm p : hash_map):
+      perm_eq (hashes_hm hm) (hashes_hm p) -> is_fine (gen_partition hm) = is_fine (gen_partition p).
+    Proof.
+    move=> count_hashes.
+    rewrite /is_fine.
+    rewrite !all_count.
+    suffices -> : count is_trivial (gen_partition hm) = count is_trivial (gen_partition p).
+      by apply /idP/idP=> /eqP ->; apply /eqP; apply size_perm_gen_partition=> //; rewrite perm_sym.
+    set c1 := count _ _.
+    set c2 := count _ _.
+    have -> : c1 = distinguished hm by [].
+    have -> : c2 = distinguished p by [].
+    rewrite !num_triv_distinguished /num_uniq_hash.
+    rewrite -(permP count_hashes); apply eq_in_count; move=> h hin.
+    by rewrite /mult1 -(permP count_hashes).
+    Qed.
+
 
 
 End Partition.
@@ -556,8 +624,8 @@ Section Template.
   Hypothesis markP :
     forall (bn : B * nat) (hm : hash_map),
       (* TODO: add this hypothesis *)
-      (* ~~ is_fine (gen_partition hm) -> *)
-      (* uniq (bnodes_hm hm) -> *)
+      ~~ is_fine (gen_partition hm) ->
+      uniq (bnodes_hm hm) ->
       bn \in choose_part hm -> M (mark bn.1 hm) < M hm.
   (* color_refine does not increase the measure *)
 
@@ -567,12 +635,47 @@ Section Template.
 
 
 
-Hypothesis iso_color_fine_can :
+  Hypothesis iso_color_fine_can :
     forall (g h : seq (triple I B L)),
       uniq g -> uniq h ->
       effective_iso_ts g h ->
          relabeling_seq_triple (color g (init_hash g)) g
       =i relabeling_seq_triple (color h (init_hash h)) h.
+
+  Hypothesis color_post_relabeling : forall (g : seq (triple I B L)) (mu : B -> B) (hm : hash_map),
+    {in (get_bts g)&, injective mu} ->
+      {in (bnodes_hm hm)&, injective mu} ->
+        perm_eq (color (relabeling_seq_triple mu g) (map1 mu hm)) (map1 mu (color g hm)).
+  Hypothesis color_perm_graph : forall (g h : seq (triple I B L)) (hm : hash_map),
+      perm_eq g h -> perm_eq (color g hm) (color h hm).
+  Hypothesis init_hash_inj_rel : forall (g : seq (triple I B L)) (mu: B -> B),
+      {in (get_bts g)&, injective mu} -> perm_eq (map1 mu (init_hash g)) (init_hash (relabeling_seq_triple mu g)).
+  Hypothesis color_perm_hm : forall (hm p : hash_map),
+      perm_eq p hm -> forall (g : seq (triple I B L)), perm_eq (color g hm) (color g p).
+  Hypothesis init_hash_perm_graph : forall (g h : seq (triple I B L)), perm_eq g h -> perm_eq (init_hash g) (init_hash h).
+  Hypothesis choose_part_post_relabeling : forall (hm: hash_map)(mu : B -> B), choose_part (map1 mu hm) = map1 mu (choose_part hm).
+  Hypothesis color_refine_perm_hm : forall (g : seq (triple I B L)) (hm p: hash_map), perm_eq hm p -> perm_eq (color_refine g hm) (color_refine g p).
+
+  Hypothesis color_refine_post_relabeling : forall (g : seq (triple I B L)) (hm : hash_map) (mu : B -> B),
+           {in (get_bts g)&, injective mu} ->
+           {in (bnodes_hm hm)&, injective mu} ->
+           perm_eq (color_refine (relabeling_seq_triple mu g) (map1 mu hm))
+                   (map1 mu (color_refine g hm)).
+  Hypothesis color_refine_perm_graph : forall (g h: seq (triple I B L)) (hm : hash_map), perm_eq g h -> perm_eq (color_refine g hm) (color_refine h hm).
+
+  Hypothesis mark_post_rel: forall (b : B) (hm : hash_map) (mu : B -> B),
+         {in (bnodes_hm hm)&, injective mu} ->
+         perm_eq (mark (mu b) (map1 mu hm)) (map1 mu (mark b hm)).
+
+  Hypothesis mark_perm_hm : forall (b : B) (hm p : hash_map), perm_eq hm p -> perm_eq (mark b hm) (mark b p).
+
+  Hypothesis init_hash_ubs : forall (g : seq (triple I B L)), uniq (bnodes_hm (init_hash g)).
+  Hypothesis color_ubs : forall (hm: hash_map) (g : seq (triple I B L)), (uniq (bnodes_hm hm)) -> uniq (bnodes_hm (color g hm)).
+  Hypothesis mark_ubs : forall (hm: hash_map),
+      (uniq (bnodes_hm hm))
+      -> forall (b : B), b \in (bnodes_hm hm)
+                               -> uniq (bnodes_hm (mark b hm)).
+  Hypothesis color_refine_ubs : forall (hm: hash_map) (g : seq (triple I B L)), (uniq (bnodes_hm hm)) -> uniq (bnodes_hm (color_refine g hm)).
 
   Equations? foldl_In {T R : eqType} (s : seq T) (f : R -> forall (y : T), y \in s -> R) (z : R) : R :=
     foldl_In nil f z := z;
@@ -588,6 +691,27 @@ Hypothesis iso_color_fine_can :
   funelim (foldl_In s _ z).
   - by [].
   - autorewrite with foldl_In; apply H.
+  Qed.
+
+  Definition in_eq (T U: eqType) (s : seq U) (f g : T -> forall (u : U), u \in s -> T) := (forall (t : T)(u : U), f t u =1 g t u).
+
+  Lemma eq_foldl_in {T U: eqType} (s : seq U) (t: T) (f g : T -> forall (u : U), u \in s -> T):
+    in_eq T U s f g ->
+     foldl_In s f t = foldl_In s g t.
+  Proof.
+    move: t f g.
+    elim: s=> [//|hd tl IHtl t f g].
+  move=> H; autorewrite with foldl_In; rewrite H.
+  set P1 := foldl_In_obligation_2 _ _ _ _ _ _ _.
+  set P2 := foldl_In_obligation_2 _ _ _ _ _ _ _.
+  move: P1 P2=> P1 P2.
+  have -> : g t hd P1 = g t hd P2 by rewrite (eq_irrelevance P1).
+  apply IHtl.
+  move=> t' u' t''; rewrite H.
+  set P1' := foldl_In_obligation_1 _ _ _ _ _ _ _ _ _ _.
+  set P2' := foldl_In_obligation_1 _ _ _ _ _ _ _ _ _ _.
+  have -> : P1' = P2' by rewrite (eq_irrelevance P1').
+  by [].
   Qed.
 
   Section Distinguish.
@@ -821,51 +945,133 @@ Hypothesis iso_color_fine_can :
     by rewrite map_inj_in_uniq=> //; apply inj_get_bts_inj_ts.
     Qed.
 
+    Definition ifb {T : Type} (b : bool) (f : b = true -> T) (g : b = false -> T) :=
+      (if b then f else g) erefl.
+
+    Definition tT (b : bool) : b = true -> is_true b :=
+      id.
+
+    Definition nF (b : bool) : b = false -> is_true (~~ b).
+      by move=> p; apply/negPf.
+    Defined.
+
+    Definition Fn (b : bool) :is_true (~~ b) -> b = false.
+      by move=> /negPf.
+    Defined.
+
+    Definition pres_ubs (hm : hash_map) : uniq (bnodes_hm hm) ->
+                                          forall  (b : B), b \in (bnodes_hm hm) ->
+                                                  forall (g : seq (triple I B L)),
+                                                     uniq (bnodes_hm (color_refine g (mark b hm))).
+    Proof.
+    move=> ubs b bin g.
+    by apply color_refine_ubs; apply mark_ubs=> //.
+    Qed.
+
 (*TODO : merge distinguish__ and distinguish by gbot <- can *)
     Equations? distinguish__
       (g : seq (triple I B L))
         (hm : hash_map)
         (gbot : seq (triple I B L))
+       (finePn : ~~ is_fine (gen_partition hm))
+       (ubs : uniq (bnodes_hm hm))
+      (* (hm : ) *)
         : seq (triple I B L) by wf (M hm) lt :=
-      distinguish__ g hm gbot :=
+      distinguish__ g hm gbot finePn ubs :=
       let p := choose_part hm in
-	    let d := fun bn inP =>
+	    let d := fun (bn : B * nat) (inP : bn \in p) =>
 	               let hm' := color_refine g (mark bn.1 hm) in
                  let fine := is_fine (gen_partition hm') in
-	               if fine then
-	                 let candidate := sort le_triple (relabeling_seq_triple (fun_of_hash_map hm') g) in
-	                 candidate
-	               else (distinguish__ g hm' gbot) in
-      let f := fun gbot bn inP  =>
+                 @ifb _ fine (fun h=> sort le_triple (relabeling_seq_triple (fun_of_hash_map hm') g))
+	                 (* if fine then *)
+	                 (*   let candidate := sort le_triple (relabeling_seq_triple (fun_of_hash_map hm') g) in *)
+	                 (* candidate *)
+	               (fun h=> distinguish__ g hm' gbot (nF h) (pres_ubs hm ubs bn.1 (in_part_in_bnodes _ _ inP) g)) in
+	  (* else (distinguish__ g hm' gbot) in *)
+      let f := fun gbot (bn : B * nat) (inP : bn \in p) =>
                  let candidate := d bn inP in
                  if cmp gbot candidate then candidate else gbot in
       foldl_In p f gbot.
       Proof.
-      by apply /ltP; apply (leq_ltn_trans (color_refineP _ _)); apply (markP _ _ inP).
+      by apply /ltP; apply (leq_ltn_trans (color_refineP _ _)); rewrite nat_coq_nat; apply: (markP _ _ _ _ inP).
       Qed.
 
-    Definition distinguish (g : seq (triple I B L)) (hm : hash_map) : seq (triple I B L) :=
+     (*  Equations? distinguish__v2 *)
+     (*  (g : seq (triple I B L)) *)
+     (*    (hm : hash_map) *)
+     (*    (gbot : seq (triple I B L)) *)
+     (*   (finePn : ~~ is_fine (gen_partition hm)) *)
+     (*   (ubs : uniq (bnodes_hm hm)) *)
+     (*  (* (hm : ) *) *)
+     (*    : seq (triple I B L) by wf (M hm) lt := *)
+     (*  distinguish__v2 g hm gbot finePn ubs := *)
+     (*  let p := choose_part hm in *)
+	   (*  let d := fun (bn : B * nat) (inP : bn \in p) => *)
+	   (*             let hm' := color_refine g (mark bn.1 hm) in *)
+     (*             if insub hm' : {? x | ~~ is_fine (gen_partition x) } is Some fineS then *)
+     (*               distinguish__v2 g (\val fineS) gbot (pres_ubs (\val fineS) _ bn.1 _ g) _ *)
+     (*               else *)
+     (*                 sort le_triple (relabeling_seq_triple (fun_of_hash_map hm') g) *)
+     (* in *)
+     (*  let f := fun gbot (bn : B * nat) (inP : bn \in p) => *)
+     (*             let candidate := d bn inP in *)
+     (*             if cmp gbot candidate then candidate else gbot in *)
+     (*  foldl_In p f gbot. *)
+     (*  Proof. *)
+     (*    exact: fineS. *)
+     (*    apply H. *)
+     (*    apply pres_b *)
+     (*  by apply /ltP; apply (leq_ltn_trans (color_refineP _ _)); rewrite nat_coq_nat; apply: (markP _ _ _ _ inP). *)
+     (*  Qed. *)
+
+    Definition distinguish (g : seq (triple I B L)) (hm : hash_map) :
+       ~~ is_fine (gen_partition hm) -> uniq (bnodes_hm hm) -> seq (triple I B L) :=
       distinguish__ g hm can.
+
+    Definition p1andb (b1 b2 : bool) : b1 && b2 -> b1.
+    Proof. by move=> /andP[->]. Defined.
+
+    Definition p2andb (b1 b2 : bool) : b1 && b2 -> b2.
+    Proof. by move=> /andP[_ ->]. Defined.
 
     Definition distinguish_ (g : seq (triple I B L)) (hm : hash_map) : seq (triple I B L) :=
       let p := choose_part hm in
-	    let d := fun bn =>
+	    let d := fun (bn : B * nat) =>
+	    (* let d := fun (bn : B * nat)(inP : bn \in p) => *)
 	               let hm' := color_refine g (mark bn.1 hm) in
-	               if is_fine (gen_partition hm') then
-	                 let candidate := sort le_triple (relabeling_seq_triple (fun_of_hash_map hm') g) in
-	                 candidate
-	               else (distinguish g hm') in
-      let f := fun gbot bn  =>
+                 if insub hm' : {? x | ~~ is_fine (gen_partition x) && uniq (bnodes_hm x)} is Some fineS then
+                   let P := valP fineS in
+	                 (distinguish g (\val fineS) (p1andb _ _ P) (p2andb _ _ P)) else
+	    (* if is_fine (gen_partition hm') then *)
+	                  sort le_triple (relabeling_seq_triple (fun_of_hash_map hm') g)
+	               (* else (distinguish g hm') *)
+      in
+      let f := fun gbot (bn : B * nat) =>
                  let candidate := d bn in
                  if cmp gbot candidate then candidate else gbot in
-      foldl f can p.
+    foldl f can p.
 
-    Lemma eq_distinguish (g : seq (triple I B L)) (hm : hash_map) :
-      distinguish g hm = distinguish_ g hm.
+    Lemma eq_distinguish (g : seq (triple I B L)) (hm : hash_map) (finePn : ~~ is_fine (gen_partition hm)) (ubs : uniq (bnodes_hm hm))
+      : distinguish g hm finePn ubs = distinguish_ g hm.
     Proof.
     rewrite /distinguish_/distinguish -foldl_foldl_eq.
-    by autorewrite with distinguish__.
-    Qed.
+    autorewrite with distinguish__.
+    rewrite /=.
+    apply eq_foldl_in.
+    move=> /= t u uP=> /=.
+    set u' := match insub (color_refine _ _) with Some _ => _ | None => _ end.
+    set u'' := ifb _ _.
+    apply (f_equal (fun u => if cmp t u then u else t)).
+    rewrite {}/u''{}/u'.
+    rewrite /ifb.
+    set hm' := (color_refine g _).
+    set P := gen_partition hm'.
+    move: erefl.
+    set y := is_fine P.
+    rewrite {1}/y.
+    remember (is_fine P) as fine in |-.
+    case: fine Heqfine.
+    Admitted.
 
     Definition canonicalize (g : seq (triple I B L)) (hm : hash_map)
       (bn : (B * nat)) :=
@@ -1202,7 +1408,12 @@ Hypothesis iso_color_fine_can :
             (fun (bn :B * nat) => (nth 0 [seq i.2 | i <- hm] (index bn.1 (bnodes_hm hm)))) =1 snd}.
     Proof.
     move=> /= ubs bn bnin.
-    Admitted.
+    suffices -> : (index bn.1 (bnodes_hm hm)) = (index bn hm).
+      by rewrite (nth_map bn) ?nth_index ?index_mem.
+    apply index_map_in=> //.
+    apply /in_map_injP=> //.
+    by rewrite (hm_zip hm); apply zip_uniq_l.
+    Qed.
 
     Lemma nth_hash (hm: hash_map):
       (uniq (bnodes_hm hm)) ->
@@ -1244,45 +1455,31 @@ Hypothesis iso_color_fine_can :
     move=> hm; elim: hm=> [//|[b n] tl IHtl] /=.
     by rewrite /map1/= -IHtl.
     Qed.
-(* Hypothesis for following lemma  *)
-    (* you can postpone a relabeling and this won't affect color *)
-    Hypothesis color_post_relabeling : forall (g : seq (triple I B L)) (mu : B -> B) (hm : hash_map),
-      {in (get_bts g)&, injective mu} ->
-        {in (bnodes_hm hm)&, injective mu} ->
-          perm_eq (color (relabeling_seq_triple mu g) (map1 mu hm)) (map1 mu (color g hm)).
-    Hypothesis color_perm_graph : forall (g h : seq (triple I B L)) (hm : hash_map),
-        perm_eq g h -> perm_eq (color g hm) (color h hm).
-    Hypothesis init_hash_inj_rel : forall (g : seq (triple I B L)) (mu: B -> B),
-        {in (get_bts g)&, injective mu} -> perm_eq (map1 mu (init_hash g)) (init_hash (relabeling_seq_triple mu g)).
-    Hypothesis color_perm_hm : forall (hm p : hash_map),
-        perm_eq p hm -> forall (g : seq (triple I B L)), perm_eq (color g hm) (color g p).
-    Hypothesis init_hash_perm_graph : forall (g h : seq (triple I B L)), perm_eq g h -> perm_eq (init_hash g) (init_hash h).
-    Hypothesis choose_part_post_relabeling : forall (hm: hash_map)(mu : B -> B), choose_part (map1 mu hm) = map1 mu (choose_part hm).
-    Hypothesis color_refine_perm_hm : forall (g : seq (triple I B L)) (hm p: hash_map), perm_eq hm p -> perm_eq (color_refine g hm) (color_refine g p).
 
-    Hypothesis color_refine_post_relabeling : forall (g : seq (triple I B L)) (hm : hash_map) (mu : B -> B),
-             {in (get_bts g)&, injective mu} ->
-             {in (bnodes_hm hm)&, injective mu} ->
-             perm_eq (color_refine (relabeling_seq_triple mu g) (map1 mu hm))
-                     (map1 mu (color_refine g hm)).
-    Hypothesis color_refine_perm_graph : forall (g h: seq (triple I B L)) (hm : hash_map), perm_eq g h -> perm_eq (color_refine g hm) (color_refine h hm).
-
-    Hypothesis mark_post_rel: forall (b : B) (hm : hash_map) (mu : B -> B),
-           {in (bnodes_hm hm)&, injective mu} ->
-           perm_eq (mark (mu b) (map1 mu hm)) (map1 mu (mark b hm)).
-
-    Hypothesis mark_perm_hm : forall (b : B) (hm p : hash_map), perm_eq hm p -> perm_eq (mark b hm) (mark b p).
-
-    (*not yet used*)
     Lemma distinguish_perm_hm : forall (hm p : hash_map) g, perm_eq hm p -> distinguish g hm = distinguish g p.
     Proof.
+    move=> hm p g peq.
+    rewrite !distinguish_fold_map/distinguish_fold.
+    set cang := map _ _.
+    set canh := map _ _.
+    suffices eq_mem_ch : cang =i canh.
+      by rewrite !foldl_idx/= (eq_big_idem _ _ choose_graph_idem eq_mem_ch).
+    rewrite {}/cang{}/canh=>/= c.
+    suffices peq_cp : perm_eq (choose_part hm) (choose_part p).
+      rewrite -(eq_mem_map _ (perm_mem peq_cp)).
+      suffices /eq_in_map -> : {in choose_part hm, canonicalize g hm =1 canonicalize g p} by [].
+    move=> bn bnin.
+    rewrite /canonicalize.
+    have /perm_mem := peq.
+    
+    (* rewrite eqxx.  eqxx. *)
+
+
     Admitted.
 
     Lemma distinguish_perm_graph : forall (hm : hash_map) (g h : seq (triple I B L)),
         perm_eq g h -> distinguish g hm = distinguish h hm.
     Admitted.
-
-    (* End of hypothesis for following lemma*)
 
     Section wip.
 
@@ -1443,80 +1640,6 @@ Hypothesis iso_color_fine_can :
     (* Lemma color_refine_is_perm_hm: perm_hm color_refine. *)
     (* by move=> hm p peq g; rewrite perm_sym; apply color_refine_perm_hm. *)
     (* Qed. *)
-    Lemma size_mem_filter_undup (T : eqType) (s : seq T) (t : T):
-      t \in s -> size (undup s) = (size (undup (filter (negb \o (pred_eq t)) s))).+1.
-    Proof.
-    elim: s=> [//|hd tl IHtl].
-    rewrite /= in_cons=> /orP[].
-    + move=> /eqP H /=; rewrite H {1}/pred_eq eqxx /=.
-      case: ifP; first by move=> x; rewrite IHtl H.
-      move=> neqin /=; rewrite -filter_undup size_filter.
-      suffices /eq_in_count -> : {in (undup tl), (negb \o pred_eq hd) =1 predT}.
-        by congr S.
-      move=> a /= a_in; rewrite /pred_eq.
-      suffices : count_mem a (undup tl) != count_mem hd (undup tl).
-        by move=> /neq_count_mem; rewrite /negb eq_sym.
-      move: neqin; rewrite -mem_undup=> /count_memPn ->.
-      move/count_mem_inP: a_in=> /=.
-      by rewrite -lt0n.
-    + move=> t_in; have /IHtl {}IHtl:= t_in.
-      rewrite /pred_eq /= {1}/negb.
-      case_eq (t == hd); first by move=> /eqP <-; rewrite t_in IHtl.
-      rewrite /==> t_hd_neq.
-      suffices -> : (hd \in tl = (hd \in [seq x <- tl | (negb \o [eta eq_op t]) x])).
-        by case: ifP; rewrite /= ?IHtl //.
-      by rewrite mem_filter /= /negb t_hd_neq.
-    Qed.
-
-    Lemma size_perm_gen_partition (hm p : hash_map):
-      perm_eq (hashes_hm hm) (hashes_hm p) -> size (gen_partition hm) = size (gen_partition p).
-    Proof.
-    suffices rewr: forall (hm : hash_map), size (gen_partition hm) = size (undup (hashes_hm hm)).
-      by rewrite !rewr=> /perm_mem/perm_undup/perm_size ->.
-    move=> {p}hm.
-    have : size hm < S (size hm) by apply ltnSn.
-    move: hm (size hm).+1.
-    move=> hm n; move: n hm=> n.
-    elim: n => [//| n' IHn [//|hd tl]] /= measure.
-      autorewrite with gen_partition=> /=; rewrite eq_hash_refl /=.
-      case: ifP.
-      + move=> /size_mem_filter_undup ->.
-        congr S. rewrite IHn ?filter_map //.
-        by apply: (leq_ltn_trans (size_filter_le _ _) measure).
-      + move=> neq_in /=.
-        have Hn : size [seq x <- tl | (negb \o eq_hash hd.2) x] < n'.
-          by apply: (leq_ltn_trans (size_filter_le _ _) measure).
-        rewrite IHn //; congr S; congr size; congr undup.
-        elim: tl neq_in {measure Hn}=> [//|a tl' IHtl] /=.
-        rewrite in_cons -[_ || _]negbK -[false]negbK=> /negb_inj; rewrite negb_or /=.
-        move=> /andP[neqhda hdnin]; rewrite /eq_hash/pred_eq neqhda /= IHtl //.
-        by move: hdnin; rewrite /negb; case: ifP.
-    Qed.
-
-    Lemma perm_hash_eq_fine (hm p : hash_map):
-      perm_eq (hashes_hm hm) (hashes_hm p) -> is_fine (gen_partition hm) = is_fine (gen_partition p).
-    Proof.
-    move=> count_hashes.
-    rewrite /is_fine.
-    rewrite !all_count.
-    suffices -> : count (is_trivial (B:=B)) (gen_partition hm) = count (is_trivial (B:=B)) (gen_partition p).
-      by apply /idP/idP=> /eqP ->; apply /eqP; apply size_perm_gen_partition=> //; rewrite perm_sym.
-    set c1 := count _ _.
-    set c2 := count _ _.
-    have -> : c1 = distinguished hm by [].
-    have -> : c2 = distinguished p by [].
-    rewrite !num_triv_distinguished /num_uniq_hash.
-    rewrite -(permP count_hashes); apply eq_in_count; move=> h hin.
-    by rewrite /mult1 -(permP count_hashes).
-    Qed.
-
-    Hypothesis init_hash_ubs : forall (g : seq (triple I B L)), uniq (bnodes_hm (init_hash g)).
-    Hypothesis color_ubs : forall (hm: hash_map) (g : seq (triple I B L)), (uniq (bnodes_hm hm)) -> uniq (bnodes_hm (color g hm)).
-    Hypothesis mark_ubs : forall (hm: hash_map),
-        (uniq (bnodes_hm hm))
-        -> forall (b : B), b \in (bnodes_hm hm)
-        -> uniq (bnodes_hm (mark b hm)).
-    Hypothesis color_refine_ubs : forall (hm: hash_map) (g : seq (triple I B L)), (uniq (bnodes_hm hm)) -> uniq (bnodes_hm (color_refine g hm)).
 
 
     Lemma fun_of_hash_perm : forall (hm p : hash_map),
@@ -1531,17 +1654,29 @@ Hypothesis iso_color_fine_can :
     congr nat_inj.
     rewrite !(nth_map (b,O)).
     rewrite {2}(hm_zip hm) {2}(hm_zip p) !find_index_eq_bnode ?size_proj //.
-    congr snd.
-    move/(nthP b) : bin_hm=> [i iin eq].
-    rewrite -{2}eq.
-    move/(nthP b) : bin_p=> [i' iin' eq2].
-    rewrite -{4}eq2.
-    rewrite !index_uniq //.
-    move/(perm_iotaP (b,O)): peq=> /=.
-    move=> [hashes peq_hashes ].
-    move=> ->.
-    Admitted.
-
+    have := bin_hm.
+    move=> /(in_zip_l)=> /(_ _ (hashes_hm hm)).
+    rewrite /bnodes_hm/hashes_hm/=; move=> []; first by rewrite size_proj.
+    move=> bn.
+    rewrite -(hm_zip hm)=> [[bnin [<- ]] ] [n n_eq].
+    have fst_inj_in_p: {in p &, injective fst}.
+      apply /in_map_injP.
+      + by rewrite -(perm_uniq peq); rewrite (hm_zip hm); apply zip_uniq_l.
+      by move/(perm_map fst): peq=> /perm_uniq <-.
+    rewrite !index_map_in //.
+    rewrite !nth_index //.
+    + by rewrite -(perm_mem peq).
+      by rewrite -(perm_mem peq).
+      by move=> bn1 bn2; rewrite !(perm_mem peq); apply fst_inj_in_p.
+      rewrite {1}(hm_zip p) find_index_eq_bnode.
+      move: bin_p.
+      by rewrite -index_mem size_map=> ->.
+      by rewrite size_proj.
+      rewrite {1}(hm_zip hm) find_index_eq_bnode.
+      move: bin_hm.
+      by rewrite -index_mem size_map=> ->.
+      by rewrite size_proj.
+    Qed.
 
     Lemma peq_get_bts (ts1 ts2: seq (triple I B L)): perm_eq ts1 ts2 -> perm_eq (get_bts ts1) (get_bts ts2).
     Proof.
@@ -1726,7 +1861,7 @@ Hypothesis iso_color_fine_can :
             by apply good_mark=> //; apply in_part_in_bnodes.
           rewrite -(eq_mem_map _ eq_bs_mark) /bnodes_hm -map_comp.
           by congr (in_mem b).
-          by admit. (*TODO: prove fun_of_hash_perm. *)
+          by apply fun_of_hash_perm.
           ++
             rewrite relabeling_seq_triple_comp.
             apply relabeling_ext_in.
@@ -1784,7 +1919,7 @@ Hypothesis iso_color_fine_can :
           apply mark_ubs=> //.
           by apply in_part_in_bnodes.
           by apply color_refine_inv; apply mark_inv=> //; rewrite -mem_eq_bs; apply in_part_in_bnodes.
- Admitted.
+ Qed.
 
     Lemma eiso_correct_complete' (g h : seq (triple I B L)) (ug: uniq g) (uh: uniq h) :
       perm_eq (template g) (template h) <-> effective_iso_ts g h.

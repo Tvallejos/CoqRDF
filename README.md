@@ -1,5 +1,5 @@
 # CoqRDF
-[![Docker Coq Build](https://github.com/Tvallejos/rdf-model/workflows/Docker%20Coq%20Build/badge.svg?branch=main)](https://github.com/Tvallejos/rdf-model/actions?query=workflow:"Docker%20Coq%20Build")
+[![Nix CI for bundle default](https://github.com/Tvallejos/CoqRDF/actions/workflows/nix-action-default.yml/badge.svg)](https://github.com/Tvallejos/CoqRDF/actions/workflows/nix-action-default.yml)
 
 Development of the RDF model using Coq and the Mathematical Components library.
 
@@ -10,7 +10,7 @@ Development of the RDF model using Coq and the Mathematical Components library.
   - Assia Mahboubi
 - Compatible Coq versions: 8.19.1
 - Additional dependencies: 
-  - the [`Mathematical Components` Library](https://github.com/math-comp/math-comp) version 2.2.0
+  - the [`Mathematical Components` Library](https://github.com/math-comp/math-comp) version 2.3.0
   
 ## Description
 
